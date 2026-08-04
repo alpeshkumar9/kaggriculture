@@ -74,6 +74,31 @@ class CropFirstAgentTests(unittest.TestCase):
         )
         self.assertEqual(orders, [])
 
+    def test_sells_shed_stock_to_make_room_for_incoming_worker_cargo(self):
+        orders = _sell_orders(
+            {
+                "shed": {"CARROT": 70, "FERTILIZER": 10},
+                "inventories": [{"MELON": 30}],
+            },
+            day=18,
+            market_state={"prices": {"CARROT": 1}},
+        )
+        self.assertEqual(orders, [["SELL", "CARROT", 10]])
+
+    def test_never_sells_fertilizer_reserved_for_production(self):
+        orders = _sell_orders(
+            {"shed": {"FERTILIZER": 10}}, day=20,
+            market_state={"prices": {"FERTILIZER": 100}},
+        )
+        self.assertEqual(orders, [])
+
+    def test_sells_cow_fertilizer_outside_the_field_refresh_window(self):
+        orders = _sell_orders(
+            {"shed": {"FERTILIZER": 3}}, day=10,
+            market_state={"prices": {"FERTILIZER": 95}}, owned_cows=1,
+        )
+        self.assertEqual(orders, [["SELL", "FERTILIZER", 3]])
+
     def test_tomato_is_watered_and_harvested_as_an_ongoing_crop(self):
         tomato = {
             "kind": "PLANT", "crop": "TOMATO", "planted_day": 4,

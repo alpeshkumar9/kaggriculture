@@ -17,8 +17,8 @@ CROPS = {
     "STRAWBERRY": {"cost": 100, "ongoing": True},
     "MELON": {"cost": 80, "harvest_day": 12, "bonus_start": 6},
 }
-HANDS_PER_DAY = 10
-HIRE_COSTS = (1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89)
+HANDS_PER_DAY = 13
+HIRE_COSTS = (1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233)
 SEED_BUFFER = 10
 # The fourth quadrant costs $4k with too little remaining season to recover
 # its labour and weed-management cost.  The proven high-output replay uses
@@ -26,8 +26,7 @@ SEED_BUFFER = 10
 LAND_PLAN = ((4, 1600), (8, 3200))
 MOVES = ((0, -1, "NORTH"), (0, 1, "SOUTH"), (1, 0, "EAST"), (-1, 0, "WEST"))
 PRODUCTS = {"WHEAT", "CARROT", "TOMATO", "STRAWBERRY", "MELON", "EGG", "MILK", "WOOL", "FERTILIZER"}
-EARLY_COW_TARGET = 0
-LATE_COW_TARGET = 0
+COMPACT_COW_TARGET = 12
 EARLY_GOOSE_TARGET = 0
 EARLY_SHEEP_TARGET = 0
 LATE_SHEEP_TARGET = 0
@@ -109,9 +108,9 @@ def _market_actions(farm, private, day, tiles, livestock, market_state):
         for row in tiles
         for tile in row
     ):
-        desired_hands = min(11, desired_hands + 1)
+        desired_hands = min(HANDS_PER_DAY, desired_hands + 1)
     if day >= 29:
-        desired_hands = min(11, desired_hands + 1)
+        desired_hands = min(HANDS_PER_DAY, desired_hands + 1)
     hires_today = int(farm.get("hires_today", 0))
     for hire_index in range(hires_today, desired_hands):
         hire_cost = HIRE_COSTS[hire_index]
@@ -130,15 +129,16 @@ def _market_actions(farm, private, day, tiles, livestock, market_state):
     # Milk is the first scalable premium revenue stream.  Four cows keep the
     # operational burden bounded while giving the crop engine time to fund
     # further expansion.
-    cows_to_buy = max(0, EARLY_COW_TARGET - livestock["owned_cows"])
-    if day <= 2 and cows_to_buy and money >= 400 * cows_to_buy + 500:
+    unlocked_count = len(farm.get("unlocked_quadrants", ["NW"]))
+    compact_cow_target = len(_compact_cow_slots(tiles))
+    affordable_cows = max(0, int((money - 200) // 400))
+    cows_to_buy = min(
+        2, affordable_cows,
+        max(0, compact_cow_target - livestock["owned_cows"]),
+    )
+    if day <= 20 and cows_to_buy:
         market.append(["BUY_ANIMAL", "COW", cows_to_buy])
         money -= 400 * cows_to_buy
-
-    late_cows_to_buy = max(0, LATE_COW_TARGET - livestock["owned_cows"])
-    if 16 <= day <= 18 and late_cows_to_buy and money >= late_cows_to_buy * 400 + 1200:
-        market.append(["BUY_ANIMAL", "COW", late_cows_to_buy])
-        money -= late_cows_to_buy * 400
 
     geese_to_buy = max(0, EARLY_GOOSE_TARGET - livestock["owned_geese"])
     if day <= 2 and geese_to_buy and money >= geese_to_buy * 300 + 700:
@@ -164,7 +164,7 @@ def _market_actions(farm, private, day, tiles, livestock, market_state):
         int(inventory.get("WHEAT", 0)) for inventory in private.get("inventories", [])
     )
     protected_animals = (
-        livestock["owned_animals"] + cows_to_buy + late_cows_to_buy
+        livestock["owned_animals"] + cows_to_buy
         + geese_to_buy + early_sheep_to_buy + sheep_to_buy
     )
     wheat_needed = max(0, protected_animals * 3 - wheat_on_hand)
@@ -188,7 +188,7 @@ def _market_actions(farm, private, day, tiles, livestock, market_state):
             market.append(["BUY_PRODUCT", "FERTILIZER", fertilizer_to_buy])
             money -= fertilizer_to_buy * BASE_PRICES["FERTILIZER"]
 
-    unlocked = len(farm.get("unlocked_quadrants", ["NW"]))
+    unlocked = unlocked_count
     if unlocked <= len(LAND_PLAN):
         unlock_day, cash_threshold = LAND_PLAN[unlocked - 1]
         if day >= unlock_day and money >= cash_threshold:
@@ -234,16 +234,16 @@ def _desired_hands(tiles):
 
 def _next_crop(seeds, shed, day, tiles, prices=None):
     """Choose the highest-value crop whose production window still fits."""
+    strawberries = sum(
+        isinstance(tile, dict) and tile.get("kind") == "PLANT" and tile.get("crop") == "STRAWBERRY"
+        for row in tiles for tile in row
+    )
     melons = sum(
         isinstance(tile, dict) and tile.get("kind") == "PLANT" and tile.get("crop") == "MELON"
         for row in tiles for tile in row
     )
     if 4 <= day <= 16 and melons < MELON_TARGET:
         return "MELON"
-    strawberries = sum(
-        isinstance(tile, dict) and tile.get("kind") == "PLANT" and tile.get("crop") == "STRAWBERRY"
-        for row in tiles for tile in row
-    )
     # A small late block captures high strawberry scarcity prices without
     # flooding its extremely glut-sensitive market.
     if 10 <= day <= 16 and strawberries < STRAWBERRY_TARGET:
@@ -271,7 +271,6 @@ def _choose_worker_action(
     x, y = position
     if not _in_bounds(x, y, tiles):
         return ["PASS"]
-
     # Melons fund the next production cycle. Move each six-unit harvest to the
     # shed immediately so it can be sold and reinvested before day 16 ends.
     carrying_products = any(inventory.get(item, 0) > 0 for item in PRODUCTS)
@@ -294,7 +293,15 @@ def _choose_worker_action(
     )
     if livestock_action:
         return livestock_action
-    action = _action_for_tile(tile, seed_budget, day)
+    # Keep the northwest shed-access cell clear for the first compact cow.
+    # A stationary service lane avoids paying movement for five recurring
+    # pickup/feed/care/collect actions every day.
+    compact_cow_slots = set(_compact_cow_slots(tiles))
+    action = (
+        None
+        if (x, y) in compact_cow_slots and tile is None
+        else _action_for_tile(tile, seed_budget, day)
+    )
     ripe_melons = sum(
         isinstance(target, dict)
         and target.get("crop") == "MELON"
@@ -353,6 +360,13 @@ def _action_for_tile(tile, seed_budget, day):
 
     crop = tile.get("crop")
     crop_data = CROPS.get(crop, {})
+    if (
+        day == FINAL_LIQUIDATION_DAY
+        and crop_data.get("ongoing")
+        and int(tile.get("max_lifespan_step", -1)) >= 0
+        and int(tile.get("consecutive_unwatered", 0)) >= 1
+    ):
+        return ["DIG"]
     if crop_data.get("ongoing") and tile.get("yield_units", 0) > 0:
         return ["HARVEST"]
     if crop_data.get("ongoing") and _expires_by_next_day(tile, day):
@@ -444,6 +458,13 @@ def _target_priority(tile, seed_budget, day):
         return None
     crop = tile.get("crop")
     crop_data = CROPS.get(crop, {})
+    if (
+        day == FINAL_LIQUIDATION_DAY
+        and crop_data.get("ongoing")
+        and int(tile.get("max_lifespan_step", -1)) >= 0
+        and int(tile.get("consecutive_unwatered", 0)) >= 1
+    ):
+        return -3
     if crop_data.get("ongoing") and tile.get("yield_units", 0) > 0:
         return 0
     if crop_data.get("ongoing") and _expires_by_next_day(tile, day):
@@ -480,10 +501,27 @@ def _sell_orders(private, day, market_state, owned_cows=0):
     product_stock = {
         item: int(quantity)
         for item, quantity in shed.items()
-        if item in PRODUCTS and quantity > 0
+        # Fertilizer is production input.  Selling it at the same base price
+        # immediately after purchase only starves the scheduled field refresh.
+        if item in PRODUCTS and item != "FERTILIZER" and quantity > 0
     }
     total_stock = sum(max(0, int(quantity)) for quantity in shed.values())
-    overflow = max(0, total_stock - SHED_CAPACITY + 12)
+    # Worker inventories are dropped into the shed automatically overnight.
+    # Reserve room for the actual cargo already in flight instead of a fixed
+    # twelve-unit guess; otherwise a large harvest is silently discarded.
+    incoming_stock = sum(
+        max(0, int(quantity))
+        for inventory in private.get("inventories", [])
+        for item, quantity in inventory.items()
+        if item in PRODUCTS
+    )
+    overflow = max(0, total_stock + incoming_stock - SHED_CAPACITY)
+    fertilizer_reserve = 10 if 19 <= day <= 25 else 0
+    excess_fertilizer = max(
+        0, int(shed.get("FERTILIZER", 0)) - fertilizer_reserve,
+    )
+    if owned_cows and excess_fertilizer:
+        product_stock["FERTILIZER"] = excess_fertilizer
     orders = []
 
     for item, quantity in sorted(product_stock.items(), key=lambda entry: entry[1], reverse=True):
@@ -497,7 +535,7 @@ def _sell_orders(private, day, market_state, owned_cows=0):
         base_price = BASE_PRICES[item]
         quoted_price = float(prices.get(item, base_price))
         target_price = base_price * SELL_PRICE_MULTIPLIERS.get(item, 1.0)
-        price_is_healthy = quoted_price >= target_price
+        price_is_healthy = item == "FERTILIZER" or quoted_price >= target_price
         if day >= FINAL_LIQUIDATION_DAY:
             sell_quantity = quantity
         elif price_is_healthy:
@@ -533,6 +571,7 @@ def _livestock_state(tiles, private, day):
         "owned_geese": owned_geese,
         "owned_animals": owned_cows + owned_sheep + owned_geese,
         "unfed": [(x, y) for x, y, tile in animals if not tile.get("fed_today", False)],
+        "deployments_assigned": 0,
     }
 
 
@@ -556,7 +595,8 @@ def _livestock_action(
     # Once a worker has an animal, finish that deployment before considering
     # another shed pickup or any routine farm service.
     if carried_animal:
-        if tile is None and (x, y) not in reserved:
+        cow_slots = set(_compact_cow_slots(tiles))
+        if tile is None and (x, y) in cow_slots:
             reserved.add((x, y))
             return ["BUILD_COOP" if carried_animal == "GOOSE" else "BUILD_PASTURE"]
         structure = "COOP" if carried_animal == "GOOSE" else "PASTURE"
@@ -568,7 +608,12 @@ def _livestock_action(
         ):
             reserved.add((x, y))
             return ["PLACE", carried_animal]
-        return _move_to_empty(x, y, tiles, reserved)
+        empty_slots = [
+            (slot_x, slot_y)
+            for slot_x, slot_y in cow_slots
+            if tiles[slot_y][slot_x] is None
+        ]
+        return _move_to(x, y, tiles, empty_slots, reserved)
 
     # Deployment is a short, separate responsibility: assign one worker per
     # shed animal so a growing serviced herd cannot permanently starve the
@@ -578,9 +623,25 @@ def _livestock_action(
         int(private.get("shed", {}).get(animal, 0))
         for animal in ("GOOSE", "SHEEP", "COW")
     )
-    if at_shed and not carried_animal and worker_index < animals_in_shed:
+    if (
+        at_shed
+        and not carried_animal
+        and (
+            not (isinstance(tile, dict) and tile.get("animal"))
+            or (
+                tile.get("fed_today", False)
+                and tile.get("cared_today", False)
+                and not tile.get("fertilizer_available", False)
+                and int(tile.get("yield_units", 0)) <= 0
+            )
+        )
+        and (x, y) not in reserved
+        and livestock["deployments_assigned"] < animals_in_shed
+    ):
         for animal in ("SHEEP", "COW", "GOOSE"):
             if private.get("shed", {}).get(animal, 0) > 0:
+                livestock["deployments_assigned"] += 1
+                reserved.add((x, y))
                 return ["PICKUP", animal, 1]
 
     if isinstance(tile, dict) and tile.get("animal") in {"GOOSE", "COW", "SHEEP"}:
@@ -593,11 +654,15 @@ def _livestock_action(
             if carrying_wheat:
                 reserved.add((x, y))
                 return ["FEED"]
+            if at_shed and private.get("shed", {}).get("WHEAT", 0) > 0:
+                reserved.add((x, y))
+                batch = max(1, (len(livestock["unfed"]) + service_workers - 1) // service_workers)
+                return ["PICKUP", "WHEAT", batch]
             return _move_to(x, y, tiles, _shed_targets(len(tiles)), reserved)
         if not tile.get("cared_today", False):
             reserved.add((x, y))
             return ["CARE"]
-        if tile.get("animal") == "COW" and _should_collect_fertilizer(private, tiles, day):
+        if tile.get("fertilizer_available", False):
             reserved.add((x, y))
             return ["COLLECT_FERTILIZER"]
         if tile.get("yield_units", 0) > 0:
@@ -634,7 +699,8 @@ def _livestock_action(
     if livestock["unfed"]:
         if at_shed and not carrying_wheat:
             if private.get("shed", {}).get("WHEAT", 0) > 0:
-                return ["PICKUP", "WHEAT", 1]
+                batch = max(1, (len(livestock["unfed"]) + service_workers - 1) // service_workers)
+                return ["PICKUP", "WHEAT", batch]
             return None
         if carrying_wheat:
             return _move_to(x, y, tiles, livestock["unfed"], reserved)
@@ -700,6 +766,29 @@ def _move_to_empty(x, y, tiles, reserved):
 def _shed_targets(board_size):
     half = board_size // 2
     return ((half - 1, half - 1), (half, half - 1), (half - 1, half), (half, half))
+
+
+def _compact_cow_slots(tiles):
+    """Return unlocked pasture cells ordered by service distance to the shed."""
+    board_size = len(tiles)
+    if board_size < 4:
+        return ()
+    half = board_size // 2
+    candidates = (
+        (half - 1, half - 1), (half, half - 1),
+        (half - 1, half), (half, half),
+        (half - 2, half - 1), (half + 1, half - 1),
+        (half - 1, half - 2), (half, half - 2),
+        (half - 2, half), (half - 1, half + 1),
+        (half + 1, half), (half, half + 1),
+        (half - 2, half - 2), (half + 1, half - 2),
+        (half - 2, half + 1),
+    )
+    return tuple(
+        (x, y)
+        for x, y in candidates
+        if _in_bounds(x, y, tiles) and tiles[y][x] != "LOCKED"
+    )[:COMPACT_COW_TARGET]
 
 
 def _is_shed_access(x, y, board_size):
