@@ -167,6 +167,27 @@ def get_adversarial_crop_choice(day, money, unlocked_quadrants_count, step=0, op
 
     return best_crop
 
+def get_town_inventory_squeeze_target(item, qty, current_price, base_price, mkt_inv, day, town_shops=None):
+    """
+    Town Demand Inventory Squeeze (Peak Price Holding):
+    If item is consumed by an active town shop, hold sales until market inventory drops <= 5,000,
+    capturing peak +30% to +50% price surges ($240-$280/unit).
+    """
+    if qty <= 0:
+        return 0
+    if day >= 25:
+        return qty
+
+    town_demands = get_active_town_demands(town_shops)
+    if item in town_demands:
+        if mkt_inv > 5000 and current_price < base_price * 1.25:
+            return 0 # Hold inventory for price surge!
+        return qty
+
+    if current_price >= base_price * 0.90:
+        return qty
+    return 0
+
 def should_undercut_market(item, qty, current_price, base_price, day, opponent_tiles=None):
     """
     Adversarial Market Undercutting:
@@ -189,6 +210,7 @@ def should_undercut_market(item, qty, current_price, base_price, day, opponent_t
                         return qty
 
     return 0
+
 
 
 

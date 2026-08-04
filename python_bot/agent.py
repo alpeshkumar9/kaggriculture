@@ -214,6 +214,8 @@ def agent(observation, configuration=None):
                         act = ["FEED"]
                     elif fed and not cared:
                         act = ["CARE"]
+                    elif fed and cared and current_tile.get('care_count_today', 0) < 2:
+                        act = ["CARE"]
                     elif yield_units > 0:
                         act = ["HARVEST"]
                     elif current_tile.get('fertilizer_available', False):
