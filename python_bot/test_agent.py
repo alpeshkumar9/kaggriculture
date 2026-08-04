@@ -65,6 +65,13 @@ class CropFirstAgentTests(unittest.TestCase):
         )
         self.assertEqual(orders, [["SELL", "STRAWBERRY", 8]])
 
+    def test_retains_three_feed_days_of_wheat_for_each_cow(self):
+        orders = _sell_orders(
+            {"shed": {"WHEAT": 12}}, day=12,
+            market_state={"prices": {"WHEAT": 40}}, owned_cows=4,
+        )
+        self.assertEqual(orders, [])
+
     def test_tomato_is_watered_and_harvested_as_an_ongoing_crop(self):
         tomato = {"kind": "PLANT", "crop": "TOMATO", "planted_day": 4, "watered_today": False}
         self.assertEqual(agent(observation(tomato, day=11))["farmer"], ["WATER"])

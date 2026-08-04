@@ -16,7 +16,7 @@ CROPS = {
     "TOMATO": {"cost": 50, "ongoing": True},
     "STRAWBERRY": {"cost": 100, "ongoing": True},
 }
-HANDS_PER_DAY = 6
+HANDS_PER_DAY = 7
 SEED_BUFFER = 10
 # The fourth quadrant costs $4k with too little remaining season to recover
 # its labour and weed-management cost.  The proven high-output replay uses
@@ -90,7 +90,7 @@ def _market_actions(farm, private, day, tiles, livestock, market_state):
     # has recovered to at least base, except when capacity or season-end makes
     # holding stock unsafe.  Small tranches let town consumption rebuild price
     # between calls instead of collapsing it with one shed-wide dump.
-    market.extend(_sell_orders(private, day, market_state)[:3])
+    market.extend(_sell_orders(private, day, market_state, livestock["owned_cows"])[:3])
 
     # Six helpers cost twenty coins per day (1 + 1 + 2 + 3 + 5 + 8), leaving
     # enough labour to water a full expanded field and clear spawned weeds.
@@ -281,8 +281,8 @@ def _in_bounds(x, y, tiles):
     return 0 <= y < len(tiles) and 0 <= x < len(tiles[y])
 
 
-def _sell_orders(private, day, market_state):
-    """Return market-aware sales while preserving shed space for harvests."""
+def _sell_orders(private, day, market_state, owned_cows=0):
+    """Return market-aware sales while preserving shed and livestock reserves."""
     shed = private.get("shed", {})
     prices = market_state.get("prices", {}) if isinstance(market_state, dict) else {}
     product_stock = {
@@ -295,6 +295,13 @@ def _sell_orders(private, day, market_state):
     orders = []
 
     for item, quantity in sorted(product_stock.items(), key=lambda entry: entry[1], reverse=True):
+        # Wheat is operating inventory, not sale inventory, while cows exist.
+        # Three feed-days cover a placement delay and a missed route without
+        # leaving an animal exposed to the two-day escape rule.
+        if item == "WHEAT" and day < FINAL_LIQUIDATION_DAY:
+            quantity = max(0, quantity - owned_cows * 3)
+            if quantity == 0:
+                continue
         base_price = BASE_PRICES[item]
         quoted_price = float(prices.get(item, base_price))
         price_is_healthy = quoted_price >= base_price
