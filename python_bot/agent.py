@@ -13,13 +13,18 @@ from collections import deque
 CROPS = {
     "WHEAT": {"cost": 10, "harvest_day": 4},
     "CARROT": {"cost": 20, "harvest_day": 3},
+    "STRAWBERRY": {"cost": 100, "ongoing": True},
 }
 HANDS_PER_DAY = 6
 SEED_BUFFER = 10
-LAND_PLAN = ((7, 1800), (14, 3300), (20, 7000))
+# The fourth quadrant costs $4k with too little remaining season to recover
+# its labour and weed-management cost.  The proven high-output replay uses
+# three quadrants, so expansion stops after NE and SW.
+LAND_PLAN = ((7, 1800), (14, 3300))
 MOVES = ((0, -1, "NORTH"), (0, 1, "SOUTH"), (1, 0, "EAST"), (-1, 0, "WEST"))
 PRODUCTS = {"WHEAT", "CARROT", "TOMATO", "STRAWBERRY", "MELON", "EGG", "MILK", "WOOL", "FERTILIZER"}
 EARLY_COW_TARGET = 4
+STRAWBERRY_TARGET = 8
 
 
 def agent(observation, configuration=None):
@@ -91,19 +96,28 @@ def _market_actions(farm, private, day, tiles, livestock):
             market.append(["BUY_LAND"])
             money -= (1000, 2000, 4000)[unlocked - 1]
 
-    seed_count = sum(int(quantity) for quantity in private.get("seeds", {}).values())
     open_tiles = sum(tile is None for row in tiles for tile in row)
-    if seed_count < min(open_tiles, SEED_BUFFER) and money >= CROPS["WHEAT"]["cost"]:
-        crop = _next_crop(private.get("seeds", {}), private.get("shed", {}), day)
-        quantity = min(12, max(1, min(open_tiles, SEED_BUFFER) - seed_count), int(money // CROPS[crop]["cost"]))
+    crop = _next_crop(private.get("seeds", {}), private.get("shed", {}), day, tiles)
+    target_seed_count = STRAWBERRY_TARGET if crop == "STRAWBERRY" else SEED_BUFFER
+    crop_seed_count = int(private.get("seeds", {}).get(crop, 0))
+    if crop_seed_count < min(open_tiles, target_seed_count) and money >= CROPS["WHEAT"]["cost"]:
+        quantity = min(12, max(1, min(open_tiles, target_seed_count) - crop_seed_count), int(money // CROPS[crop]["cost"]))
         if quantity:
             market.append(["BUY_SEED", crop, quantity])
 
     return market[:10]
 
 
-def _next_crop(seeds, shed, day):
+def _next_crop(seeds, shed, day, tiles):
     """Mix staple crops so one market glut cannot erase the whole harvest."""
+    strawberries = sum(
+        isinstance(tile, dict) and tile.get("kind") == "PLANT" and tile.get("crop") == "STRAWBERRY"
+        for row in tiles for tile in row
+    )
+    # A small late block captures high strawberry scarcity prices without
+    # flooding its extremely glut-sensitive market.
+    if 10 <= day <= 16 and strawberries < STRAWBERRY_TARGET:
+        return "STRAWBERRY"
     wheat = int(seeds.get("WHEAT", 0)) + int(shed.get("WHEAT", 0))
     carrots = int(seeds.get("CARROT", 0)) + int(shed.get("CARROT", 0))
     if day >= 26:
@@ -155,7 +169,10 @@ def _action_for_tile(tile, seed_budget, day):
         return None
 
     crop = tile.get("crop")
-    harvest_day = CROPS.get(crop, {}).get("harvest_day")
+    crop_data = CROPS.get(crop, {})
+    if crop_data.get("ongoing") and tile.get("yield_units", 0) > 0:
+        return ["HARVEST"]
+    harvest_day = crop_data.get("harvest_day")
     if harvest_day is not None and day - int(tile.get("planted_day", day)) >= harvest_day:
         return ["HARVEST"]
     if not tile.get("watered_today", False):
@@ -167,6 +184,8 @@ def _available_crop(seed_budget, day):
     available = [crop for crop in CROPS if seed_budget.get(crop, 0) > 0]
     if not available:
         return None
+    if 10 <= day <= 16 and seed_budget.get("STRAWBERRY", 0) > 0:
+        return "STRAWBERRY"
     if day >= 26 and seed_budget.get("CARROT", 0) > 0:
         return "CARROT"
     return min(available, key=lambda crop: -seed_budget[crop])
@@ -204,7 +223,10 @@ def _target_priority(tile, seed_budget, day):
     if tile.get("kind") != "PLANT":
         return None
     crop = tile.get("crop")
-    harvest_day = CROPS.get(crop, {}).get("harvest_day")
+    crop_data = CROPS.get(crop, {})
+    if crop_data.get("ongoing") and tile.get("yield_units", 0) > 0:
+        return 0
+    harvest_day = crop_data.get("harvest_day")
     if harvest_day is not None and day - int(tile.get("planted_day", day)) >= harvest_day:
         return 0
     return 1 if not tile.get("watered_today", False) else None
