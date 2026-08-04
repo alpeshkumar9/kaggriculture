@@ -1,61 +1,81 @@
-# Implementation Plan - Kaggriculture Simulator & Kaggle Bot Suite
+# Winning Strategy Roadmap & Implementation Plan for Kaggle Kaggriculture ($50,000 Prize Pool)
 
-Build a comprehensive, modern **Kaggriculture Simulation Suite**, combining an interactive **Web Simulator & Strategy Sandbox** and a **Python Kaggle Bot Starter Kit** ready for competition submission.
-
-> [!NOTE]
-> Project Location: `/Volumes/Important/Office/White Way Web/Github/kaggriculture`
+To build a **#1 Leaderboard Winning Agent** for Kaggriculture, we need a 3-phase execution roadmap that moves from fixing baseline compatibility to advanced economic optimization, price prediction, and head-to-head validation.
 
 ---
 
-## Technical Architecture & Core Features
+## 🏆 The 3-Phase Winning Strategy
 
 ```
-/Volumes/Important/Office/White Way Web/Github/kaggriculture/
-├── web/                               # React + Vite Interactive Web Simulator
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── Header.jsx             # Title, season day/hour counter, game controls
-│   │   │   ├── FarmGrid.jsx           # Interactive visual map of crops, animals, land quadrants
-│   │   │   ├── MarketChart.jsx        # Dynamic price graph & trading desk (Wheat, Milk, Eggs, etc.)
-│   │   │   ├── StrategyEditor.jsx     # Visual bot rule builder & strategy presets
-│   │   │   ├── MatchArena.jsx         # Head-to-head bot competition runner & leaderboard
-│   │   │   ├── AnalyticsPanel.jsx     # Turn logs, financial P&L breakdown, action history
-│   │   │   └── BotExporter.jsx        # One-click export of Python Kaggle submission code
-│   │   ├── engine/
-│   │   │   ├── kaggricultureEngine.js # 720-turn (30 days) game simulation logic
-│   │   │   ├── dynamicMarket.js       # Price-reactive supply/demand market model
-│   │   │   └── botStrategies.js       # Built-in bot algorithms (Greedy, Market Arbitrage, Land Scale)
-│   │   ├── App.jsx
-│   │   └── index.css                  # Custom styling, dark mode, glassmorphism design system
-│   ├── index.html
-│   └── package.json
-└── python_bot/                        # Kaggle Competition Submission Kit
-    ├── agent.py                       # `kaggle-environments` compatible main agent entrypoint
-    ├── strategy_rules.py              # Modular heuristic, market curve, & resource allocation rules
-    ├── run_local_game.py              # Offline simulator runner using kaggle-environments
-    └── README.md                      # Kaggle submission instructions
+Phase 1: Standard Compliance & Foundation Fix (Immediate)
+   ├── Fix Python Bot Observation & Action Schemas (Kaggle Environments)
+   ├── Implement 2D Grid Pathfinding & Spatial Inventory Manager (BFS/A*)
+   └── Align Web Simulator Engine & Exporter with 100% Official Specs
+        │
+Phase 2: Winning Economic Engine & Algorithmic Bot
+   ├── Dynamic ROI & Seasonal Crop Scheduler (720-Turn Horizon)
+   ├── Town Demand Front-Running & Dynamic Market Arbitrage (Avoid Gluts)
+   ├── Optimal Livestock CARE Bank & Fertilizer Bonus Cycles
+   └── Aggressive Land Expansion ($1k/$2k/$4k) & Farmhand Scaling
+        │
+Phase 3: Tournament Validation Harness & Opponent Modeling
+   ├── Local 1,000-Episode Self-Play & Match Arena Simulation
+   ├── Bradley-Terry Skill Rating Leaderboard Benchmark
+   └── Kaggle Submission Package Packaging (<100 MiB)
 ```
 
 ---
 
-## Core Features
+## 🎯 Detailed Phase-by-Phase Plan
 
-- **720-Turn Engine:** Full turn-by-turn simulation (24 hours x 30 days = 720 turns).
-- **Visual Farm Board:** Animated grid showing crops (Wheat, Corn, Soy), animal pens (Cows, Chickens, Sheep), farmhand tasks, and land expansion.
-- **Price-Reactive Market:** Real-time dynamic market curves reacting to player actions and macro-events.
-- **Bot Strategy Builder:** Visual builder for configuring rules (e.g. target crop ratios, price threshold sell triggers, land purchase thresholds).
-- **Python Kaggle Bot:** Clean, standalone `agent.py` ready for upload to Kaggle.
+### Phase 1: Core System Alignment (Immediate Priority)
+1. **Fix `python_bot/agent.py`:**
+   - Parse official observation dictionary (`obs["farms"]`, `obs["market"]`, `obs["private"]`, `obs["town"]`).
+   - Output valid Kaggle action dict format: `{"farmer": [...], "hands": [...], "market": [...]}`.
+   - Add a 2D spatial grid movement controller (`NORTH`, `SOUTH`, `EAST`, `WEST`, `PICKUP`, `DROP`, `PLACE`) allowing the farmer and hands to navigate between crops, shed, and pastures.
+
+2. **Fix `python_bot/strategy_rules.py`:**
+   - Set accurate costs and yields for Wheat, Carrot, Tomato, Strawberry, Melon, Goose, Cow, Sheep, Fertilizer, and Land ($1k, $2k, $4k).
+
+3. **Fix `web/src/engine/` & Exporter:**
+   - Implement official $\text{price}(\text{inv}) = \text{base} + \text{sign} \cdot \text{amp} \cdot f(|\text{inv} - I_0|)$ price formula with $I_0 = 10,000$.
+   - Update `BotExporter.jsx` so exported code runs cleanly on Kaggle.
 
 ---
 
-## Planned Project Structure
+### Phase 2: Winning Algorithmic Strategy Engine
 
-### 1. Web Application (`web/`)
-- `kaggricultureEngine.js`: 720-turn game logic state machine
-- `dynamicMarket.js`: Price supply-demand reactive pricing engine
-- `botStrategies.js`: Preset AI behaviors and configurable rules engine
-- Modern Dark Mode Glassmorphism UI components
+1. **720-Turn Seasonal Crop Scheduler:**
+   - **Early Season (Turns 1-240 / Days 1-10):** Focus on high-turnover Wheat & Carrots to generate fast cash flow for Land Quadrant #2 ($1,000) and Quadrant #3 ($2,000).
+   - **Mid Season (Turns 241-550 / Days 11-23):** Plant ongoing multi-yield crops (Tomatoes, Strawberries) and high-value Melons ($250 base). Expand to Quadrant #4 ($4,000) for 100 total tiles.
+   - **Late Season (Turns 551-720 / Days 24-30):** Shift back to 2-day fast Wheat/Carrots so all planted crops finish yielding before Turn 720.
 
-### 2. Python Kaggle Bot Kit (`python_bot/`)
-- `agent.py`: Submission agent for Kaggle Environments
-- `run_local_game.py`: Offline simulation script
+2. **Market Price Prediction & Town Shop Front-Running:**
+   - Track active Town Shops (Bakery, Pizza Shop, Ice Cream Shop, etc.) unlocking every 3 days.
+   - Store harvested inventory in shed until town consumption drains market inventory ($I_0 < 10,000$) driving prices up.
+   - Stagger sales in small batches to avoid triggering the steep glut penalty ($\text{inv} > 10,000$) on premium items (Strawberry, Melon, Wool, Milk).
+
+3. **Livestock CARE & Fertilizer Optimization:**
+   - Execute `CARE` daily on fed animals to bank +2 yield bonuses paid out on scheduled production days.
+   - Apply Fertilizer ($100) to ongoing crops on watered days to double yield outputs during high-demand windows.
+
+4. **Optimal Farmhand Hiring:**
+   - Evaluate daily Fibonacci hiring cost `fib(n)` against the marginal profit generated by extra hands watering/feeding tiles.
+
+---
+
+### Phase 3: Validation & Leaderboard Deployment
+
+1. **Local Self-Play Harness:**
+   - Run 1,000-turn simulation batches against baseline agents (`pass`, `random`, `greedy`, `arbitrageur`).
+   - Track win rate and final cash balance variance.
+
+2. **Kaggle Submission Package:**
+   - Bundle self-contained `agent.py` and submit to Kaggle via CLI or web UI.
+
+---
+
+## ❓ User Review & Approval Required
+
+> [!IMPORTANT]  
+> Should we begin **Phase 1** immediately by refactoring `python_bot/agent.py`, `strategy_rules.py`, and `test_agent.py` to match 100% of Kaggle's observation & action schemas?
