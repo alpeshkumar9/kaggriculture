@@ -16,7 +16,6 @@ def package_submission():
     base_dir = os.path.dirname(os.path.abspath(__file__))
     main_file = os.path.join(base_dir, 'main.py')
     agent_file = os.path.join(base_dir, 'agent.py')
-    rules_file = os.path.join(base_dir, 'strategy_rules.py')
     tar_file = os.path.join(base_dir, 'submission.tar.gz')
 
     # 1. Ensure main.py entry point exists
@@ -43,7 +42,6 @@ def my_agent(observation, configuration=None):
     files_to_pack = [
         ('main.py', main_file),
         ('agent.py', agent_file),
-        ('strategy_rules.py', rules_file)
     ]
 
     with tarfile.open(tar_file, 'w:gz') as tar:
@@ -82,7 +80,7 @@ def my_agent(observation, configuration=None):
 
     print("=" * 65)
     print("🚀 SUBMISSION PACKAGE IS 100% READY FOR KAGGLE UPLOAD!")
-    print(f"   Command: kaggle competitions submit kaggriculture -f python_bot/submission.tar.gz -m 'Phase 3 Winning Agent v1'")
+    print(f"   Command: kaggle competitions submit kaggriculture -f python_bot/submission.tar.gz -m 'Crop-first verified v1'")
     print("=" * 65)
 
 if __name__ == '__main__':

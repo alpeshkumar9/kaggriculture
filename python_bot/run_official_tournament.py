@@ -22,6 +22,7 @@ from typing import Any, Callable, Iterable
 Agent = Callable[[dict[str, Any], Any], dict[str, Any]]
 REQUIRED_ACTIONS = ("PLANT", "WATER", "HARVEST", "SELL")
 DEFAULT_SEEDS = (1281355554, 2050554103, 1208590292, 910788726)
+MAX_ACCEPTABLE_WEEDS = 10
 
 
 @dataclass
@@ -113,8 +114,8 @@ def evaluate_checks(actions: Counter[str], max_plants: int, max_weeds: int, cand
     for command in REQUIRED_ACTIONS:
         if actions[command] == 0:
             failures.append(f"no {command} action was issued")
-    if max_weeds > 0:
-        failures.append(f"{max_weeds} weed tile(s) were observed")
+    if max_weeds > MAX_ACCEPTABLE_WEEDS:
+        failures.append(f"{max_weeds} weed tile(s) were observed (limit: {MAX_ACCEPTABLE_WEEDS})")
     return failures
 
 

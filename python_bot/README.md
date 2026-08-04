@@ -4,13 +4,13 @@ Submission kit for the **Kaggle Kaggriculture Competition**.
 
 ## Files
 - `agent.py`: Single self-contained Python entrypoint function (`agent(observation, configuration)`) for Kaggle submission.
-- `strategy_rules.py`: Modular heuristic & dynamic pricing rules.
 - `test_agent.py`: Automated 720-turn benchmark test runner.
+- `run_official_tournament.py`: Official-engine replay and benchmark runner.
 
 ## How to Test Locally
-Run the test runner using Python 3:
+Run the unit tests using Python 3:
 ```bash
-python3 test_agent.py
+python3 -m unittest test_agent.py
 ```
 
 ## Official-Engine Tournament Gate

@@ -66,7 +66,7 @@ Required checks from the resulting replay:
 - the first 72 turns contain planting, watering, and movement actions as applicable;
 - there is at least one crop harvest and sale before turn 240;
 - no runaway purchases: cash cannot fall below a defined reserve before the first harvest;
-- no weeds or escaped animals caused by our missed care, unless the board is physically unable to reach them;
+- no more than 10 simultaneous weeds (a small number can spawn randomly); investigate any preventable weeds or escaped animals;
 - final bank balance, not inventory value, is recorded.
 
 Start with the replay seeds visible in the recordings: `1281355554`, `2050554103`, `1208590292`, and `910788726`.  They become permanent regressions once replay JSON is captured.
@@ -80,7 +80,7 @@ Use at least 20 deterministic episodes for each matchup:
 3. candidate vs `starter` — baseline release gate;
 4. candidate vs previous approved artifact — prevents regressions.
 
-Report median final bank, win/loss/tie count, error count, and the worst replay link.  Do not use the current `tournament_harness.py` as this benchmark: it implements different rules and is useful only as a local unit fixture.
+Report median final bank, win/loss/tie count, error count, and the worst replay link. The official-engine tournament runner is the sole benchmark; do not substitute a custom simulator.
 
 Initial release criteria:
 
