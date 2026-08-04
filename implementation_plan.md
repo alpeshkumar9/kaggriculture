@@ -1,24 +1,24 @@
 # Winning Strategy Roadmap & Implementation Plan for Kaggle Kaggriculture ($50,000 Prize Pool)
 
-To build a **#1 Leaderboard Winning Agent** for Kaggriculture, we need a 3-phase execution roadmap that moves from fixing baseline compatibility to advanced economic optimization, price prediction, and head-to-head validation.
+To build a **#1 Leaderboard Winning Agent** for Kaggriculture, we are following a 3-phase execution roadmap moving from foundation compatibility to advanced economic optimization, price prediction, and head-to-head validation.
 
 ---
 
-## 🏆 The 3-Phase Winning Strategy
+## 🏆 Progress Status
 
 ```
-Phase 1: Standard Compliance & Foundation Fix (Immediate)
-   ├── Fix Python Bot Observation & Action Schemas (Kaggle Environments)
-   ├── Implement 2D Grid Pathfinding & Spatial Inventory Manager (BFS/A*)
-   └── Align Web Simulator Engine & Exporter with 100% Official Specs
+Phase 1: Standard Compliance & Foundation Fix [COMPLETED ✅]
+   ├── Fix Python Bot Observation & Action Schemas (Kaggle Environments) [DONE]
+   ├── Implement 2D Grid Pathfinding & Spatial Inventory Manager (BFS/A*) [DONE]
+   └── Align Web Simulator Engine & Exporter with 100% Official Specs [DONE]
         │
-Phase 2: Winning Economic Engine & Algorithmic Bot
+Phase 2: Winning Economic Engine & Advanced Bot [NEXT UP 🚀]
    ├── Dynamic ROI & Seasonal Crop Scheduler (720-Turn Horizon)
    ├── Town Demand Front-Running & Dynamic Market Arbitrage (Avoid Gluts)
    ├── Optimal Livestock CARE Bank & Fertilizer Bonus Cycles
    └── Aggressive Land Expansion ($1k/$2k/$4k) & Farmhand Scaling
         │
-Phase 3: Tournament Validation Harness & Opponent Modeling
+Phase 3: Tournament Validation Harness & Opponent Modeling [PLANNED ⏳]
    ├── Local 1,000-Episode Self-Play & Match Arena Simulation
    ├── Bradley-Terry Skill Rating Leaderboard Benchmark
    └── Kaggle Submission Package Packaging (<100 MiB)
@@ -26,56 +26,28 @@ Phase 3: Tournament Validation Harness & Opponent Modeling
 
 ---
 
-## 🎯 Detailed Phase-by-Phase Plan
+## 🎯 Phase 2 Execution Plan
 
-### Phase 1: Core System Alignment (Immediate Priority)
-1. **Fix `python_bot/agent.py`:**
-   - Parse official observation dictionary (`obs["farms"]`, `obs["market"]`, `obs["private"]`, `obs["town"]`).
-   - Output valid Kaggle action dict format: `{"farmer": [...], "hands": [...], "market": [...]}`.
-   - Add a 2D spatial grid movement controller (`NORTH`, `SOUTH`, `EAST`, `WEST`, `PICKUP`, `DROP`, `PLACE`) allowing the farmer and hands to navigate between crops, shed, and pastures.
+### 1. Dynamic ROI & 720-Turn Seasonal Crop Scheduler (`python_bot/strategy_rules.py`)
+- **Early Season (Turns 1–240 / Days 1–10):** Plant 2-day fast turnover Wheat & Carrots to generate rapid capital for Land Quadrant #2 ($1,000) and Quadrant #3 ($2,000).
+- **Mid Season (Turns 241–550 / Days 11–23):** Transition to ongoing high-yield crops (Tomatoes, Strawberries) and premium Melons ($250 base price). Unlock Land Quadrant #4 ($4,000) to max out at 100 tiles.
+- **Late Season (Turns 551–720 / Days 24–30):** Stop planting long-gestation crops. Pivot back to fast 2-day Wheat & Carrots to ensure 100% of planted produce is harvested and sold before Turn 720.
 
-2. **Fix `python_bot/strategy_rules.py`:**
-   - Set accurate costs and yields for Wheat, Carrot, Tomato, Strawberry, Melon, Goose, Cow, Sheep, Fertilizer, and Land ($1k, $2k, $4k).
+### 2. Town Demand Front-Running & Market Arbitrage (`python_bot/agent.py`)
+- Track town shop unlocks (every 3 days) and town center consumption schedule.
+- Hold harvested items in shed during low price periods; liquidate when town demand drains market inventory ($I_0 < 10,000$), driving prices above base.
+- Implement tiered sell limits to avoid dumping large quantities at once, preventing steep price crashes to the $1 price floor on premium items.
 
-3. **Fix `web/src/engine/` & Exporter:**
-   - Implement official $\text{price}(\text{inv}) = \text{base} + \text{sign} \cdot \text{amp} \cdot f(|\text{inv} - I_0|)$ price formula with $I_0 = 10,000$.
-   - Update `BotExporter.jsx` so exported code runs cleanly on Kaggle.
+### 3. Livestock Care & Fertilizer Yield Doubling (`python_bot/strategy_rules.py`)
+- Automated daily `CARE` execution on fed livestock (Goose, Cow, Sheep) to bank +2 yield bonuses paid out on scheduled production days.
+- Strategic `FERTILIZE` application on ongoing crops (Tomato, Strawberry) on watered days to double yield.
 
----
-
-### Phase 2: Winning Algorithmic Strategy Engine
-
-1. **720-Turn Seasonal Crop Scheduler:**
-   - **Early Season (Turns 1-240 / Days 1-10):** Focus on high-turnover Wheat & Carrots to generate fast cash flow for Land Quadrant #2 ($1,000) and Quadrant #3 ($2,000).
-   - **Mid Season (Turns 241-550 / Days 11-23):** Plant ongoing multi-yield crops (Tomatoes, Strawberries) and high-value Melons ($250 base). Expand to Quadrant #4 ($4,000) for 100 total tiles.
-   - **Late Season (Turns 551-720 / Days 24-30):** Shift back to 2-day fast Wheat/Carrots so all planted crops finish yielding before Turn 720.
-
-2. **Market Price Prediction & Town Shop Front-Running:**
-   - Track active Town Shops (Bakery, Pizza Shop, Ice Cream Shop, etc.) unlocking every 3 days.
-   - Store harvested inventory in shed until town consumption drains market inventory ($I_0 < 10,000$) driving prices up.
-   - Stagger sales in small batches to avoid triggering the steep glut penalty ($\text{inv} > 10,000$) on premium items (Strawberry, Melon, Wool, Milk).
-
-3. **Livestock CARE & Fertilizer Optimization:**
-   - Execute `CARE` daily on fed animals to bank +2 yield bonuses paid out on scheduled production days.
-   - Apply Fertilizer ($100) to ongoing crops on watered days to double yield outputs during high-demand windows.
-
-4. **Optimal Farmhand Hiring:**
-   - Evaluate daily Fibonacci hiring cost `fib(n)` against the marginal profit generated by extra hands watering/feeding tiles.
-
----
-
-### Phase 3: Validation & Leaderboard Deployment
-
-1. **Local Self-Play Harness:**
-   - Run 1,000-turn simulation batches against baseline agents (`pass`, `random`, `greedy`, `arbitrageur`).
-   - Track win rate and final cash balance variance.
-
-2. **Kaggle Submission Package:**
-   - Bundle self-contained `agent.py` and submit to Kaggle via CLI or web UI.
+### 4. Fibonacci Farmhand ROI Calculator (`python_bot/agent.py`)
+- Dynamically calculate whether hiring an additional farmhand (`farmHandCostMult * fib(n)`) yields net positive ROI based on unwatered/unfed tile count.
 
 ---
 
 ## ❓ User Review & Approval Required
 
 > [!IMPORTANT]  
-> Should we begin **Phase 1** immediately by refactoring `python_bot/agent.py`, `strategy_rules.py`, and `test_agent.py` to match 100% of Kaggle's observation & action schemas?
+> Phase 1 is complete and verified! Should we proceed immediately to execute **Phase 2** (Winning Economic Engine, Seasonal Crop Scheduler, Town Shop Arbitrage, and Livestock CARE Optimization)?

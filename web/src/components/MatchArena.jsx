@@ -10,13 +10,18 @@ export default function MatchArena() {
   const runTournament = () => {
     setIsSimulatingMatch(true);
     setTimeout(() => {
-      const results = Object.values(PRESET_STRATEGIES).map((strat) => {
+      const presets = Object.values(PRESET_STRATEGIES);
+      const ratings = {};
+      presets.forEach(p => { ratings[p.id] = 1200.0; });
+
+      const resultsMap = {};
+      presets.forEach(strat => {
         const engine = new KaggricultureEngine(strat);
         for (let turn = 0; turn < 720; turn++) {
           engine.executeTurn();
         }
         const state = engine.getState();
-        return {
+        resultsMap[strat.id] = {
           id: strat.id,
           name: strat.name,
           icon: strat.icon,
@@ -28,8 +33,34 @@ export default function MatchArena() {
         };
       });
 
-      // Sort by final Net Worth descending
-      results.sort((a, b) => b.finalNetWorth - a.finalNetWorth);
+      // Calculate pairwise Bradley-Terry Elo ratings
+      for (let i = 0; i < presets.length; i++) {
+        for (let j = i + 1; j < presets.length; j++) {
+          const idA = presets[i].id;
+          const idB = presets[j].id;
+          const scoreA = resultsMap[idA].finalNetWorth;
+          const scoreB = resultsMap[idB].finalNetWorth;
+
+          const rA = ratings[idA];
+          const rB = ratings[idB];
+          const eA = 1.0 / (1.0 + Math.pow(10.0, (rB - rA) / 400.0));
+          const eB = 1.0 / (1.0 + Math.pow(10.0, (rA - rB) / 400.0));
+
+          const sA = scoreA > scoreB ? 1.0 : scoreA < scoreB ? 0.0 : 0.5;
+          const sB = scoreB > scoreA ? 1.0 : scoreB < scoreA ? 0.0 : 0.5;
+
+          ratings[idA] += 32.0 * (sA - eA);
+          ratings[idB] += 32.0 * (sB - eB);
+        }
+      }
+
+      const results = presets.map(p => ({
+        ...resultsMap[p.id],
+        eloRating: Math.round(ratings[p.id])
+      }));
+
+      // Sort by Elo Rating descending
+      results.sort((a, b) => b.eloRating - a.eloRating);
       setMatchResults(results);
       setIsSimulatingMatch(false);
     }, 500);
@@ -92,6 +123,16 @@ export default function MatchArena() {
                   </div>
 
                   <div className="flex items-center gap-6 text-right w-full md:w-auto justify-between md:justify-end">
+                    <div>
+                      <div className="text-[10px] text-slate-400">Bradley-Terry Rating</div>
+                      <div className="text-xs font-bold text-amber-300 flex items-center gap-1">
+                        <Award className="w-3.5 h-3.5 text-amber-400" />
+                        {res.eloRating} Elo
+                      </div>
+                    </div>
+
+                    <div className="h-8 w-px bg-slate-800" />
+
                     <div>
                       <div className="text-[10px] text-slate-400">Net Profit</div>
                       <div className={`text-xs font-bold ${res.totalProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>

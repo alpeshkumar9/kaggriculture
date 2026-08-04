@@ -76,13 +76,7 @@ COMMODITIES = {
 }
 
 LAND_QUADRANT_COSTS = [1000, 2000, 4000]
-
-QUADRANT_BOUNDS = {
-    "NW": {"min_x": 0, "max_x": 4, "min_y": 0, "max_y": 4},
-    "NE": {"min_x": 5, "max_x": 9, "min_y": 0, "max_y": 4},
-    "SW": {"min_x": 0, "max_x": 4, "min_y": 5, "max_y": 9},
-    "SE": {"min_x": 5, "max_x": 9, "min_y": 5, "max_y": 9}
-}
+LAND_EXPANSION_THRESHOLDS = [2500, 5000, 9000]
 
 def get_base_price(item):
     if item in COMMODITIES:
@@ -93,3 +87,35 @@ def get_next_land_cost(unlocked_quadrants_count):
     if unlocked_quadrants_count < 4:
         return LAND_QUADRANT_COSTS[unlocked_quadrants_count - 1]
     return None
+
+def get_seasonal_crop_choice(day, money, unlocked_quadrants_count, step=0):
+    """
+    High Velocity ROI Crop Scheduler:
+    Prioritizes fast-turnover Wheat & Carrots ($140 profit / 2 days) to build maximum cash.
+    """
+    if day < 20:
+        return 'WHEAT' if step % 2 == 0 else 'CARROT'
+    elif day <= 27:
+        return 'WHEAT'
+    else:
+        return 'WHEAT' if day < 29 else None
+
+def get_fibonacci_hire_cost(hires_today, mult=1):
+    fib = [1, 1, 2, 3, 5, 8, 13, 21, 34, 55]
+    idx = min(hires_today, len(fib) - 1)
+    return mult * fib[idx]
+
+def should_hire_farmhand(workload_count, money, hires_today, mult=1):
+    cost = get_fibonacci_hire_cost(hires_today, mult)
+    if workload_count >= 12 and money >= cost + 200:
+        return True
+    return False
+
+def calculate_market_sell_quantity(item, qty, current_price, base_price, day):
+    if qty <= 0:
+        return 0
+    if day >= 25 or current_price >= base_price * 0.90:
+        return qty
+    return 0
+
+

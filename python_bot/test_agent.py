@@ -77,29 +77,61 @@ def run_official_kaggle_test():
 
         valid_actions_count += 1
 
-        # Simulate farmer movement / actions in test loop
-        farmer_act = action_dict['farmer']
-        fx, fy = obs['farms'][0]['farmer']
-        
-        if farmer_act and farmer_act[0] == 'NORTH' and fy > 0:
-            obs['farms'][0]['farmer'][1] -= 1
-        elif farmer_act and farmer_act[0] == 'SOUTH' and fy < 9:
-            obs['farms'][0]['farmer'][1] += 1
-        elif farmer_act and farmer_act[0] == 'EAST' and fx < 9:
-            obs['farms'][0]['farmer'][0] += 1
-        elif farmer_act and farmer_act[0] == 'WEST' and fx > 0:
-            obs['farms'][0]['farmer'][0] -= 1
-        elif farmer_act and farmer_act[0] == 'PLANT' and len(farmer_act) > 1:
-            crop = farmer_act[1]
-            if obs['private']['seeds'].get(crop, 0) > 0:
-                obs['private']['seeds'][crop] -= 1
-                obs['farms'][0]['tiles'][fy][fx] = {
-                    'kind': 'PLANT',
-                    'crop': crop,
-                    'planted_day': obs['day'],
-                    'watered_today': True,
-                    'yield_units': 0
-                }
+        # Process worker actions (farmer & hands)
+        farmer_act = action_dict.get('farmer', ['PASS'])
+        workers_actions = [farmer_act] + action_dict.get('hands', [])
+        workers_pos = [obs['farms'][0]['farmer']] + obs['farms'][0]['hands']
+
+        for idx, act in enumerate(workers_actions):
+            if not act or not isinstance(act, list):
+                continue
+            wx, wy = workers_pos[idx] if idx < len(workers_pos) else (0, 0)
+            cmd = act[0]
+
+            if cmd == 'NORTH' and wy > 0:
+                workers_pos[idx][1] -= 1
+            elif cmd == 'SOUTH' and wy < 9:
+                workers_pos[idx][1] += 1
+            elif cmd == 'EAST' and wx < 9:
+                workers_pos[idx][0] += 1
+            elif cmd == 'WEST' and wx > 0:
+                workers_pos[idx][0] -= 1
+            elif cmd == 'PLANT' and len(act) > 1:
+                crop = act[1]
+                if obs['private']['seeds'].get(crop, 0) > 0:
+                    obs['private']['seeds'][crop] -= 1
+                    obs['farms'][0]['tiles'][wy][wx] = {
+                        'kind': 'PLANT',
+                        'crop': crop,
+                        'planted_day': obs['day'],
+                        'watered_today': True,
+                        'yield_units': 0
+                    }
+            elif cmd == 'WATER':
+                t = obs['farms'][0]['tiles'][wy][wx]
+                if isinstance(t, dict):
+                    t['watered_today'] = True
+            elif cmd == 'HARVEST':
+                t = obs['farms'][0]['tiles'][wy][wx]
+                if isinstance(t, dict) and t.get('kind') == 'PLANT':
+                    crop = t.get('crop', 'WHEAT')
+                    yield_qty = t.get('yield_units', 4)
+                    if yield_qty <= 0: yield_qty = 4
+                    obs['private']['shed'][crop] = obs['private']['shed'].get(crop, 0) + yield_qty
+                    obs['farms'][0]['tiles'][wy][wx] = None # One-time harvest clears tile
+
+        # Simulate Crop Growth & Yield updates each day
+        if obs['hour'] == 0:
+            obs['farms'][0]['hires_today'] = 0
+            obs['farms'][0]['hands'] = [] # Reset hired hands each day
+            for r in range(10):
+                for c in range(10):
+                    t = obs['farms'][0]['tiles'][r][c]
+                    if isinstance(t, dict) and t.get('kind') == 'PLANT':
+                        t['watered_today'] = False
+                        age = obs['day'] - t.get('planted_day', 0)
+                        if age >= 2: # Crops mature after 2+ days
+                            t['yield_units'] = 4
 
         # Process market orders in test loop
         for order in action_dict['market']:
@@ -109,20 +141,34 @@ def run_official_kaggle_test():
             if cmd == 'BUY_LAND':
                 quads = obs['farms'][0]['unlocked_quadrants']
                 if len(quads) < 4:
-                    quads.append('NE' if len(quads) == 1 else 'SW' if len(quads) == 2 else 'SE')
-                    # Unlock corresponding 5x5 quadrant
-                    for y in range(10):
-                        for x in range(10):
-                            if x >= 5 and y < 5 and 'NE' in quads:
-                                obs['farms'][0]['tiles'][y][x] = None
-                            elif x < 5 and y >= 5 and 'SW' in quads:
-                                obs['farms'][0]['tiles'][y][x] = None
-                            elif x >= 5 and y >= 5 and 'SE' in quads:
-                                obs['farms'][0]['tiles'][y][x] = None
+                    next_cost = [1000, 2000, 4000][len(quads) - 1]
+                    if obs['farms'][0]['money'] >= next_cost:
+                        obs['farms'][0]['money'] -= next_cost
+                        quads.append('NE' if len(quads) == 1 else 'SW' if len(quads) == 2 else 'SE')
+                        for y in range(10):
+                            for x in range(10):
+                                if x >= 5 and y < 5 and 'NE' in quads:
+                                    obs['farms'][0]['tiles'][y][x] = None
+                                elif x < 5 and y >= 5 and 'SW' in quads:
+                                    obs['farms'][0]['tiles'][y][x] = None
+                                elif x >= 5 and y >= 5 and 'SE' in quads:
+                                    obs['farms'][0]['tiles'][y][x] = None
+            elif cmd == 'HIRE':
+                hires = obs['farms'][0]['hires_today']
+                fib = [1, 1, 2, 3, 5, 8, 13, 21, 34, 55]
+                cost = fib[min(hires, len(fib) - 1)]
+                if obs['farms'][0]['money'] >= cost:
+                    obs['farms'][0]['money'] -= cost
+                    obs['farms'][0]['hires_today'] += 1
+                    obs['farms'][0]['hands'].append([0, 0]) # Spawn hand at shed
             elif cmd == 'BUY_SEED' and len(order) >= 3:
                 crop = order[1]
                 qty = order[2]
-                obs['private']['seeds'][crop] = obs['private']['seeds'].get(crop, 0) + qty
+                costs = {'WHEAT': 10, 'CARROT': 20, 'TOMATO': 50, 'STRAWBERRY': 100, 'MELON': 80}
+                total_cost = costs.get(crop, 10) * qty
+                if obs['farms'][0]['money'] >= total_cost:
+                    obs['farms'][0]['money'] -= total_cost
+                    obs['private']['seeds'][crop] = obs['private']['seeds'].get(crop, 0) + qty
             elif cmd == 'SELL' and len(order) >= 3:
                 item = order[1]
                 qty = order[2]
@@ -141,9 +187,11 @@ def run_official_kaggle_test():
     print(f"  • Final Cash Balance:        ${obs['farms'][0]['money']:.2f}")
     print(f"  • Unlocked Quadrants:        {obs['farms'][0]['unlocked_quadrants']}")
     print(f"  • Final Private Seeds:       {obs['private']['seeds']}")
+    print(f"  • Final Shed Inventory:      {obs['private']['shed']}")
     print("=" * 65)
     print("🎉 ALL KAGGLE ENVIRONMENTS SCHEMA ASSERTIONS PASSED!")
     print("=" * 65)
 
 if __name__ == '__main__':
     run_official_kaggle_test()
+
