@@ -1,84 +1,169 @@
 """
-Kaggriculture Submission Bot for Kaggle Environments (Official Rules Compliant)
-Author: Antigravity AI Agent
-Competition: Kaggriculture (Kaggle)
+Official Kaggle Kaggriculture Competition Submission Bot
+Compatible with kaggle_environments kaggriculture simulation engine.
 """
 
-import math
-import random
-try:
-    from strategy_rules import evaluate_best_action, get_base_price
-except ImportError:
-    COMMODITY_BASE_PRICES = {'WHEAT': 25, 'CARROT': 35, 'TOMATO': 45, 'STRAWBERRY': 60}
-    SEED_COSTS = {'WHEAT': 10, 'CARROT': 20, 'TOMATO': 30, 'STRAWBERRY': 40}
+import collections
 
-    def get_base_price(item):
-        return COMMODITY_BASE_PRICES.get(item, 25)
-
-    def evaluate_best_action(step, cash, inventory, market_prices, plots, land_quadrants=1):
-        if cash >= 550 and land_quadrants < 4:
-            return {"action": "BUY_LAND", "cost": 500}
-
-        for item, qty in inventory.items():
-            if qty > 0 and item in market_prices:
-                if market_prices[item] >= get_base_price(item) * 1.15 or step >= 710:
-                    return {"action": "SELL_MARKET", "item": item, "quantity": qty, "price": market_prices[item]}
-
-        for plot in plots:
-            p_id = plot.get('id')
-            state = plot.get('state', 'EMPTY')
-            if state == 'WEED':
-                return {"action": "CLEAR_WEED", "plot_id": p_id}
-            elif state == 'READY_TO_HARVEST':
-                return {"action": "HARVEST", "plot_id": p_id}
-            elif state == 'PLANTED' and plot.get('moisture', 100) < 35 and cash >= 2:
-                return {"action": "WATER", "plot_id": p_id}
-            elif state == 'EMPTY' and cash >= 15:
-                crops = ['WHEAT', 'CARROT', 'TOMATO']
-                choice = crops[step % len(crops)]
-                if cash >= SEED_COSTS.get(choice, 10):
-                    return {"action": "PLANT", "plot_id": p_id, "crop": choice}
-
-        return {"action": "PASS"}
-
-bot_memory = {
-    'turn': 0,
-    'land_quadrants': 1
+COMMODITIES = {
+    'WHEAT': {'seed_cost': 10, 'base_price': 25, 'first_yield_days': 2},
+    'CARROT': {'seed_cost': 20, 'base_price': 35, 'first_yield_days': 2},
+    'TOMATO': {'seed_cost': 50, 'base_price': 60, 'first_yield_days': 7},
+    'STRAWBERRY': {'seed_cost': 100, 'base_price': 120, 'first_yield_days': 10},
+    'MELON': {'seed_cost': 80, 'base_price': 250, 'first_yield_days': 10},
 }
 
+LAND_COSTS = [1000, 2000, 4000]
+
 def agent(observation, configuration=None):
-    global bot_memory
+    """
+    Kaggle Environments Entry Point
+    - observation: dict containing full game state
+    - returns: {"farmer": [...], "hands": [[...]], "market": [[...]]}
+    """
+    obs = observation if isinstance(observation, dict) else getattr(observation, '__dict__', {})
+    
+    player_id = obs.get('player', 0)
+    farms = obs.get('farms', [{}, {}])
+    me = farms[player_id] if player_id < len(farms) else {}
+    
+    money = me.get('money', 1000.0)
+    tiles = me.get('tiles', [])
+    farmer_pos = me.get('farmer', [0, 0])
+    hands_pos = me.get('hands', [])
+    unlocked_quads = me.get('unlocked_quadrants', ['NW'])
+    
+    market_obs = obs.get('market', {})
+    prices = market_obs.get('prices', {})
+    
+    private_obs = obs.get('private', {})
+    shed = private_obs.get('shed', {})
+    seeds = private_obs.get('seeds', {})
+    
+    day = obs.get('day', 0)
+    hour = obs.get('hour', 0)
+    step = day * 24 + hour
+    
+    market_orders = []
+    
+    # 1. Market Orders: Land Expansion
+    quad_count = len(unlocked_quads)
+    if quad_count < 4:
+        next_cost = LAND_COSTS[quad_count - 1]
+        if money >= next_cost + 200:
+            market_orders.append(["BUY_LAND"])
+            money -= next_cost
 
-    obs_dict = observation if isinstance(observation, dict) else getattr(observation, '__dict__', {})
+    # 2. Market Orders: Sell Shed Produce
+    for item, qty in shed.items():
+        if qty > 0 and item in prices:
+            base_price = COMMODITIES.get(item, {}).get('base_price', 25)
+            # Sell if price is good (>= base) or near season end (day >= 28)
+            if prices[item] >= base_price * 0.95 or day >= 28:
+                market_orders.append(["SELL", item, qty])
 
-    step = obs_dict.get('step', bot_memory['turn'])
-    cash = obs_dict.get('cash', 1000)
-    market_prices = obs_dict.get('market_prices', {
-        'WHEAT': 25, 'CARROT': 35, 'TOMATO': 45, 'STRAWBERRY': 60
-    })
-    inventory = obs_dict.get('inventory', {})
-    plots = obs_dict.get('plots', [
-        {'id': 'plot_1', 'state': 'EMPTY', 'moisture': 100},
-        {'id': 'plot_2', 'state': 'EMPTY', 'moisture': 100},
-        {'id': 'plot_3', 'state': 'EMPTY', 'moisture': 100},
-        {'id': 'plot_4', 'state': 'EMPTY', 'moisture': 100}
-    ])
+    # 3. Market Orders: Buy Seeds
+    total_seeds = sum(seeds.values())
+    if total_seeds < 5 and money >= 20:
+        # Choose crop based on season phase
+        if day < 10:
+            crop = 'WHEAT' if step % 2 == 0 else 'CARROT'
+        elif day < 24:
+            crop = 'TOMATO' if money > 150 else 'CARROT'
+        else:
+            crop = 'WHEAT' # Fast late-season crop
+            
+        cost = COMMODITIES.get(crop, {}).get('seed_cost', 10)
+        if money >= cost:
+            market_orders.append(["BUY_SEED", crop, 2])
+            money -= cost * 2
 
-    bot_memory['turn'] = step
+    # 4. Farmer Action Selection
+    fx, fy = farmer_pos[0], farmer_pos[1]
+    current_tile = None
+    if 0 <= fy < len(tiles) and 0 <= fx < len(tiles[fy]):
+        current_tile = tiles[fy][fx]
 
-    action_dict = evaluate_best_action(
-        step=step,
-        cash=cash,
-        inventory=inventory,
-        market_prices=market_prices,
-        plots=plots,
-        land_quadrants=bot_memory['land_quadrants']
-    )
+    farmer_action = ["PASS"]
 
-    if action_dict.get('action') == 'BUY_LAND':
-        bot_memory['land_quadrants'] += 1
+    # Action priority on current tile
+    if current_tile is not None and isinstance(current_tile, dict):
+        kind = current_tile.get('kind')
+        if kind == 'WEED':
+            farmer_action = ["DIG"]
+        elif kind == 'PLANT':
+            yield_units = current_tile.get('yield_units', 0)
+            watered = current_tile.get('watered_today', False)
+            if yield_units > 0:
+                farmer_action = ["HARVEST"]
+            elif not watered:
+                farmer_action = ["WATER"]
+    elif current_tile is None: # Empty unlocked tile
+        # Try to plant seed
+        available_crops = [c for c, q in seeds.items() if q > 0]
+        if available_crops:
+            crop_to_plant = available_crops[0]
+            farmer_action = ["PLANT", crop_to_plant]
 
-    return action_dict
+    # If no action on current tile, move towards work
+    if farmer_action == ["PASS"]:
+        move_dir = get_best_move(fx, fy, tiles, seeds)
+        if move_dir:
+            farmer_action = [move_dir]
+
+    # 5. Hired Hands Actions
+    hands_actions = [["PASS"] for _ in hands_pos]
+
+    return {
+        "farmer": farmer_action,
+        "hands": hands_actions,
+        "market": market_orders
+    }
+
+def get_best_move(fx, fy, tiles, seeds):
+    """
+    Finds shortest path direction (NORTH, SOUTH, EAST, WEST) to nearest actionable tile.
+    """
+    if not tiles:
+        return None
+
+    rows = len(tiles)
+    cols = len(tiles[0]) if rows > 0 else 0
+
+    queue = collections.deque([(fx, fy, [])])
+    visited = {(fx, fy)}
+
+    directions = [
+        (0, -1, "NORTH"),
+        (0, 1, "SOUTH"),
+        (1, 0, "EAST"),
+        (-1, 0, "WEST")
+    ]
+
+    while queue:
+        cx, cy, path = queue.popleft()
+        if len(path) > 10: # Path limit
+            break
+
+        # Check if tile needs action
+        if 0 <= cy < rows and 0 <= cx < cols:
+            t = tiles[cy][cx]
+            if t != "LOCKED":
+                if (cx, cy) != (fx, fy):
+                    if t is None and sum(seeds.values()) > 0: # Empty tile to plant
+                        return path[0]
+                    elif isinstance(t, dict):
+                        if t.get('kind') == 'WEED' or t.get('yield_units', 0) > 0 or not t.get('watered_today', True):
+                            return path[0]
+
+        for dx, dy, move in directions:
+            nx, ny = cx + dx, cy + dy
+            if 0 <= ny < rows and 0 <= nx < cols and (nx, ny) not in visited:
+                if tiles[ny][nx] != "LOCKED":
+                    visited.add((nx, ny))
+                    queue.append((nx, ny, path + [move]))
+
+    return None
 
 def my_agent(observation, configuration=None):
     return agent(observation, configuration)

@@ -1,4 +1,5 @@
-// Official Kaggle Kaggriculture Commodity Specification & Dynamic Market Engine
+// Official Kaggle Kaggriculture Dynamic Market Engine
+// Formula: price(inv) = base + sign * amp * f(|inv - I0|)
 
 export const COMMODITIES = {
   WHEAT: {
@@ -6,12 +7,15 @@ export const COMMODITIES = {
     type: 'One-time',
     seedCost: 10,
     basePrice: 25,
-    minPrice: 10,
-    maxPrice: 60,
-    timeToFirstYieldHours: 48, // 2 days
-    timeToMaxYieldHours: 96,   // 4 days
+    I0: 10000,
+    T: 400,
+    belowFunc: 'sq',
+    belowTarget: 0.80,
+    aboveFunc: 'log',
+    aboveTarget: 0.20,
+    firstYieldDays: 2,
+    maxYieldDays: 4,
     maxYield: 6,
-    actionCost: 1,
     icon: '🌾'
   },
   CARROT: {
@@ -19,45 +23,127 @@ export const COMMODITIES = {
     type: 'One-time',
     seedCost: 20,
     basePrice: 35,
-    minPrice: 15,
-    maxPrice: 85,
-    timeToFirstYieldHours: 48, // 2 days
-    timeToMaxYieldHours: 72,   // 3 days
+    I0: 10000,
+    T: 450,
+    belowFunc: 'log',
+    belowTarget: 0.20,
+    aboveFunc: 'sqrt',
+    aboveTarget: 0.70,
+    firstYieldDays: 2,
+    maxYieldDays: 3,
     maxYield: 4,
-    actionCost: 1,
     icon: '🥕'
   },
   TOMATO: {
     name: 'Tomato',
     type: 'Ongoing',
-    seedCost: 30,
-    basePrice: 45,
-    minPrice: 20,
-    maxPrice: 110,
-    timeToFirstYieldHours: 72, // 3 days
-    timeToMaxYieldHours: 120,  // 5 days
-    maxYield: 8,
-    actionCost: 1,
+    seedCost: 50,
+    basePrice: 60,
+    I0: 10000,
+    T: 200,
+    belowFunc: 'linear',
+    belowTarget: 0.40,
+    aboveFunc: 'sqrt',
+    aboveTarget: 0.60,
+    firstYieldDays: 7,
+    maxYield: 4,
     icon: '🍅'
   },
   STRAWBERRY: {
     name: 'Strawberry',
     type: 'Ongoing',
-    seedCost: 40,
-    basePrice: 60,
-    minPrice: 25,
-    maxPrice: 140,
-    timeToFirstYieldHours: 96, // 4 days
-    timeToMaxYieldHours: 144,  // 6 days
-    maxYield: 10,
-    actionCost: 1,
+    seedCost: 100,
+    basePrice: 120,
+    I0: 10000,
+    T: 100,
+    belowFunc: 'sqrt',
+    belowTarget: 0.70,
+    aboveFunc: 'linear',
+    aboveTarget: 1.60,
+    firstYieldDays: 10,
+    maxYield: 4,
     icon: '🍓'
+  },
+  MELON: {
+    name: 'Melon',
+    type: 'One-time',
+    seedCost: 80,
+    basePrice: 250,
+    I0: 10000,
+    T: 300,
+    belowFunc: 'log',
+    belowTarget: 0.20,
+    aboveFunc: 'sq',
+    aboveTarget: 3.60,
+    firstYieldDays: 10,
+    maxYieldDays: 12,
+    maxYield: 6,
+    icon: '🍈'
+  },
+  EGGS: {
+    name: 'Eggs',
+    type: 'AnimalProduct',
+    animalCost: 300,
+    basePrice: 50,
+    I0: 10000,
+    T: 332,
+    belowFunc: 'linear',
+    belowTarget: 0.40,
+    aboveFunc: 'log',
+    aboveTarget: 0.20,
+    firstYieldDays: 4,
+    maxYield: 4,
+    icon: '🥚'
+  },
+  MILK: {
+    name: 'Milk',
+    type: 'AnimalProduct',
+    animalCost: 400,
+    basePrice: 160,
+    I0: 10000,
+    T: 122,
+    belowFunc: 'sqrt',
+    belowTarget: 0.60,
+    aboveFunc: 'linear',
+    aboveTarget: 1.60,
+    firstYieldDays: 8,
+    maxYield: 6,
+    icon: '🥛'
+  },
+  WOOL: {
+    name: 'Wool',
+    type: 'AnimalProduct',
+    animalCost: 500,
+    basePrice: 200,
+    I0: 10000,
+    T: 105,
+    belowFunc: 'log',
+    belowTarget: 0.20,
+    aboveFunc: 'sq',
+    aboveTarget: 3.20,
+    firstYieldDays: 6,
+    maxYield: 6,
+    icon: '🧶'
+  },
+  FERTILIZER: {
+    name: 'Fertilizer',
+    type: 'Consumable',
+    buyCost: 100,
+    basePrice: 100,
+    I0: 10000,
+    T: 200,
+    belowFunc: 'linear',
+    belowTarget: 0.40,
+    aboveFunc: 'linear',
+    aboveTarget: 0.40,
+    icon: '🧪'
   }
 };
 
 export class DynamicMarket {
   constructor(seed = 42) {
     this.seed = seed;
+    this.inventory = {};
     this.prices = {};
     this.history = [];
     this.initMarket();
@@ -65,9 +151,46 @@ export class DynamicMarket {
 
   initMarket() {
     Object.keys(COMMODITIES).forEach((key) => {
+      this.inventory[key] = COMMODITIES[key].I0;
       this.prices[key] = COMMODITIES[key].basePrice;
     });
     this.recordHistory(0);
+  }
+
+  evaluateShape(funcName, x) {
+    if (funcName === 'sq') return x * x;
+    if (funcName === 'sqrt') return Math.sqrt(x);
+    if (funcName === 'log' || funcName === 'log10') return Math.log1p(x);
+    return x; // linear default
+  }
+
+  calculatePrice(key) {
+    const comm = COMMODITIES[key];
+    if (!comm) return 25;
+
+    const I0 = comm.I0;
+    const inv = this.inventory[key] || I0;
+    const diff = inv - I0;
+
+    if (diff === 0) return comm.basePrice;
+
+    const isScarcity = diff < 0;
+    const absDiff = Math.abs(diff);
+    const funcName = isScarcity ? comm.belowFunc : comm.aboveFunc;
+    const target = isScarcity ? comm.belowTarget : comm.aboveTarget;
+    const T = comm.T;
+
+    const fT = this.evaluateShape(funcName, T);
+    if (fT === 0) return comm.basePrice;
+
+    const amp = (target * comm.basePrice) / fT;
+    const fx = this.evaluateShape(funcName, absDiff);
+
+    const sign = isScarcity ? 1 : -1;
+    let price = comm.basePrice + sign * amp * fx;
+    
+    // Price floor at $1 and rounded to nearest dollar
+    return Math.max(1, Math.round(price));
   }
 
   recordHistory(turn) {
@@ -75,24 +198,14 @@ export class DynamicMarket {
     this.history.push(entry);
   }
 
-  updateTurn(turn, playerSales = {}) {
+  updateTurn(turn, playerSales = {}, townShopsUnlocked = 0) {
     Object.keys(COMMODITIES).forEach((key) => {
-      const comm = COMMODITIES[key];
-      let currentPrice = this.prices[key];
-
-      // Cyclic demand curve (peaks twice daily)
-      const hour = turn % 24;
-      const cycleBonus = Math.sin((hour / 24) * Math.PI * 2) * 0.025;
-      const noise = (Math.random() - 0.49) * 0.05;
-
-      // Price decay when selling
-      const soldAmount = playerSales[key] || 0;
-      const priceImpact = soldAmount > 0 ? -Math.log1p(soldAmount) * 0.02 : 0.008;
-
-      let nextPrice = currentPrice * (1 + noise + cycleBonus + priceImpact);
-      nextPrice = Math.max(comm.minPrice, Math.min(comm.maxPrice, nextPrice));
+      let soldAmount = playerSales[key] || 0;
+      // Town consumption drains inventory
+      let townDrain = townShopsUnlocked > 0 ? townShopsUnlocked * 2 : 1;
       
-      this.prices[key] = Number(nextPrice.toFixed(2));
+      this.inventory[key] = Math.max(0, (this.inventory[key] || 10000) + soldAmount - townDrain);
+      this.prices[key] = this.calculatePrice(key);
     });
 
     this.recordHistory(turn);

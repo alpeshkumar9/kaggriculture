@@ -1,66 +1,95 @@
 """
-Official Strategy Rules & Heuristics for Kaggriculture Kaggle Bot
-Matches Official Kaggle "How to Play" Specifications
+Official Strategy Rules & Constants for Kaggle Kaggriculture Competition.
+Fully compliant with official specs in overview.md and AGENTS.md.
 """
 
-COMMODITY_BASE_PRICES = {
-    'WHEAT': 25,
-    'CARROT': 35,
-    'TOMATO': 45,
-    'STRAWBERRY': 60
+COMMODITIES = {
+    'WHEAT': {
+        'type': 'One-time',
+        'seed_cost': 10,
+        'base_price': 25,
+        'first_yield_days': 2,
+        'max_yield_days': 4,
+        'max_yield': 6,
+        'action_cost': 1
+    },
+    'CARROT': {
+        'type': 'One-time',
+        'seed_cost': 20,
+        'base_price': 35,
+        'first_yield_days': 2,
+        'max_yield_days': 3,
+        'max_yield': 4,
+        'action_cost': 1
+    },
+    'TOMATO': {
+        'type': 'Ongoing',
+        'seed_cost': 50,
+        'base_price': 60,
+        'first_yield_days': 7,
+        'max_yield': 4,
+        'action_cost': 1
+    },
+    'STRAWBERRY': {
+        'type': 'Ongoing',
+        'seed_cost': 100,
+        'base_price': 120,
+        'first_yield_days': 10,
+        'max_yield': 4,
+        'action_cost': 1
+    },
+    'MELON': {
+        'type': 'One-time',
+        'seed_cost': 80,
+        'base_price': 250,
+        'first_yield_days': 10,
+        'max_yield_days': 12,
+        'max_yield': 6,
+        'action_cost': 1
+    },
+    'EGG': {
+        'type': 'AnimalProduct',
+        'animal_cost': 300,
+        'base_price': 50,
+        'first_yield_days': 4,
+        'max_yield': 4
+    },
+    'MILK': {
+        'type': 'AnimalProduct',
+        'animal_cost': 400,
+        'base_price': 160,
+        'first_yield_days': 8,
+        'max_yield': 6
+    },
+    'WOOL': {
+        'type': 'AnimalProduct',
+        'animal_cost': 500,
+        'base_price': 200,
+        'first_yield_days': 6,
+        'max_yield': 6
+    },
+    'FERTILIZER': {
+        'type': 'Consumable',
+        'buy_cost': 100,
+        'base_price': 100
+    }
 }
 
-SEED_COSTS = {
-    'WHEAT': 10,
-    'CARROT': 20,
-    'TOMATO': 30,
-    'STRAWBERRY': 40
+LAND_QUADRANT_COSTS = [1000, 2000, 4000]
+
+QUADRANT_BOUNDS = {
+    "NW": {"min_x": 0, "max_x": 4, "min_y": 0, "max_y": 4},
+    "NE": {"min_x": 5, "max_x": 9, "min_y": 0, "max_y": 4},
+    "SW": {"min_x": 0, "max_x": 4, "min_y": 5, "max_y": 9},
+    "SE": {"min_x": 5, "max_x": 9, "min_y": 5, "max_y": 9}
 }
 
 def get_base_price(item):
-    return COMMODITY_BASE_PRICES.get(item, 25)
+    if item in COMMODITIES:
+        return COMMODITIES[item].get('base_price', 25)
+    return 25
 
-def evaluate_best_action(step, cash, inventory, market_prices, plots, land_quadrants=1):
-    """
-    Evaluates optimal turn action based on official Kaggle Wheat/Carrot rules.
-    """
-    # 1. Expand land if cash permits
-    if cash >= 550 and land_quadrants < 4:
-        return {"action": "BUY_LAND", "cost": 500}
-
-    # 2. Sell inventory when price >= 1.15 * Base Price or near season end
-    for item, qty in inventory.items():
-        if qty > 0 and item in market_prices:
-            curr_price = market_prices[item]
-            base = get_base_price(item)
-            if curr_price >= base * 1.15 or step >= 710:
-                return {
-                    "action": "SELL_MARKET",
-                    "item": item,
-                    "quantity": qty,
-                    "price": curr_price
-                }
-
-    # 3. Handle Plot Operations (Clear Weeds > Harvest > Water > Plant)
-    for plot in plots:
-        plot_id = plot.get('id')
-        state = plot.get('state', 'EMPTY')
-
-        if state == 'WEED':
-            return {"action": "CLEAR_WEED", "plot_id": plot_id}
-
-        elif state == 'READY_TO_HARVEST':
-            return {"action": "HARVEST", "plot_id": plot_id}
-
-        elif state == 'PLANTED':
-            if plot.get('moisture', 100) < 35 and cash >= 2:
-                return {"action": "WATER", "plot_id": plot_id}
-
-        elif state == 'EMPTY' and cash >= 15:
-            # Rotate crop choices (Wheat, Carrot, Tomato)
-            crops = ['WHEAT', 'CARROT', 'TOMATO']
-            selected_crop = crops[step % len(crops)]
-            if cash >= SEED_COSTS.get(selected_crop, 10):
-                return {"action": "PLANT", "plot_id": plot_id, "crop": selected_crop}
-
-    return {"action": "PASS"}
+def get_next_land_cost(unlocked_quadrants_count):
+    if unlocked_quadrants_count < 4:
+        return LAND_QUADRANT_COSTS[unlocked_quadrants_count - 1]
+    return None
