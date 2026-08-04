@@ -1,6 +1,6 @@
-// Kaggriculture 720-Turn Game Engine Simulation State Machine
+// Official Kaggle Kaggriculture Engine Implementation
 
-import { DynamicMarket } from './dynamicMarket.js';
+import { DynamicMarket, COMMODITIES } from './dynamicMarket.js';
 import { BotStrategyRunner, PRESET_STRATEGIES } from './botStrategies.js';
 
 export class KaggricultureEngine {
@@ -15,29 +15,26 @@ export class KaggricultureEngine {
     this.maxTurns = 720;
     this.cash = 1000;
     this.initialCash = 1000;
-    this.landQuadrants = 1; // Starts with 1 land quadrant (up to 4)
+    this.landQuadrants = 1; // 1 to 4
     this.farmhands = 0;
     
-    // Plots: Each quadrant has 4 plots (Total 4 to 16 plots)
+    // Plots: Starts with 4 plots in Quadrant 1
     this.plots = this.generatePlots(4);
-
-    // Livestock
-    this.animals = { cows: 0, chickens: 0, sheep: 0 };
 
     // Inventory
     this.inventory = {
-      WHEAT: 0, CORN: 0, SOY: 0,
-      EGGS: 0, MILK: 0, WOOL: 0,
-      FERTILIZER: 5
+      WHEAT: 0,
+      CARROT: 0,
+      TOMATO: 0,
+      STRAWBERRY: 0
     };
 
-    // Metrics & Logs
     this.logs = [];
     this.financialHistory = [{ turn: 0, day: 1, cash: 1000, netWorth: 1000 }];
     this.salesThisTurn = {};
     this.isGameOver = false;
 
-    this.log(`🌾 Kaggriculture Simulation Started. Initial Capital: $1,000. Strategy: ${this.botStrategy.name}`);
+    this.log(`🌾 Kaggriculture Season Started (Official Rules). Capital: $1,000. Wheat & Carrot specs loaded. Strategy: ${this.botStrategy.name}`);
   }
 
   generatePlots(count) {
@@ -45,12 +42,13 @@ export class KaggricultureEngine {
     for (let i = 1; i <= count; i++) {
       plots.push({
         id: `plot_${i}`,
-        state: 'EMPTY', // EMPTY, PLANTED, READY_TO_HARVEST
+        state: 'EMPTY', // EMPTY, PLANTED, READY_TO_HARVEST, WEED
         crop: null,
-        growth: 0, // 0 to 100%
-        moisture: 80,
+        hoursPlanted: 0,
+        unwateredHours: 0,
+        moisture: 100,
         fertilized: false,
-        daysToGrow: 0
+        yieldAmount: 0
       });
     }
     return plots;
@@ -80,17 +78,17 @@ export class KaggricultureEngine {
     this.market.updateTurn(this.turn, this.salesThisTurn);
     const marketPrices = this.market.getPrices();
 
-    // 2. Evaluate Bot Strategy Actions
+    // 2. Evaluate Bot Actions
     const currentGameState = this.getState();
     const recommendedActions = BotStrategyRunner.evaluateActions(currentGameState, this.botStrategy);
 
-    // 3. Process Actions
+    // 3. Apply Actions
     recommendedActions.forEach((action) => {
       this.applyAction(action, marketPrices);
     });
 
-    // 4. Update Environmental & Natural Growth
-    this.updateGrowthAndAnimals();
+    // 4. Environmental Growth & Weed Check
+    this.updateGrowth();
 
     // 5. Calculate Financial Net Worth
     const netWorth = this.calculateNetWorth(marketPrices);
@@ -101,10 +99,9 @@ export class KaggricultureEngine {
       netWorth: Math.round(netWorth)
     });
 
-    // 6. Check Game Over
     if (this.turn >= this.maxTurns) {
       this.isGameOver = true;
-      this.log(`🏆 Season Finished (720 Turns)! Final Net Worth: $${Math.round(netWorth)}. Net Profit: $${Math.round(netWorth - this.initialCash)}`, 'success');
+      this.log(`🏆 Season Finished (720 Turns)! Final Net Worth: $${Math.round(netWorth)}. Profit: $${Math.round(netWorth - 1000)}`, 'success');
     }
 
     return this.getState();
@@ -116,19 +113,20 @@ export class KaggricultureEngine {
         if (this.cash >= action.cost && this.landQuadrants < 4) {
           this.cash -= action.cost;
           this.landQuadrants += 1;
-          const newPlotCount = this.landQuadrants * 4;
-          const currentCount = this.plots.length;
-          for (let i = currentCount + 1; i <= newPlotCount; i++) {
+          const newTotal = this.landQuadrants * 4;
+          for (let i = this.plots.length + 1; i <= newTotal; i++) {
             this.plots.push({
               id: `plot_${i}`,
               state: 'EMPTY',
               crop: null,
-              growth: 0,
-              moisture: 75,
-              fertilized: false
+              hoursPlanted: 0,
+              unwateredHours: 0,
+              moisture: 100,
+              fertilized: false,
+              yieldAmount: 0
             });
           }
-          this.log(`🚜 Purchased Land Quadrant #${this.landQuadrants}. Total plots: ${newPlotCount}`, 'action');
+          this.log(`🚜 Purchased Land Quadrant #${this.landQuadrants}. Total plots: ${newTotal}`, 'action');
         }
         break;
 
@@ -136,71 +134,66 @@ export class KaggricultureEngine {
         if (this.cash >= action.cost) {
           this.cash -= action.cost;
           this.farmhands += 1;
-          this.log(`👩‍🌾 Hired Farmhand #${this.farmhands} for automated tasks.`, 'action');
-        }
-        break;
-
-      case 'BUY_ANIMAL':
-        if (this.cash >= action.cost) {
-          this.cash -= action.cost;
-          if (action.animal === 'COW') this.animals.cows += 1;
-          else if (action.animal === 'CHICKEN') this.animals.chickens += 1;
-          else if (action.animal === 'SHEEP') this.animals.sheep += 1;
-          this.log(`🐄 Purchased ${action.animal} for $${action.cost}`, 'action');
+          this.log(`👩‍🌾 Hired Farmhand #${this.farmhands} for auto-watering.`, 'action');
         }
         break;
 
       case 'PLANT':
         const plot = this.plots.find(p => p.id === action.plotId);
-        if (plot && plot.state === 'EMPTY' && this.cash >= 10) {
-          this.cash -= 10;
+        const spec = COMMODITIES[action.crop] || COMMODITIES.WHEAT;
+        if (plot && plot.state === 'EMPTY' && this.cash >= spec.seedCost) {
+          this.cash -= spec.seedCost;
           plot.state = 'PLANTED';
           plot.crop = action.crop;
-          plot.growth = 0;
-          plot.moisture = 80;
-          this.log(`🌱 Planted ${action.crop} on ${plot.id}`, 'action');
+          plot.hoursPlanted = 0;
+          plot.unwateredHours = 0;
+          plot.moisture = 100;
+          plot.fertilized = false;
+          plot.yieldAmount = spec.maxYield;
+          this.log(`🌱 Planted ${spec.name} on ${plot.id} (Seed Cost: $${spec.seedCost})`, 'action');
         }
         break;
 
       case 'WATER':
-        const waterPlot = this.plots.find(p => p.id === action.plotId);
-        if (waterPlot && this.cash >= 3) {
-          this.cash -= 3;
-          waterPlot.moisture = Math.min(100, waterPlot.moisture + 35);
-        }
-        break;
-
-      case 'FERTILIZE':
-        const fertPlot = this.plots.find(p => p.id === action.plotId);
-        if (fertPlot && this.cash >= 10) {
-          this.cash -= 10;
-          fertPlot.fertilized = true;
-          this.log(`🧪 Applied fertilizer to ${fertPlot.id}`, 'action');
+        const wPlot = this.plots.find(p => p.id === action.plotId);
+        if (wPlot && wPlot.state === 'PLANTED' && this.cash >= 2) {
+          this.cash -= 2;
+          wPlot.moisture = 100;
+          wPlot.unwateredHours = 0;
         }
         break;
 
       case 'HARVEST':
         const hPlot = this.plots.find(p => p.id === action.plotId);
         if (hPlot && hPlot.state === 'READY_TO_HARVEST') {
-          const yieldQty = hPlot.fertilized ? 15 : 10;
-          this.inventory[hPlot.crop] = (this.inventory[hPlot.crop] || 0) + yieldQty;
-          this.log(`🌾 Harvested ${yieldQty} units of ${hPlot.crop} from ${hPlot.id}`, 'success');
+          const qty = hPlot.yieldAmount || 6;
+          this.inventory[hPlot.crop] = (this.inventory[hPlot.crop] || 0) + qty;
+          this.log(`🌾 Harvested ${qty} units of ${hPlot.crop} from ${hPlot.id}`, 'success');
           hPlot.state = 'EMPTY';
           hPlot.crop = null;
-          hPlot.growth = 0;
-          hPlot.fertilized = false;
+          hPlot.hoursPlanted = 0;
+        }
+        break;
+
+      case 'CLEAR_WEED':
+        const cPlot = this.plots.find(p => p.id === action.plotId);
+        if (cPlot && cPlot.state === 'WEED') {
+          cPlot.state = 'EMPTY';
+          cPlot.crop = null;
+          cPlot.hoursPlanted = 0;
+          this.log(`🧹 Cleared weeds from ${cPlot.id}`, 'action');
         }
         break;
 
       case 'SELL_MARKET':
         const qty = action.quantity;
         if (this.inventory[action.item] >= qty && qty > 0) {
-          const price = marketPrices[action.item] || action.price;
+          const price = marketPrices[action.item] || COMMODITIES[action.item]?.basePrice || 25;
           const totalEarned = Math.round(qty * price);
           this.inventory[action.item] -= qty;
           this.cash += totalEarned;
           this.salesThisTurn[action.item] = (this.salesThisTurn[action.item] || 0) + qty;
-          this.log(`💰 Sold ${qty} units of ${action.item} @ $${price}/unit for total $${totalEarned}`, 'success');
+          this.log(`💰 Sold ${qty} units of ${action.item} @ $${price}/unit ($${totalEarned})`, 'success');
         }
         break;
 
@@ -209,56 +202,51 @@ export class KaggricultureEngine {
     }
   }
 
-  updateGrowthAndAnimals() {
-    // Plots growth
+  updateGrowth() {
     this.plots.forEach((p) => {
       if (p.state === 'PLANTED') {
-        p.moisture = Math.max(0, p.moisture - 2);
-        const growthRate = p.moisture > 30 ? (p.fertilized ? 8 : 5) : 2;
-        p.growth += growthRate;
-        if (p.growth >= 100) {
-          p.growth = 100;
+        p.hoursPlanted += 1;
+        p.moisture = Math.max(0, p.moisture - 3);
+
+        if (p.moisture < 20) {
+          p.unwateredHours += 1;
+        } else {
+          p.unwateredHours = 0;
+        }
+
+        // Penalty: If unwatered for 48 consecutive hours (2 days), turns into WEED
+        if (p.unwateredHours >= 48) {
+          p.state = 'WEED';
+          this.log(`⚠️ ${p.id} dried out and turned into WEEDS!`, 'warning');
+          return;
+        }
+
+        const spec = COMMODITIES[p.crop] || COMMODITIES.WHEAT;
+        if (p.hoursPlanted >= spec.timeToFirstYieldHours) {
           p.state = 'READY_TO_HARVEST';
         }
       }
     });
 
-    // Livestock yield every 12 turns (twice a day)
-    if (this.turn > 0 && this.turn % 12 === 0) {
-      if (this.animals.chickens > 0) {
-        const eggs = this.animals.chickens * 3;
-        this.inventory.EGGS += eggs;
-        this.log(`🥚 Chickens produced ${eggs} Eggs`, 'info');
-      }
-      if (this.animals.cows > 0) {
-        const milk = this.animals.cows * 4;
-        this.inventory.MILK += milk;
-        this.log(`🥛 Cows produced ${milk} Milk`, 'info');
-      }
-      if (this.animals.sheep > 0) {
-        const wool = this.animals.sheep * 2;
-        this.inventory.WOOL += wool;
-        this.log(`🧶 Sheep produced ${wool} Wool`, 'info');
-      }
-    }
-
-    // Farmhand automated maintenance
+    // Farmhand auto-watering
     if (this.farmhands > 0) {
-      const dryPlots = this.plots.filter(p => p.state === 'PLANTED' && p.moisture < 40);
-      for (let i = 0; i < Math.min(this.farmhands, dryPlots.length); i++) {
-        dryPlots[i].moisture = Math.min(100, dryPlots[i].moisture + 30);
+      const thirsty = this.plots.filter(p => p.state === 'PLANTED' && p.moisture < 40);
+      for (let i = 0; i < Math.min(this.farmhands, thirsty.length); i++) {
+        thirsty[i].moisture = 100;
+        thirsty[i].unwateredHours = 0;
       }
     }
   }
 
   calculateNetWorth(marketPrices) {
-    let inventoryVal = 0;
+    let invVal = 0;
     Object.keys(this.inventory).forEach((k) => {
-      inventoryVal += (this.inventory[k] || 0) * (marketPrices[k] || 10);
+      const price = marketPrices[k] || COMMODITIES[k]?.basePrice || 25;
+      invVal += (this.inventory[k] || 0) * price;
     });
-    const assetVal = (this.landQuadrants * 400) + (this.farmhands * 100) +
-      (this.animals.cows * 250) + (this.animals.chickens * 80) + (this.animals.sheep * 150);
-    return this.cash + inventoryVal + assetVal;
+    const landVal = this.landQuadrants * 400;
+    const workerVal = this.farmhands * 100;
+    return this.cash + invVal + landVal + workerVal;
   }
 
   getState() {
@@ -273,7 +261,6 @@ export class KaggricultureEngine {
       landQuadrants: this.landQuadrants,
       farmhands: this.farmhands,
       plots: [...this.plots],
-      animals: { ...this.animals },
       inventory: { ...this.inventory },
       marketPrices,
       marketHistory: this.market.getHistory(),

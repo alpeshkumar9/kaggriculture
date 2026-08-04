@@ -1,13 +1,58 @@
-// Dynamic Market Pricing Engine for Kaggriculture Simulation
+// Official Kaggle Kaggriculture Commodity Specification & Dynamic Market Engine
 
 export const COMMODITIES = {
-  WHEAT: { name: 'Wheat', basePrice: 12, minPrice: 5, maxPrice: 35, category: 'crop', icon: '🌾' },
-  CORN: { name: 'Corn', basePrice: 18, minPrice: 8, maxPrice: 48, category: 'crop', icon: '🌽' },
-  SOY: { name: 'Soybeans', basePrice: 25, minPrice: 12, maxPrice: 65, category: 'crop', icon: '🫘' },
-  EGGS: { name: 'Eggs', basePrice: 15, minPrice: 7, maxPrice: 40, category: 'livestock', icon: '🥚' },
-  MILK: { name: 'Fresh Milk', basePrice: 30, minPrice: 14, maxPrice: 75, category: 'livestock', icon: '🥛' },
-  WOOL: { name: 'Fine Wool', basePrice: 45, minPrice: 20, maxPrice: 110, category: 'livestock', icon: '🧶' },
-  FERTILIZER: { name: 'Organic Fertilizer', basePrice: 10, minPrice: 6, maxPrice: 28, category: 'input', icon: '🧪' }
+  WHEAT: {
+    name: 'Wheat',
+    type: 'One-time',
+    seedCost: 10,
+    basePrice: 25,
+    minPrice: 10,
+    maxPrice: 60,
+    timeToFirstYieldHours: 48, // 2 days
+    timeToMaxYieldHours: 96,   // 4 days
+    maxYield: 6,
+    actionCost: 1,
+    icon: '🌾'
+  },
+  CARROT: {
+    name: 'Carrot',
+    type: 'One-time',
+    seedCost: 20,
+    basePrice: 35,
+    minPrice: 15,
+    maxPrice: 85,
+    timeToFirstYieldHours: 48, // 2 days
+    timeToMaxYieldHours: 72,   // 3 days
+    maxYield: 4,
+    actionCost: 1,
+    icon: '🥕'
+  },
+  TOMATO: {
+    name: 'Tomato',
+    type: 'Ongoing',
+    seedCost: 30,
+    basePrice: 45,
+    minPrice: 20,
+    maxPrice: 110,
+    timeToFirstYieldHours: 72, // 3 days
+    timeToMaxYieldHours: 120,  // 5 days
+    maxYield: 8,
+    actionCost: 1,
+    icon: '🍅'
+  },
+  STRAWBERRY: {
+    name: 'Strawberry',
+    type: 'Ongoing',
+    seedCost: 40,
+    basePrice: 60,
+    minPrice: 25,
+    maxPrice: 140,
+    timeToFirstYieldHours: 96, // 4 days
+    timeToMaxYieldHours: 144,  // 6 days
+    maxYield: 10,
+    actionCost: 1,
+    icon: '🍓'
+  }
 };
 
 export class DynamicMarket {
@@ -15,16 +60,12 @@ export class DynamicMarket {
     this.seed = seed;
     this.prices = {};
     this.history = [];
-    this.demandIndex = {};
-    this.supplyPool = {};
     this.initMarket();
   }
 
   initMarket() {
     Object.keys(COMMODITIES).forEach((key) => {
       this.prices[key] = COMMODITIES[key].basePrice;
-      this.demandIndex[key] = 1.0;
-      this.supplyPool[key] = 100;
     });
     this.recordHistory(0);
   }
@@ -39,18 +80,15 @@ export class DynamicMarket {
       const comm = COMMODITIES[key];
       let currentPrice = this.prices[key];
 
-      // Random market drift (-3% to +3%)
-      const noise = (Math.random() - 0.49) * 0.06;
-      
-      // Cyclic demand curve (e.g. higher demand every morning hour 8 and evening hour 18)
+      // Cyclic demand curve (peaks twice daily)
       const hour = turn % 24;
-      const cycleBonus = Math.sin((hour / 24) * Math.PI * 2) * 0.02;
+      const cycleBonus = Math.sin((hour / 24) * Math.PI * 2) * 0.025;
+      const noise = (Math.random() - 0.49) * 0.05;
 
-      // Player market impact (dumping items lowers price)
+      // Price decay when selling
       const soldAmount = playerSales[key] || 0;
-      const priceImpact = soldAmount > 0 ? -Math.log1p(soldAmount) * 0.015 : 0.005;
+      const priceImpact = soldAmount > 0 ? -Math.log1p(soldAmount) * 0.02 : 0.008;
 
-      // Price update formula
       let nextPrice = currentPrice * (1 + noise + cycleBonus + priceImpact);
       nextPrice = Math.max(comm.minPrice, Math.min(comm.maxPrice, nextPrice));
       
