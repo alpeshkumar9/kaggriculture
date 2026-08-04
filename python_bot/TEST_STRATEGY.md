@@ -73,6 +73,11 @@ Start with the replay seeds visible in the recordings: `1281355554`, `2050554103
 
 ### 4. Benchmark suite (before strategic changes or upload)
 
+This is mandatory for **every** decision-changing edit to `agent.py`. Do not
+describe a result as verified, rebuild a release artifact, or submit it until
+this suite has completed. If the official engine is unavailable, record the
+benchmark as blocked and stop short of any performance claim.
+
 Use at least 20 deterministic episodes for each matchup:
 
 1. candidate vs `pass` — verifies basic production;

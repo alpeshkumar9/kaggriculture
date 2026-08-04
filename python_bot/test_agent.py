@@ -10,7 +10,7 @@ import sys
 import unittest
 
 sys.path.insert(0, os.path.dirname(__file__))
-from agent import agent
+from agent import agent, _sell_orders
 
 
 def observation(tile, seeds=None, day=0, shed=None):
@@ -27,6 +27,7 @@ def observation(tile, seeds=None, day=0, shed=None):
             "hires_today": 0,
         }],
         "private": {"seeds": seeds or {}, "shed": shed or {}},
+        "market": {"prices": {}},
     }
 
 
@@ -49,6 +50,27 @@ class CropFirstAgentTests(unittest.TestCase):
         action = agent(observation(None, shed={"CARROT": 4}))
         self.assertIn(["SELL", "CARROT", 4], action["market"])
         self.assertNotIn(["BUY_PRODUCT", "FERTILIZER", 2], action["market"])
+
+    def test_holds_low_price_premium_stock_when_shed_has_room(self):
+        orders = _sell_orders(
+            {"shed": {"STRAWBERRY": 8}}, day=18,
+            market_state={"prices": {"STRAWBERRY": 1}},
+        )
+        self.assertEqual(orders, [])
+
+    def test_sells_a_bounded_premium_tranche_after_price_recovers(self):
+        orders = _sell_orders(
+            {"shed": {"STRAWBERRY": 20}}, day=18,
+            market_state={"prices": {"STRAWBERRY": 120}},
+        )
+        self.assertEqual(orders, [["SELL", "STRAWBERRY", 8]])
+
+    def test_tomato_is_watered_and_harvested_as_an_ongoing_crop(self):
+        tomato = {"kind": "PLANT", "crop": "TOMATO", "planted_day": 4, "watered_today": False}
+        self.assertEqual(agent(observation(tomato, day=11))["farmer"], ["WATER"])
+        tomato["watered_today"] = True
+        tomato["yield_units"] = 1
+        self.assertEqual(agent(observation(tomato, day=11))["farmer"], ["HARVEST"])
 
 
 if __name__ == "__main__":

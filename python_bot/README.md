@@ -28,6 +28,12 @@ The command saves official replay JSON files and returns a non-zero exit code
 when the agent fails the crop-loop checks (plant, water, harvest, sell, and no
 weeds). See `TEST_STRATEGY.md` for the release criteria.
 
+**Required for every strategy change:** run the official benchmark before
+calling the change verified, rebuilding a release artifact, or submitting it.
+Benchmark candidate versus `pass`, `random`, `starter`, and the prior approved
+artifact. If the official engine cannot run, report that the benchmark is
+blocked; unit tests alone never establish a score improvement.
+
 To measure a candidate against the $154,615 record on fresh scenarios, run a
 reproducible batch of self-play episodes:
 
