@@ -18,7 +18,7 @@ CROPS = {
     "MELON": {"cost": 80, "harvest_day": 12, "bonus_start": 6},
 }
 HANDS_PER_DAY = 10
-HIRE_COSTS = (1, 1, 2, 3, 5, 8, 13, 21, 34, 55)
+HIRE_COSTS = (1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89)
 SEED_BUFFER = 10
 # The fourth quadrant costs $4k with too little remaining season to recover
 # its labour and weed-management cost.  The proven high-output replay uses
@@ -102,6 +102,16 @@ def _market_actions(farm, private, day, tiles, livestock, market_state):
     # Establish the full workforce first. Purchases and sales can execute on
     # following turns, but a missed hire permanently loses useful actions.
     desired_hands = _desired_hands(tiles)
+    if 19 <= day <= 25 and any(
+        isinstance(tile, dict)
+        and tile.get("crop") == "STRAWBERRY"
+        and _strawberry_needs_fertilizer(tile, day)
+        for row in tiles
+        for tile in row
+    ):
+        desired_hands = min(11, desired_hands + 1)
+    if day >= 29:
+        desired_hands = min(11, desired_hands + 1)
     hires_today = int(farm.get("hires_today", 0))
     for hire_index in range(hires_today, desired_hands):
         hire_cost = HIRE_COSTS[hire_index]
@@ -265,9 +275,13 @@ def _choose_worker_action(
     # Melons fund the next production cycle. Move each six-unit harvest to the
     # shed immediately so it can be sold and reinvested before day 16 ends.
     carrying_products = any(inventory.get(item, 0) > 0 for item in PRODUCTS)
+    carrying_non_melon = any(
+        item != "MELON" and inventory.get(item, 0) > 0 for item in PRODUCTS
+    )
     if (
         (inventory.get("MELON", 0) > 0 and day <= 16)
-        or (day >= FINAL_LIQUIDATION_DAY and carrying_products)
+        or (day == FINAL_LIQUIDATION_DAY and carrying_non_melon)
+        or (day >= 29 and carrying_products)
     ):
         if _is_shed_access(x, y, len(tiles)):
             return ["DROP"]
@@ -280,8 +294,16 @@ def _choose_worker_action(
     )
     if livestock_action:
         return livestock_action
-    action = _action_for_tile(tile, seed_budget, day, x, y, len(tiles))
-    region = _worker_region(tiles, worker_index, worker_count)
+    action = _action_for_tile(tile, seed_budget, day)
+    ripe_melons = sum(
+        isinstance(target, dict)
+        and target.get("crop") == "MELON"
+        and day - int(target.get("planted_day", day)) >= CROPS["MELON"]["harvest_day"]
+        for row in tiles
+        for target in row
+    )
+    use_global_liquidation = day >= 29 and ripe_melons <= 8
+    region = None if use_global_liquidation else _worker_region(tiles, worker_index, worker_count)
     if tile is None:
         urgent_target = _nearest_target(
             x, y, tiles, seed_budget, day, reserved, urgent_only=True,
@@ -309,9 +331,18 @@ def _choose_worker_action(
     return [direction]
 
 
-def _action_for_tile(tile, seed_budget, day, x, y, board_size):
+def _action_for_tile(tile, seed_budget, day):
+    if day >= 29:
+        if (
+            isinstance(tile, dict)
+            and tile.get("kind") == "PLANT"
+            and tile.get("crop") == "MELON"
+            and day - int(tile.get("planted_day", day)) >= CROPS["MELON"]["harvest_day"]
+        ):
+            return ["HARVEST"]
+        return None
     if tile is None:
-        crop = _available_crop_for_tile(seed_budget, day, x, y, board_size)
+        crop = _available_crop(seed_budget, day)
         return ["PLANT", crop] if crop else None
     if not isinstance(tile, dict):
         return None
@@ -363,7 +394,7 @@ def _nearest_target(
             and (x, y) not in reserved
             and (allowed is None or (x, y) in allowed)
         ):
-            priority = _target_priority(tiles[y][x], seed_budget, day, x, y, len(tiles))
+            priority = _target_priority(tiles[y][x], seed_budget, day)
             if priority is not None and (not urgent_only or priority < 3):
                 candidates.setdefault(priority, (first_move, (x, y)))
         for dx, dy, move in MOVES:
@@ -390,10 +421,19 @@ def _worker_region(tiles, worker_index, worker_count):
     return set(cells[start:start + chunk_size])
 
 
-def _target_priority(tile, seed_budget, day, x, y, board_size):
+def _target_priority(tile, seed_budget, day):
     """Smaller values are assigned first across the whole farm."""
+    if day >= 29:
+        if (
+            isinstance(tile, dict)
+            and tile.get("kind") == "PLANT"
+            and tile.get("crop") == "MELON"
+            and day - int(tile.get("planted_day", day)) >= CROPS["MELON"]["harvest_day"]
+        ):
+            return -10
+        return None
     if tile is None:
-        return 3 if _available_crop_for_tile(seed_budget, day, x, y, board_size) else None
+        return 3 if _available_crop(seed_budget, day) else None
     if not isinstance(tile, dict):
         return None
     if tile.get("kind") == "WEED":
@@ -410,23 +450,13 @@ def _target_priority(tile, seed_budget, day, x, y, board_size):
         return -1
     harvest_day = crop_data.get("harvest_day")
     if harvest_day is not None and day - int(tile.get("planted_day", day)) >= harvest_day:
-        return -2 if crop == "MELON" and day == 16 else 0
+        return -2 if crop == "MELON" and day in {16, 28} else 0
     return 1 if _needs_water(tile, day) else None
 
 
 def _needs_water(tile, day):
     """Daily watering is the measured reliable policy for this workforce."""
     return not tile.get("watered_today", False)
-
-
-def _available_crop_for_tile(seed_budget, day, x, y, board_size):
-    """Keep both melon cycles in the shed-adjacent starting quadrant."""
-    half = board_size // 2
-    if x < half and y < half:
-        return _available_crop(seed_budget, day)
-    without_melons = dict(seed_budget)
-    without_melons["MELON"] = 0
-    return _available_crop(without_melons, day)
 
 
 def _expires_by_next_day(tile, day):
