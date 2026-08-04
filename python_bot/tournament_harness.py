@@ -78,7 +78,7 @@ class TournamentEngine:
 
                 self.apply_player_action(pid, action, day, hour)
 
-            # Daily crop growth update at start of day (0:00 HR)
+            # Daily crop & animal growth update at start of day (0:00 HR)
             if hour == 0:
                 for f in self.farms:
                     f['hires_today'] = 0
@@ -86,16 +86,26 @@ class TournamentEngine:
                     for r in range(10):
                         for c in range(10):
                             t = f['tiles'][r][c]
-                            if isinstance(t, dict) and t.get('kind') == 'PLANT':
-                                t['watered_today'] = False
-                                crop = t.get('crop', 'WHEAT')
-                                age = day - t.get('planted_day', 0)
-                                if crop in ['WHEAT', 'CARROT'] and age >= 2:
-                                    t['yield_units'] = 4
-                                elif crop == 'TOMATO' and age >= 7:
-                                    t['yield_units'] = 4
-                                elif crop in ['STRAWBERRY', 'MELON'] and age >= 10:
-                                    t['yield_units'] = 6
+                            if isinstance(t, dict):
+                                if t.get('kind') == 'PLANT':
+                                    t['watered_today'] = False
+                                    crop = t.get('crop', 'WHEAT')
+                                    age = day - t.get('planted_day', 0)
+                                    if crop in ['WHEAT', 'CARROT'] and age >= 2:
+                                        t['yield_units'] = 4
+                                    elif crop == 'TOMATO' and age >= 7:
+                                        t['yield_units'] = 4
+                                    elif crop in ['STRAWBERRY', 'MELON'] and age >= 10:
+                                        t['yield_units'] = 6
+                                elif t.get('kind') == 'PASTURE' and t.get('animal') == 'COW':
+                                    t['fed_today'] = False
+                                    t['cared_today'] = False
+                                    age = day - t.get('placed_day', 0)
+                                    # Cows produce Milk every 2 days
+                                    if age >= 2 and age % 2 == 0:
+                                        bonus = t.get('pending_care_bonus', 0)
+                                        t['yield_units'] = 1 + bonus
+                                        t['pending_care_bonus'] = 0
 
         score_a = self.farms[0]['money']
         score_b = self.farms[1]['money']
@@ -106,26 +116,60 @@ class TournamentEngine:
         farm = self.farms[pid]
         priv = self.privates[pid]
         
-        # Farmer action
-        farmer_act = action.get('farmer', ['PASS'])
-        if farmer_act and isinstance(farmer_act, list) and len(farmer_act) > 0:
-            cmd = farmer_act[0]
-            fx, fy = farm['farmer']
-            if cmd == 'NORTH' and fy > 0: farm['farmer'][1] -= 1
-            elif cmd == 'SOUTH' and fy < 9: farm['farmer'][1] += 1
-            elif cmd == 'EAST' and fx < 9: farm['farmer'][0] += 1
-            elif cmd == 'WEST' and fx > 0: farm['farmer'][0] -= 1
-            elif cmd == 'PLANT' and len(farmer_act) > 1:
-                crop = farmer_act[1]
+        # Process worker actions (farmer & hands)
+        workers_actions = [action.get('farmer', ['PASS'])] + action.get('hands', [])
+        workers_pos = [farm['farmer']] + farm['hands']
+
+        for idx, act in enumerate(workers_actions):
+            if not act or not isinstance(act, list): continue
+            wx, wy = workers_pos[idx] if idx < len(workers_pos) else (0, 0)
+            cmd = act[0]
+
+            if cmd == 'NORTH' and wy > 0: workers_pos[idx][1] -= 1
+            elif cmd == 'SOUTH' and wy < 9: workers_pos[idx][1] += 1
+            elif cmd == 'EAST' and wx < 9: workers_pos[idx][0] += 1
+            elif cmd == 'WEST' and wx > 0: workers_pos[idx][0] -= 1
+            elif cmd == 'BUILD_PASTURE':
+                if farm['tiles'][wy][wx] is None and farm['money'] >= 150:
+                    farm['money'] -= 150
+                    farm['tiles'][wy][wx] = {'kind': 'PASTURE', 'animal': 'COW', 'placed_day': day, 'fed_today': True, 'cared_today': True, 'yield_units': 0, 'pending_care_bonus': 0}
+            elif cmd == 'PLACE_ANIMAL' and len(act) > 1:
+                animal = act[1]
+                t = farm['tiles'][wy][wx]
+                if isinstance(t, dict) and t.get('kind') == 'PASTURE':
+                    t['animal'] = animal
+                    t['placed_day'] = day
+            elif cmd == 'FEED':
+                t = farm['tiles'][wy][wx]
+                if isinstance(t, dict) and t.get('kind') == 'PASTURE' and (priv['shed'].get('WHEAT', 0) > 0 or priv['seeds'].get('WHEAT', 0) > 0):
+                    if priv['shed'].get('WHEAT', 0) > 0: priv['shed']['WHEAT'] -= 1
+                    elif priv['seeds'].get('WHEAT', 0) > 0: priv['seeds']['WHEAT'] -= 1
+                    t['fed_today'] = True
+            elif cmd == 'CARE':
+                t = farm['tiles'][wy][wx]
+                if isinstance(t, dict) and t.get('kind') == 'PASTURE':
+                    t['cared_today'] = True
+                    if t.get('fed_today', False):
+                        t['pending_care_bonus'] = t.get('pending_care_bonus', 0) + 2
+            elif cmd == 'PLANT' and len(act) > 1:
+                crop = act[1]
                 if priv['seeds'].get(crop, 0) > 0:
                     priv['seeds'][crop] -= 1
-                    farm['tiles'][fy][fx] = {'kind': 'PLANT', 'crop': crop, 'planted_day': day, 'watered_today': True, 'yield_units': 0}
+                    farm['tiles'][wy][wx] = {'kind': 'PLANT', 'crop': crop, 'planted_day': day, 'watered_today': True, 'yield_units': 0}
             elif cmd == 'HARVEST':
-                t = farm['tiles'][fy][fx]
-                if isinstance(t, dict) and t.get('kind') == 'PLANT':
-                    crop = t.get('crop', 'WHEAT')
-                    priv['shed'][crop] = priv['shed'].get(crop, 0) + 4
-                    farm['tiles'][fy][fx] = None
+                t = farm['tiles'][wy][wx]
+                if isinstance(t, dict):
+                    if t.get('kind') == 'PLANT':
+                        crop = t.get('crop', 'WHEAT')
+                        yield_qty = t.get('yield_units', 4)
+                        if yield_qty <= 0: yield_qty = 4
+                        priv['shed'][crop] = priv['shed'].get(crop, 0) + yield_qty
+                        farm['tiles'][wy][wx] = None
+                    elif t.get('kind') == 'PASTURE' and t.get('animal') == 'COW':
+                        yield_qty = t.get('yield_units', 3)
+                        if yield_qty <= 0: yield_qty = 3
+                        priv['shed']['MILK'] = priv['shed'].get('MILK', 0) + yield_qty
+                        t['yield_units'] = 0
 
         # Market actions
         for order in action.get('market', []):
@@ -133,14 +177,14 @@ class TournamentEngine:
             cmd = order[0]
             if cmd == 'BUY_LAND':
                 quads = farm['unlocked_quadrants']
-                if len(quads) < 4:
-                    cost = [1000, 2000, 4000][len(quads) - 1]
+                if len(quads) < 3: # Max 3 Quadrants
+                    cost = [1000, 2000][len(quads) - 1]
                     if farm['money'] >= cost:
                         farm['money'] -= cost
                         quads.append('NE' if len(quads) == 1 else 'SW' if len(quads) == 2 else 'SE')
                         for y in range(10):
                             for x in range(10):
-                                if (x >= 5 and y < 5 and 'NE' in quads) or (x < 5 and y >= 5 and 'SW' in quads) or (x >= 5 and y >= 5 and 'SE' in quads):
+                                if (x >= 5 and y < 5 and 'NE' in quads) or (x < 5 and y >= 5 and 'SW' in quads):
                                     farm['tiles'][y][x] = None
             elif cmd == 'HIRE':
                 cost = [1, 1, 2, 3, 5, 8, 13, 21][min(farm['hires_today'], 7)]
@@ -148,6 +192,13 @@ class TournamentEngine:
                     farm['money'] -= cost
                     farm['hires_today'] += 1
                     farm['hands'].append([0, 0])
+            elif cmd == 'BUY_ANIMAL' and len(order) >= 3:
+                animal = order[1]
+                qty = order[2]
+                cost = 400 * qty
+                if farm['money'] >= cost:
+                    farm['money'] -= cost
+                    priv['shed'][animal] = priv['shed'].get(animal, 0) + qty
             elif cmd == 'BUY_SEED' and len(order) >= 3:
                 crop, qty = order[1], order[2]
                 cost = {'WHEAT': 10, 'CARROT': 20, 'TOMATO': 50, 'STRAWBERRY': 100, 'MELON': 80}.get(crop, 10) * qty

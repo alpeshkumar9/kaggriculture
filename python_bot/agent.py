@@ -114,24 +114,40 @@ def agent(observation, configuration=None):
     opp_tiles = opp_farm.get('tiles', [])
     town_shops = obs.get('town', {}).get('unlocked_shops', [])
 
-    # 1. Market Orders: Land Expansion
+    # 1. Market Orders: Land Expansion (Max 3 Quadrants - Subin An #1 Strategy)
     quad_count = len(unlocked_quads)
-    if quad_count < 4:
-        thresholds = [2500, 5000, 9000]
+    if quad_count < 3:
+        thresholds = [1500, 3000]
         thresh = thresholds[quad_count - 1]
         next_cost = LAND_COSTS[quad_count - 1]
         if money >= thresh:
             market_orders.append(["BUY_LAND"])
             money -= next_cost
 
-    # 2. Market Orders: Fibonacci Farmhand Hiring ROI
-    if should_hire_farmhand(workload, money, hires_today):
+    # 2. Market Orders: 5-Farmhand Daily Labor Scaling ($12/day Fibonacci total)
+    if hires_today < 5 and money >= 150 and len(market_orders) < 10:
         hire_cost = get_fibonacci_hire_cost(hires_today)
         market_orders.append(["HIRE"])
         money -= hire_cost
         hires_today += 1
 
-    # 3. Market Orders: Front-Running Town Demand, Tiered Selling & Adversarial Undercutting
+    # 3. Market Orders: Buy Cows (6-Cow Engine - Only buy if Pasture is built & total cows < 6)
+    cows_on_tiles = sum(1 for r in range(rows) for c in range(cols) if isinstance(tiles[r][c], dict) and tiles[r][c].get('animal') == 'COW')
+    pastures_count = sum(1 for r in range(rows) for c in range(cols) if isinstance(tiles[r][c], dict) and tiles[r][c].get('kind') == 'PASTURE')
+    cows_in_shed = shed.get('COW', 0)
+    total_cows = cows_on_tiles + cows_in_shed
+
+    if pastures_count > cows_on_tiles and total_cows < 6 and money >= 450 and len(market_orders) < 10:
+        market_orders.append(["BUY_ANIMAL", "COW", 1])
+        money -= 400
+
+    # 4. Market Orders: Wheat Stocking for Daily Cow Feed
+    wheat_total = shed.get('WHEAT', 0) + seeds.get('WHEAT', 0)
+    if wheat_total < 8 and money >= 30 and len(market_orders) < 10:
+        market_orders.append(["BUY_SEED", "WHEAT", 4])
+        money -= 40
+
+    # 5. Market Orders: Front-Running Town Demand & Selling Produce / Milk
     for item, qty in shed.items():
         if qty > 0 and len(market_orders) < 10:
             current_price = prices.get(item, COMMODITIES.get(item, {}).get('base_price', 25))
@@ -140,7 +156,7 @@ def agent(observation, configuration=None):
             # Check if town demand has drained inventory below 10k
             mkt_inv = inv_market.get(item, 10000)
             if mkt_inv < 10000 and current_price < base_price:
-                current_price = base_price * 1.10 # Price boost expectation from town demand
+                current_price = base_price * 1.10
 
             sell_qty = calculate_market_sell_quantity(item, qty, current_price, base_price, day)
             if sell_qty == 0 and hasattr(should_undercut_market, '__call__'):
@@ -149,9 +165,9 @@ def agent(observation, configuration=None):
             if sell_qty > 0:
                 market_orders.append(["SELL", item, sell_qty])
 
-    # 4. Market Orders: Dynamic Adversarial Seed Buying (Town Demand + Opponent Avoidance)
+    # 6. Market Orders: Dynamic Seed Buying (Melons, Strawberries, Carrots)
     total_seeds = sum(seeds.values())
-    if total_seeds < 3 and money >= 50 and len(market_orders) < 10:
+    if total_seeds < 4 and money >= 50 and len(market_orders) < 10:
         if 'get_adversarial_crop_choice' in globals() or 'get_adversarial_crop_choice' in locals():
             crop_choice = get_adversarial_crop_choice(day, money, quad_count, step, opp_tiles, town_shops)
         else:
@@ -204,13 +220,16 @@ def agent(observation, configuration=None):
                         act = ["COLLECT_FERTILIZER"]
 
         elif current_tile is None: # Empty unlocked tile
-            # Plant only if active plant count is within worker capacity (10 tiles per worker)
-            planted_count = sum(1 for r in range(rows) for c in range(cols) if isinstance(tiles[r][c], dict) and tiles[r][c].get('kind') == 'PLANT')
-            max_allowed = 10 + len(hands_pos) * 10
-            if planted_count < max_allowed:
-                available_crops = [c for c, q in seeds.items() if q > 0]
-                if available_crops:
-                    act = ["PLANT", available_crops[0]]
+            pasture_total = sum(1 for r in range(rows) for c in range(cols) if isinstance(tiles[r][c], dict) and tiles[r][c].get('kind') == 'PASTURE')
+            if pasture_total < 6 and money >= 200:
+                act = ["BUILD_PASTURE"]
+            else:
+                planted_count = sum(1 for r in range(rows) for c in range(cols) if isinstance(tiles[r][c], dict) and tiles[r][c].get('kind') == 'PLANT')
+                max_allowed = 8 + len(hands_pos) * 8
+                if planted_count < max_allowed:
+                    available_crops = [c for c, q in seeds.items() if q > 0]
+                    if available_crops:
+                        act = ["PLANT", available_crops[0]]
 
         # If no immediate action on current tile, BFS pathfind to nearest unreserved work target
         if act == ["PASS"]:
