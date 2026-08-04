@@ -64,19 +64,31 @@ See the Iteration Protocol in the plan.
 ## Commands
 
 ```bash
-python3 -m unittest python_bot/test_agent.py
+python3 -m unittest python_bot.test_agent python_bot.test_agent_allocator
 ```
+
+The release gate. Self-play is the default opponent; `--baseline` adds the paired
+head-to-head (G2) and `--smoke` adds the vs-built-in liveness tier. Exits non-zero when
+G1/G2/G3 or the liveness checks fail.
 
 ```bash
-python3 python_bot/run_official_tournament.py --agent python_bot/agent.py --replay-dir replays/official
+python3 python_bot/run_official_tournament.py --agent python_bot/agent.py --seed-count 30 --smoke --baseline python_bot/agent_allocator.py
 ```
+
+A quick during-development check — 30 self-play seeds, ~35s on 11 workers, no gate:
 
 ```bash
-python3 python_bot/run_official_tournament.py --agent python_bot/agent.py --opponents self --seed-count 30 --replay-dir replays/self-play
+python3 python_bot/run_official_tournament.py --agent python_bot/agent.py --seed-count 30 --no-gate
 ```
 
-`kaggle_environments` accepts a **file path** as an agent, so the previous approved artifact
-can be used directly as an opponent for regression runs.
+`kaggle_environments` accepts a **file path** as an agent, so any previous artifact works
+directly as `--baseline` or in `--opponents`. Full replay JSON is off by default (it is
+~25 MB per episode); pass `--replay-dir` when a replay is actually needed.
+
+**Read the engine, don't infer it.** `kaggle_environments/envs/kaggriculture/kaggriculture.py`
+is the authoritative spec — price curves, yield schedules, shop tables and the town-demand
+schedule are all readable, and the agent's models are asserted against them in
+`test_agent_allocator.py`.
 
 ## Working notes
 

@@ -3,6 +3,42 @@
 **Status:** Phase 1 (schema/API compliance) complete. Phase 2 as originally written was
 speculative; this revision replaces it with work items derived from measured replay evidence.
 
+> [!IMPORTANT]
+> **Cycle 1 ran on 2026-08-04. W0 landed; G1 did not move. Three premises below are now
+> contradicted by measurement — read `walkthrough.md` before acting on them.**
+>
+> 1. **"Where the headroom is — the market, not the land" is wrong.** Every product except
+>    melon trades *above* base for the entire season; the market is supply-starved, not
+>    glutted. Melon is the sole exception because no shop buys it. This is the stated
+>    rationale for W2 and W8, and it does not hold.
+> 2. **The binding constraint is labour**, not land and not the price curves. Scaling the
+>    herd from 10 to 22 animals added $29k of revenue and $27k of cost, and starved the crop
+>    loop (strawberry fell to 1.6 units/tile against a possible 4.0).
+> 3. **G1 and G2 actively conflict.** The Cycle-1 variant scores $86,282 self-play against
+>    the incumbent's $79,407, yet loses 77% of paired head-to-heads. Since the ladder ranks
+>    on win/loss only, it was rejected under this plan's own acceptance rule.
+>
+> Also settled: **W9b's price model is exact, not 89%.** The engine ships inside
+> `kaggle_environments`, so its price function, shop tables and town-demand schedule can be
+> read rather than inferred — and asserted against in tests. Prefer reading the engine to
+> inferring from replays for anything mechanical.
+
+> [!IMPORTANT]
+> **Cycle 2 ran on 2026-08-05. Two more premises are now settled by measurement —
+> `walkthrough.md` has the numbers.**
+>
+> 4. **G1 is *not* out of reach because the market is too small.** Cycle 1's ~$305k
+>    absorption figure valued the town's drain at *base* price, but inventory sits below I0
+>    all season so every unit is quoted above base. At achievable prices the same drain is
+>    worth **$468,476**; paced at the drain rate it is $304,416. G1's $320,000 of combined
+>    bank sits *inside* that band. **G1 stays as specified.**
+> 5. **The binding constraint is production, and it is not the opponent.** Given the whole
+>    market to itself against `pass`, the agent still sells only **34%** of the ceiling and
+>    banks $133,477. Wool ($81,668), tomato ($25,956) and egg ($20,632) are at **0% capture
+>    on every seed** — $128,256 an episode that nobody touches. Labour is the part of
+>    production that binds first (Cycle 1), so raising output per hand-turn comes before
+>    adding animals to service.
+
 ---
 
 ## GOAL — $160,000, non-negotiable

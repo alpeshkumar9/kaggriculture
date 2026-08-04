@@ -1,9 +1,22 @@
 """Run Kaggriculture agents in the official Kaggle environment.
 
-This is a release gate, not a replacement simulation.  It loads the exact
-Python entry point supplied on the command line, plays deterministic matches,
-writes the official replay JSON, and fails when the bot does not execute the
-minimum crop-production loop.
+This is the release gate.  It loads the exact Python entry points supplied on
+the command line, plays deterministic paired matches on the official engine,
+records what was actually traded, and fails the run when the candidate is not
+good enough — on score as well as on liveness.
+
+Three tiers, per `implementation_plan.md`:
+
+* **smoke**    — vs ``pass``/``random``/``starter``.  Liveness only; banks from
+  this tier are never a performance measure.
+* **self-play** — the primary measurement (goal G1/G3).  Two real sellers push
+  into one shared price curve, which is what the ladder does.
+* **head-to-head** — candidate vs ``--baseline`` (the previous approved
+  artifact), sides swapped on every seed (goal G2).
+
+Diagnostics are exact: ``_commit_unit`` in the official engine is wrapped for
+the duration of an episode, so every executed trade — not every *ordered*
+trade — is recorded with the price it actually cleared at.
 """
 
 from __future__ import annotations
@@ -13,24 +26,37 @@ import importlib.util
 import json
 import random
 import sys
-from collections import Counter
-from dataclasses import asdict, dataclass
+from collections import Counter, defaultdict
+from concurrent.futures import ProcessPoolExecutor
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from statistics import median
 from typing import Any, Callable, Iterable
 
 
-Agent = Callable[[dict[str, Any], Any], dict[str, Any]]
+Agent = Callable[..., dict[str, Any]]
 REQUIRED_ACTIONS = ("PLANT", "WATER", "HARVEST", "SELL")
 DEFAULT_SEEDS = (1281355554, 2050554103, 1208590292, 910788726)
+
+# Weeds are worthless at turn 720 and the labour is worth more on harvesting and
+# selling, so the cap is only enforced while weeds still cost yield (P6).
 MAX_ACCEPTABLE_WEEDS = 10
-RECORD_MILESTONE = 154615
+WEED_CHECK_LAST_DAY = 25
+
+# G1/G3 live here so raising the bar past $160,000 is a one-line change.
+GOAL_MEDIAN_BANK = 160_000
+GOAL_WORST_BANK = 120_000
+# G2: candidate must not lose to the previous approved artifact.
+GOAL_HEAD_TO_HEAD_WIN_RATE = 0.60
+
+SMOKE_OPPONENTS = ("pass", "random", "starter")
 
 
 @dataclass
 class EpisodeResult:
     opponent: str
     seed: int
+    swapped: bool
     candidate_status: str
     opponent_status: str
     candidate_bank: float
@@ -39,21 +65,27 @@ class EpisodeResult:
     actions: dict[str, int]
     max_plants: int
     max_weeds: int
+    max_weeds_scored: int
     checks: list[str]
-    replay: str
+    replay: str = ""
+    # Diagnostics (candidate side only).
+    revenue: dict[str, float] = field(default_factory=dict)
+    units_sold: dict[str, int] = field(default_factory=dict)
+    realised_price: dict[str, float] = field(default_factory=dict)
+    below_base_fraction: dict[str, float] = field(default_factory=dict)
+    spend: dict[str, float] = field(default_factory=dict)
+    peak_tiles: dict[str, int] = field(default_factory=dict)
+    peak_animals: int = 0
+    final_animals: int = 0
+    animals_lost: int = 0
+    unharvested_value: float = 0.0
+    final_shed_units: int = 0
+    herd_complete_day: int = -1
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--agent", type=Path, required=True, help="Python file exposing agent(obs, configuration=None).")
-    parser.add_argument("--opponents", default="pass,random,starter", help="Comma-separated built-ins; use self for candidate self-play.")
-    parser.add_argument("--seeds", default=",".join(map(str, DEFAULT_SEEDS)), help="Comma-separated deterministic episode seeds.")
-    parser.add_argument("--seed-count", type=int, default=0, help="Generate this many reproducible random seeds instead of --seeds.")
-    parser.add_argument("--seed-source", type=int, default=20260804, help="Random generator seed used with --seed-count.")
-    parser.add_argument("--milestone", type=float, default=RECORD_MILESTONE, help="Final-bank milestone reported in the summary.")
-    parser.add_argument("--replay-dir", type=Path, default=Path("replays/official"))
-    parser.add_argument("--turns", type=int, default=720, help="Episode length; use 720 for release decisions.")
-    return parser.parse_args()
+# --------------------------------------------------------------------------
+# agent loading
+# --------------------------------------------------------------------------
 
 
 def load_agent(path: Path) -> Agent:
@@ -80,13 +112,79 @@ def load_agent(path: Path) -> Agent:
     return candidate
 
 
+def resolve_opponent(spec: str, candidate: Agent) -> Any:
+    """``self`` reuses the candidate; a path loads a file; anything else is a built-in."""
+    if spec == "self":
+        return candidate
+    if spec.endswith(".py"):
+        return load_agent(Path(spec))
+    return spec
+
+
+# --------------------------------------------------------------------------
+# exact trade recording
+# --------------------------------------------------------------------------
+
+
+class TradeLog:
+    """Wrap the engine's ``_commit_unit`` so only *executed* units are counted.
+
+    Ladder agents spam infeasible orders; ordered quantity is intent, not
+    execution.  Wrapping the commit point removes that ambiguity entirely.
+    """
+
+    def __init__(self, engine: Any) -> None:
+        self.engine = engine
+        self.original_commit = engine._commit_unit
+        self.original_market = engine._process_market
+        # Live farm dicts for the running episode; step observations are
+        # per-step snapshots, so identity has to be captured mid-episode.
+        self.live_farms: list[dict] = []
+        self.entries: list[tuple[int, str, str, float]] = []
+
+    def __enter__(self) -> "TradeLog":
+        original_commit = self.original_commit
+        original_market = self.original_market
+        entries = self.entries
+        log = self
+
+        def logged_market(state, env):
+            log.live_farms = state[0].observation.farms
+            return original_market(state, env)
+
+        def logged_commit(op, item, price, farm, private, market):
+            ok = original_commit(op, item, price, farm, private, market)
+            if ok:
+                player = next(
+                    (i for i, candidate in enumerate(log.live_farms) if candidate is farm), -1
+                )
+                entries.append((player, op, item, float(price)))
+            return ok
+
+        self.engine._process_market = logged_market
+        self.engine._commit_unit = logged_commit
+        return self
+
+    def __exit__(self, *exc: Any) -> None:
+        self.engine._commit_unit = self.original_commit
+        self.engine._process_market = self.original_market
+
+    def for_player(self, player: int) -> list[tuple[str, str, float]]:
+        return [(op, item, price) for owner, op, item, price in self.entries if owner == player]
+
+
+# --------------------------------------------------------------------------
+# per-episode measurement
+# --------------------------------------------------------------------------
+
+
 def player_bank(step: Any, player: int) -> float:
-    farms = step[player].observation.get("farms", [])
+    farms = step[0].observation.get("farms", [])
     return float(farms[player].get("money", 0.0)) if player < len(farms) else 0.0
 
 
 def farm_tile_counts(step: Any, player: int) -> tuple[int, int]:
-    farms = step[player].observation.get("farms", [])
+    farms = step[0].observation.get("farms", [])
     tiles = farms[player].get("tiles", []) if player < len(farms) else []
     plants = weeds = 0
     for row in tiles:
@@ -98,11 +196,26 @@ def farm_tile_counts(step: Any, player: int) -> tuple[int, int]:
     return plants, weeds
 
 
+def crop_tile_counts(step: Any, player: int) -> Counter[str]:
+    farms = step[0].observation.get("farms", [])
+    tiles = farms[player].get("tiles", []) if player < len(farms) else []
+    counts: Counter[str] = Counter()
+    for row in tiles:
+        for tile in row:
+            if not isinstance(tile, dict):
+                continue
+            if tile.get("kind") == "PLANT":
+                counts[tile.get("crop", "?")] += 1
+            elif tile.get("animal"):
+                counts[tile["animal"]] += 1
+    return counts
+
+
 def action_names(action: Any) -> Iterable[str]:
     if not isinstance(action, dict):
         return ()
-    workers = [action.get("farmer", [])] + action.get("hands", [])
-    market = action.get("market", [])
+    workers = [action.get("farmer", [])] + list(action.get("hands", []))
+    market = list(action.get("market", []))
     commands = []
     for instruction in [*workers, *market]:
         if isinstance(instruction, list) and instruction:
@@ -110,7 +223,9 @@ def action_names(action: Any) -> Iterable[str]:
     return commands
 
 
-def evaluate_checks(actions: Counter[str], max_plants: int, max_weeds: int, candidate_status: str) -> list[str]:
+def evaluate_checks(
+    actions: Counter[str], max_plants: int, max_weeds_scored: int, candidate_status: str
+) -> list[str]:
     failures = []
     if candidate_status != "DONE":
         failures.append(f"candidate status is {candidate_status}, expected DONE")
@@ -119,40 +234,135 @@ def evaluate_checks(actions: Counter[str], max_plants: int, max_weeds: int, cand
     for command in REQUIRED_ACTIONS:
         if actions[command] == 0:
             failures.append(f"no {command} action was issued")
-    if max_weeds > MAX_ACCEPTABLE_WEEDS:
-        failures.append(f"{max_weeds} weed tile(s) were observed (limit: {MAX_ACCEPTABLE_WEEDS})")
+    if max_weeds_scored > MAX_ACCEPTABLE_WEEDS:
+        failures.append(
+            f"{max_weeds_scored} weed tile(s) on or before day {WEED_CHECK_LAST_DAY} "
+            f"(limit: {MAX_ACCEPTABLE_WEEDS})"
+        )
     return failures
 
 
-def run_episode(candidate: Agent, opponent_name: str, seed: int, turns: int, replay_dir: Path) -> EpisodeResult:
+def unharvested_value(step: Any, player: int, engine: Any) -> float:
+    farms = step[0].observation.get("farms", [])
+    tiles = farms[player].get("tiles", []) if player < len(farms) else []
+    total = 0.0
+    for row in tiles:
+        for tile in row:
+            if not isinstance(tile, dict):
+                continue
+            units = int(tile.get("yield_units", 0) or 0)
+            if units <= 0:
+                continue
+            if tile.get("kind") == "PLANT":
+                product = tile.get("crop")
+            elif tile.get("animal"):
+                product = engine.ANIMALS[tile["animal"]]["product"]
+            else:
+                continue
+            total += units * engine.MARKET_PARAMS[product]["base"]
+    return total
+
+
+def run_episode(
+    agent_path: str,
+    opponent_spec: str,
+    seed: int,
+    turns: int,
+    swapped: bool,
+    replay_dir: str | None,
+) -> EpisodeResult:
     from kaggle_environments import make
+    from kaggle_environments.envs.kaggriculture import kaggriculture as engine
 
-    environment = make("kaggriculture", configuration={"episodeSteps": turns, "seed": seed}, debug=True)
-    opponent = candidate if opponent_name == "self" else opponent_name
-    environment.run([candidate, opponent])
+    candidate = load_agent(Path(agent_path))
+    opponent = resolve_opponent(opponent_spec, candidate)
 
+    seat = 1 if swapped else 0
+    players: list[Any] = [opponent, candidate] if swapped else [candidate, opponent]
+
+    environment = make(
+        "kaggriculture", configuration={"episodeSteps": turns, "seed": seed}, debug=False
+    )
+    with TradeLog(engine) as trades:
+        environment.run(players)
+
+    turns_per_day = max(1, int(environment.configuration.get("turnsPerDay", 24)))
     commands: Counter[str] = Counter()
-    max_plants = max_weeds = 0
-    for step in environment.steps:
-        commands.update(action_names(step[0].action))
-        plants, weeds = farm_tile_counts(step, player=0)
+    max_plants = max_weeds = max_weeds_scored = 0
+    peak_tiles: Counter[str] = Counter()
+    peak_animals = 0
+    herd_complete_day = -1
+    animals_by_day: dict[int, int] = {}
+
+    for index, step in enumerate(environment.steps):
+        commands.update(action_names(step[seat].action))
+        plants, weeds = farm_tile_counts(step, seat)
         max_plants = max(max_plants, plants)
         max_weeds = max(max_weeds, weeds)
+        day = index // turns_per_day
+        if day <= WEED_CHECK_LAST_DAY:
+            max_weeds_scored = max(max_weeds_scored, weeds)
+        counts = crop_tile_counts(step, seat)
+        for name, value in counts.items():
+            peak_tiles[name] = max(peak_tiles[name], value)
+        animals = sum(counts[a] for a in ("COW", "SHEEP", "GOOSE"))
+        peak_animals = max(peak_animals, animals)
+        animals_by_day[day] = max(animals_by_day.get(day, 0), animals)
+
+    for day in sorted(animals_by_day):
+        if animals_by_day[day] >= peak_animals:
+            herd_complete_day = day
+            break
 
     final = environment.steps[-1]
-    candidate_bank = player_bank(final, player=0)
-    opponent_bank = player_bank(final, player=1)
-    candidate_status, opponent_status = final[0].status, final[1].status
-    outcome = "win" if candidate_bank > opponent_bank else "loss" if candidate_bank < opponent_bank else "tie"
-    checks = evaluate_checks(commands, max_plants, max_weeds, candidate_status)
+    final_farm = final[0].observation["farms"][seat]
+    candidate_bank = float(final_farm.get("money", 0.0))
+    opponent_bank = player_bank(final, 1 - seat)
+    candidate_status, opponent_status = final[seat].status, final[1 - seat].status
+    outcome = (
+        "win" if candidate_bank > opponent_bank
+        else "loss" if candidate_bank < opponent_bank else "tie"
+    )
+    checks = evaluate_checks(commands, max_plants, max_weeds_scored, candidate_status)
 
-    replay_dir.mkdir(parents=True, exist_ok=True)
-    replay = replay_dir / f"candidate-vs-{opponent_name}-seed-{seed}.json"
-    replay.write_text(json.dumps(environment.toJSON()), encoding="utf-8")
+    revenue: dict[str, float] = defaultdict(float)
+    units_sold: dict[str, int] = defaultdict(int)
+    below_base: dict[str, int] = defaultdict(int)
+    spend: dict[str, float] = defaultdict(float)
+    for op, item, price in trades.for_player(seat):
+        if op == "SELL":
+            revenue[item] += price
+            units_sold[item] += 1
+            if price < engine.MARKET_PARAMS[item]["base"]:
+                below_base[item] += 1
+        else:
+            spend[item] += price
+
+    realised = {
+        item: revenue[item] / units_sold[item] for item in units_sold if units_sold[item]
+    }
+    below_fraction = {
+        item: below_base[item] / units_sold[item] for item in units_sold if units_sold[item]
+    }
+
+    final_counts = crop_tile_counts(final, seat)
+    final_animals = sum(final_counts[a] for a in ("COW", "SHEEP", "GOOSE"))
+    final_private = final[seat].observation.get("private", {}) or {}
+    final_shed = final_private.get("shed", {}) or {}
+
+    replay_path = ""
+    if replay_dir:
+        directory = Path(replay_dir)
+        directory.mkdir(parents=True, exist_ok=True)
+        suffix = "-swapped" if swapped else ""
+        target = directory / f"candidate-vs-{Path(opponent_spec).stem}-seed-{seed}{suffix}.json"
+        target.write_text(json.dumps(environment.toJSON()), encoding="utf-8")
+        replay_path = str(target)
 
     return EpisodeResult(
-        opponent=opponent_name,
+        opponent=opponent_spec,
         seed=seed,
+        swapped=swapped,
         candidate_status=candidate_status,
         opponent_status=opponent_status,
         candidate_bank=candidate_bank,
@@ -161,56 +371,147 @@ def run_episode(candidate: Agent, opponent_name: str, seed: int, turns: int, rep
         actions=dict(commands),
         max_plants=max_plants,
         max_weeds=max_weeds,
+        max_weeds_scored=max_weeds_scored,
         checks=checks,
-        replay=str(replay),
+        replay=replay_path,
+        revenue=dict(revenue),
+        units_sold=dict(units_sold),
+        realised_price=realised,
+        below_base_fraction=below_fraction,
+        spend=dict(spend),
+        peak_tiles=dict(peak_tiles),
+        peak_animals=peak_animals,
+        final_animals=final_animals,
+        animals_lost=max(0, peak_animals - final_animals),
+        unharvested_value=unharvested_value(final, seat, engine),
+        final_shed_units=sum(int(v) for v in final_shed.values()),
+        herd_complete_day=herd_complete_day,
     )
 
 
-def print_summary(results: list[EpisodeResult], milestone: float) -> None:
-    wins = sum(result.outcome == "win" for result in results)
-    losses = sum(result.outcome == "loss" for result in results)
-    ties = len(results) - wins - losses
-    banks = [result.candidate_bank for result in results]
-    failed = [result for result in results if result.checks]
-    print("\nOfficial Kaggriculture tournament")
-    print(f"Episodes: {len(results)} | wins: {wins} | losses: {losses} | ties: {ties}")
-    print(f"Candidate final bank — median: ${median(banks):.0f}, minimum: ${min(banks):.0f}, maximum: ${max(banks):.0f}")
-    over_milestone = sum(bank >= milestone for bank in banks)
-    print(f"${milestone:,.0f} milestone: {over_milestone}/{len(banks)} episodes")
-    print(f"Replay/action gates: {len(results) - len(failed)}/{len(results)} passed")
-    for opponent in sorted({result.opponent for result in results}):
-        matchup = [result for result in results if result.opponent == opponent]
-        matchup_wins = sum(result.outcome == "win" for result in matchup)
-        print(
-            f"  vs {opponent}: {matchup_wins}/{len(matchup)} wins, "
-            f"median bank ${median([result.candidate_bank for result in matchup]):.0f}"
-        )
+# --------------------------------------------------------------------------
+# reporting
+# --------------------------------------------------------------------------
+
+
+def _aggregate(results: list[EpisodeResult], attribute: str) -> dict[str, float]:
+    totals: dict[str, float] = defaultdict(float)
     for result in results:
-        status = "PASS" if not result.checks else "FAIL"
-        print(f"[{status}] vs {result.opponent}, seed {result.seed}: ${result.candidate_bank:.0f} vs ${result.opponent_bank:.0f} ({result.outcome})")
+        for item, value in getattr(result, attribute).items():
+            totals[item] += value
+    return dict(totals)
+
+
+def print_diagnostics(results: list[EpisodeResult]) -> None:
+    from kaggle_environments.envs.kaggriculture import kaggriculture as engine
+
+    if not results:
+        return
+    count = len(results)
+    revenue = _aggregate(results, "revenue")
+    units = _aggregate(results, "units_sold")
+    below = defaultdict(float)
+    for result in results:
+        for item, value in result.below_base_fraction.items():
+            below[item] += value * result.units_sold.get(item, 0)
+
+    print("\n  Product          units/ep   revenue/ep   realised   base   below-base")
+    for item in sorted(revenue, key=lambda name: -revenue[name]):
+        sold = units.get(item, 0)
+        realised = revenue[item] / sold if sold else 0.0
+        base = engine.MARKET_PARAMS[item]["base"]
+        share = below[item] / sold if sold else 0.0
+        print(
+            f"  {item:<14} {sold / count:8.1f}   ${revenue[item] / count:9,.0f}   "
+            f"${realised:7.1f}  ${base:5}   {share:6.0%}"
+        )
+
+    spend = _aggregate(results, "spend")
+    if spend:
+        line = ", ".join(
+            f"{item} ${value / count:,.0f}" for item, value in sorted(spend.items())
+        )
+        print(f"  Purchases/ep: {line}")
+
+    tiles = _aggregate(results, "peak_tiles")
+    print(
+        "  Peak tiles/ep: "
+        + ", ".join(f"{item} {value / count:.1f}" for item, value in sorted(tiles.items()))
+    )
+    print(
+        f"  Herd: peak {sum(r.peak_animals for r in results) / count:.1f}, "
+        f"complete day {median([r.herd_complete_day for r in results]):.0f}, "
+        f"lost {sum(r.animals_lost for r in results) / count:.2f}"
+    )
+    print(
+        f"  End of season: unharvested ${sum(r.unharvested_value for r in results) / count:,.0f}, "
+        f"shed {sum(r.final_shed_units for r in results) / count:.1f} units, "
+        f"peak weeds {max(r.max_weeds for r in results)}"
+    )
+
+
+def summarise_tier(name: str, results: list[EpisodeResult]) -> dict[str, Any]:
+    banks = [result.candidate_bank for result in results]
+    wins = sum(result.outcome == "win" for result in results)
+    ties = sum(result.outcome == "tie" for result in results)
+    failed = [result for result in results if result.checks]
+    summary = {
+        "tier": name,
+        "episodes": len(results),
+        "wins": wins,
+        "ties": ties,
+        "losses": len(results) - wins - ties,
+        "win_rate": wins / len(results) if results else 0.0,
+        "median_bank": median(banks) if banks else 0.0,
+        "min_bank": min(banks) if banks else 0.0,
+        "max_bank": max(banks) if banks else 0.0,
+        "gate_failures": len(failed),
+    }
+    print(f"\n=== {name} ({len(results)} episodes) ===")
+    print(
+        f"  wins {wins} | ties {ties} | losses {summary['losses']} "
+        f"| win rate {summary['win_rate']:.0%}"
+    )
+    print(
+        f"  bank — median ${summary['median_bank']:,.0f}, "
+        f"min ${summary['min_bank']:,.0f}, max ${summary['max_bank']:,.0f}"
+    )
+    print(f"  liveness gate: {len(results) - len(failed)}/{len(results)} passed")
+    for result in failed:
+        print(f"  [FAIL] seed {result.seed}{' swapped' if result.swapped else ''}:")
         for failure in result.checks:
-            print(f"  - {failure}")
-        print(f"  replay: {result.replay}")
+            print(f"    - {failure}")
+    return summary
 
 
-def main() -> int:
-    args = parse_args()
-    candidate = load_agent(args.agent)
-    opponents = tuple(opponent.strip() for opponent in args.opponents.split(",") if opponent.strip())
-    seeds = _seeds_from_args(args)
-    if not opponents or not seeds:
-        raise ValueError("At least one opponent and one seed are required")
+# --------------------------------------------------------------------------
+# entry point
+# --------------------------------------------------------------------------
 
-    results = [
-        run_episode(candidate, opponent, seed, args.turns, args.replay_dir)
-        for opponent in opponents
-        for seed in seeds
-    ]
-    report = args.replay_dir / "report.json"
-    report.write_text(json.dumps([asdict(result) for result in results], indent=2), encoding="utf-8")
-    print_summary(results, args.milestone)
-    print(f"Machine-readable report: {report}")
-    return 1 if any(result.checks for result in results) else 0
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--agent", type=Path, required=True, help="Python file exposing agent(obs, configuration=None).")
+    parser.add_argument(
+        "--opponents",
+        default="self",
+        help="Comma-separated opponents: 'self', a built-in name (pass/random/starter), "
+        "or a path to another agent .py file. Default: self-play (the G1 measurement).",
+    )
+    parser.add_argument("--baseline", type=Path, default=None, help="Previous approved artifact; run head-to-head, sides swapped (G2).")
+    parser.add_argument("--smoke", action="store_true", help="Also run the vs-built-in liveness tier.")
+    parser.add_argument("--seeds", default=",".join(map(str, DEFAULT_SEEDS)))
+    parser.add_argument("--seed-count", type=int, default=0, help="Generate this many reproducible seeds instead of --seeds.")
+    parser.add_argument("--seed-source", type=int, default=20260804)
+    parser.add_argument("--goal", type=float, default=GOAL_MEDIAN_BANK, help="G1: required self-play median final bank.")
+    parser.add_argument("--worst-goal", type=float, default=GOAL_WORST_BANK, help="G3: required self-play worst-seed bank.")
+    parser.add_argument("--h2h-goal", type=float, default=GOAL_HEAD_TO_HEAD_WIN_RATE, help="G2: required win rate vs --baseline.")
+    parser.add_argument("--replay-dir", type=Path, default=None, help="Write full replay JSON here (large; off by default).")
+    parser.add_argument("--report", type=Path, default=Path("replays/report.json"))
+    parser.add_argument("--turns", type=int, default=720)
+    parser.add_argument("--jobs", type=int, default=0, help="Parallel worker processes (default: cpu_count - 1).")
+    parser.add_argument("--no-gate", action="store_true", help="Report only; always exit 0.")
+    return parser.parse_args()
 
 
 def _seeds_from_args(args: argparse.Namespace) -> tuple[int, ...]:
@@ -218,6 +519,112 @@ def _seeds_from_args(args: argparse.Namespace) -> tuple[int, ...]:
         rng = random.Random(args.seed_source)
         return tuple(rng.randrange(1, 2**31) for _ in range(args.seed_count))
     return tuple(int(seed.strip()) for seed in args.seeds.split(",") if seed.strip())
+
+
+def _jobs(requested: int) -> int:
+    import os
+
+    if requested > 0:
+        return requested
+    return max(1, (os.cpu_count() or 2) - 1)
+
+
+def main() -> int:
+    args = parse_args()
+    load_agent(args.agent)  # fail fast on a broken candidate
+    seeds = _seeds_from_args(args)
+    opponents = tuple(o.strip() for o in args.opponents.split(",") if o.strip())
+    if not seeds:
+        raise ValueError("At least one seed is required")
+
+    jobs: list[tuple[str, str, int, int, bool, str | None]] = []
+    tiers: list[tuple[str, str, bool]] = []  # (tier name, opponent spec, paired)
+    for opponent in opponents:
+        tiers.append(("smoke" if opponent in SMOKE_OPPONENTS else "self-play", opponent, False))
+    if args.smoke:
+        tiers.extend(("smoke", name, False) for name in SMOKE_OPPONENTS)
+    if args.baseline:
+        tiers.append(("head-to-head", str(args.baseline), True))
+
+    replay_dir = str(args.replay_dir) if args.replay_dir else None
+    job_tiers: list[str] = []
+    for tier, opponent, paired in tiers:
+        for seed in seeds:
+            sides = (False, True) if paired else (False,)
+            for swapped in sides:
+                jobs.append((str(args.agent), opponent, seed, args.turns, swapped, replay_dir))
+                job_tiers.append(tier)
+
+    worker_count = min(_jobs(args.jobs), len(jobs))
+    print(f"Running {len(jobs)} episodes on {worker_count} workers…")
+    with ProcessPoolExecutor(max_workers=worker_count) as pool:
+        results = list(pool.map(run_episode, *zip(*jobs)))
+
+    by_tier: dict[str, list[EpisodeResult]] = defaultdict(list)
+    for tier, result in zip(job_tiers, results):
+        by_tier[tier].append(result)
+
+    print("\nOfficial Kaggriculture tournament")
+    summaries = []
+    for tier in ("smoke", "self-play", "head-to-head"):
+        if tier not in by_tier:
+            continue
+        summary = summarise_tier(tier, by_tier[tier])
+        summaries.append(summary)
+        if tier != "smoke":
+            print_diagnostics(by_tier[tier])
+
+    failures: list[str] = []
+    for result in results:
+        if result.checks:
+            failures.append(f"liveness gate failed on {result.opponent} seed {result.seed}")
+            break
+
+    self_play = by_tier.get("self-play", [])
+    if self_play:
+        banks = [result.candidate_bank for result in self_play]
+        g1, g3 = median(banks), min(banks)
+        print(
+            f"\nG1 self-play median ${g1:,.0f} / ${args.goal:,.0f} — "
+            f"{'MET' if g1 >= args.goal else 'NOT MET'}"
+        )
+        print(
+            f"G3 self-play worst  ${g3:,.0f} / ${args.worst_goal:,.0f} — "
+            f"{'MET' if g3 >= args.worst_goal else 'NOT MET'}"
+        )
+        if g1 < args.goal:
+            failures.append(f"G1 median ${g1:,.0f} below ${args.goal:,.0f}")
+        if g3 < args.worst_goal:
+            failures.append(f"G3 worst seed ${g3:,.0f} below ${args.worst_goal:,.0f}")
+
+    head_to_head = by_tier.get("head-to-head", [])
+    if head_to_head:
+        win_rate = sum(r.outcome == "win" for r in head_to_head) / len(head_to_head)
+        print(
+            f"G2 head-to-head win rate {win_rate:.0%} / {args.h2h_goal:.0%} — "
+            f"{'MET' if win_rate >= args.h2h_goal else 'NOT MET'}"
+        )
+        if win_rate < args.h2h_goal:
+            failures.append(f"G2 win rate {win_rate:.0%} below {args.h2h_goal:.0%}")
+
+    args.report.parent.mkdir(parents=True, exist_ok=True)
+    args.report.write_text(
+        json.dumps(
+            {
+                "summaries": summaries,
+                "episodes": [asdict(result) for result in results],
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    print(f"\nMachine-readable report: {args.report}")
+
+    if failures:
+        print("\nGATE FAILED:")
+        for failure in failures:
+            print(f"  - {failure}")
+    return 0 if args.no_gate or not failures else 1
 
 
 if __name__ == "__main__":

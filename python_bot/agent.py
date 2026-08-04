@@ -10,12 +10,16 @@ for direct Kaggle uploads.
 from collections import deque
 
 
+# ``harvest_day`` is the engine's ``max_yield_day`` -- the age at which a
+# one-time crop holds its full yield and is worth collecting.  ``first_yield_day``
+# is the earlier age at which the engine will *accept* a HARVEST at all, which is
+# what matters on the final day when partial yield still beats leaving it standing.
 CROPS = {
-    "WHEAT": {"cost": 10, "harvest_day": 4, "bonus_start": 2},
-    "CARROT": {"cost": 20, "harvest_day": 3, "bonus_start": 2},
-    "TOMATO": {"cost": 50, "ongoing": True},
-    "STRAWBERRY": {"cost": 100, "ongoing": True},
-    "MELON": {"cost": 80, "harvest_day": 12, "bonus_start": 6},
+    "WHEAT": {"cost": 10, "harvest_day": 4, "bonus_start": 2, "first_yield_day": 2},
+    "CARROT": {"cost": 20, "harvest_day": 3, "bonus_start": 2, "first_yield_day": 2},
+    "TOMATO": {"cost": 50, "ongoing": True, "first_yield_day": 8},
+    "STRAWBERRY": {"cost": 100, "ongoing": True, "first_yield_day": 10},
+    "MELON": {"cost": 80, "harvest_day": 12, "bonus_start": 6, "first_yield_day": 10},
 }
 HANDS_PER_DAY = 13
 HIRE_COSTS = (1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377)
@@ -206,7 +210,11 @@ def _market_actions(
         + geese_to_buy + early_sheep_to_buy + sheep_to_buy
     )
     wheat_needed = max(0, protected_animals * WHEAT_RESERVE_DAYS - wheat_on_hand)
-    if protected_animals and wheat_needed and money >= wheat_needed * BASE_PRICES["WHEAT"]:
+    # Liquidation releases the feed reserve on the final day, and the escape
+    # check only runs in the end-of-day update, so an animal left unfed then
+    # costs nothing.  Without this guard the reserve is sold and re-bought on
+    # the same turn, every episode.
+    if day < FINAL_LIQUIDATION_DAY and protected_animals and wheat_needed and money >= wheat_needed * BASE_PRICES["WHEAT"]:
         market.append(["BUY_PRODUCT", "WHEAT", wheat_needed])
         money -= wheat_needed * BASE_PRICES["WHEAT"]
 
@@ -438,14 +446,11 @@ def _action_for_tile(
     strawberry_priority_day=STRAWBERRY_PRIORITY_DAY,
 ):
     if day >= 29:
-        if isinstance(tile, dict) and tile.get("kind") == "PLANT":
-            crop = tile.get("crop")
-            if (
-                crop == "MELON"
-                and day - int(tile.get("planted_day", day)) >= CROPS["MELON"]["harvest_day"]
-            ):
-                return ["HARVEST"]
-        return None
+        # Nothing planted or watered on the last day can pay back, so every
+        # hand-turn goes to banking yield that is already standing -- from any
+        # crop or animal, not just melon.  Anything left in the ground at turn
+        # 720 is worth nothing.
+        return ["HARVEST"] if _has_standing_yield(tile, day) else None
     if tile is None:
         crop = _available_crop(seed_budget, day, strawberry_priority_day)
         return ["PLANT", crop] if crop else None
@@ -545,14 +550,7 @@ def _target_priority(
 ):
     """Smaller values are assigned first across the whole farm."""
     if day >= 29:
-        if isinstance(tile, dict) and tile.get("kind") == "PLANT":
-            crop = tile.get("crop")
-            if (
-                crop == "MELON"
-                and day - int(tile.get("planted_day", day)) >= CROPS["MELON"]["harvest_day"]
-            ):
-                return -10
-        return None
+        return -10 if _has_standing_yield(tile, day) else None
     if tile is None:
         return 3 if _available_crop(seed_budget, day, strawberry_priority_day) else None
     if not isinstance(tile, dict):
@@ -578,6 +576,19 @@ def _target_priority(
     if harvest_day is not None and day - int(tile.get("planted_day", day)) >= harvest_day:
         return -2 if crop == "MELON" and day in {16, 28} else 0
     return 1 if _needs_water(tile, day) else None
+
+
+def _has_standing_yield(tile, day):
+    """True when the tile holds units a HARVEST would actually collect."""
+    if not isinstance(tile, dict) or int(tile.get("yield_units", 0)) <= 0:
+        return False
+    if tile.get("animal"):
+        return True
+    if tile.get("kind") != "PLANT":
+        return False
+    crop_data = CROPS.get(tile.get("crop"), {})
+    # The engine refuses a harvest before the crop's first yield day.
+    return day - int(tile.get("planted_day", day)) >= crop_data.get("first_yield_day", 0)
 
 
 def _needs_water(tile, day):
@@ -780,8 +791,7 @@ def _livestock_action(
                 return ["FEED"]
             if at_shed and private.get("shed", {}).get("WHEAT", 0) > 0:
                 reserved.add((x, y))
-                batch = max(1, (len(livestock["unfed"]) + service_workers - 1) // service_workers)
-                return ["PICKUP", "WHEAT", batch]
+                return ["PICKUP", "WHEAT", _feed_batch(livestock, service_workers)]
             return _move_to(x, y, tiles, _shed_targets(len(tiles)), reserved)
         if not tile.get("cared_today", False):
             reserved.add((x, y))
@@ -826,8 +836,7 @@ def _livestock_action(
     if livestock["unfed"]:
         if at_shed and not carrying_wheat:
             if private.get("shed", {}).get("WHEAT", 0) > 0:
-                batch = max(1, (len(livestock["unfed"]) + service_workers - 1) // service_workers)
-                return ["PICKUP", "WHEAT", batch]
+                return ["PICKUP", "WHEAT", _feed_batch(livestock, service_workers)]
             return None
         if carrying_wheat:
             return _move_to(x, y, tiles, livestock["unfed"], reserved)
@@ -837,6 +846,11 @@ def _livestock_action(
             if private.get("shed", {}).get(animal, 0) > 0:
                 return ["PICKUP", animal, 1]
     return None
+
+
+def _feed_batch(livestock, service_workers):
+    """Wheat to carry so one trip services this worker's share of the herd."""
+    return max(1, -(-len(livestock["unfed"]) // max(1, service_workers)))
 
 
 def _should_collect_fertilizer(private, tiles, day):
