@@ -1,197 +1,156 @@
 import React from 'react';
-import { Droplet, Sparkles, PlusCircle, Users, CheckCircle, Clock } from 'lucide-react';
+import { Droplet, Sparkles, PlusCircle, Users, Box, Home, ShieldAlert } from 'lucide-react';
 
 export default function FarmGrid({ gameState }) {
-  const { plots, landQuadrants, farmhands, animals, inventory } = gameState;
+  const { tiles, landQuadrants, farmhands, shedInventory, seedsInventory, shedCapacity, shedUsed } = gameState;
+  const landCosts = [1000, 2000, 4000];
+  const nextLandCost = landCosts[landQuadrants - 1];
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       
-      {/* Visual Farm Map (2 Columns) */}
+      {/* 5x5 Quadrant Farm Grid (2 Columns) */}
       <div className="lg:col-span-2 space-y-6">
         <div className="glass-card p-6 rounded-2xl border border-slate-700/60 bg-slate-900/60 backdrop-blur-md">
           
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-                🌾 Interactive Farm Plots ({plots.length} Plots across {landQuadrants} Quadrant{landQuadrants > 1 ? 's' : ''})
+                🌾 Official 10x10 Farm Grid ({tiles.length} Tiles across {landQuadrants} Quadrant{landQuadrants > 1 ? 's' : ''})
               </h2>
-              <p className="text-xs text-slate-400">Live moisture levels, crop growth cycles & fertilizer application</p>
+              <p className="text-xs text-slate-400">5x5 segments • 24 turns/day • 48h unwatered weed penalty</p>
             </div>
             
             <div className="flex items-center gap-3">
               <span className="text-xs px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-300 flex items-center gap-1.5">
                 <Users className="w-3.5 h-3.5 text-cyan-400" />
-                {farmhands} Farmhands Active
+                {farmhands} Farmhands Hired Today
               </span>
             </div>
           </div>
 
-          {/* Plot Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {plots.map((plot) => {
-              const isPlanted = plot.state === 'PLANTED';
-              const isReady = plot.state === 'READY_TO_HARVEST';
-              const isDry = isPlanted && plot.moisture < 35;
+          {/* Grid Render (5 columns per quadrant) */}
+          <div className="grid grid-cols-5 gap-2.5 max-h-[500px] overflow-y-auto pr-1">
+            {tiles.map((tile) => {
+              const isPlant = tile.type === 'PLANT';
+              const isWeed = tile.type === 'WEED';
+              const isCoop = tile.type === 'COOP';
+              const isPasture = tile.type === 'PASTURE';
 
               return (
                 <div
-                  key={plot.id}
-                  className={`relative p-4 rounded-xl border transition-all duration-300 flex flex-col justify-between h-44 ${
-                    isReady
-                      ? 'border-emerald-500/80 bg-gradient-to-b from-emerald-950/40 to-slate-900 shadow-lg shadow-emerald-500/10 animate-pulse'
-                      : isPlanted
-                      ? 'border-amber-500/40 bg-gradient-to-b from-slate-900 via-slate-900 to-amber-950/20'
-                      : 'border-slate-800 bg-slate-950/60 hover:border-slate-700'
+                  key={tile.id}
+                  className={`p-2.5 rounded-xl border text-center transition-all flex flex-col justify-between h-28 ${
+                    isWeed
+                      ? 'border-amber-700/60 bg-amber-950/30'
+                      : isPlant
+                      ? 'border-emerald-500/40 bg-slate-900/80'
+                      : isCoop || isPasture
+                      ? 'border-cyan-500/40 bg-cyan-950/20'
+                      : 'border-slate-800 bg-slate-950/60'
                   }`}
                 >
-                  {/* Status Badge */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-mono font-medium text-slate-400">{plot.id}</span>
-                    {plot.fertilized && (
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center gap-1" title="Fertilized (+50% yield)">
-                        <Sparkles className="w-3 h-3 text-purple-400" />
-                      </span>
-                    )}
+                  <div className="flex items-center justify-between text-[9px] text-slate-500 font-mono">
+                    <span>{tile.id.replace('tile_', '#')}</span>
+                    {tile.wateredToday && <span className="text-cyan-400 font-bold">W</span>}
                   </div>
 
-                  {/* Center Crop Visual */}
-                  <div className="flex flex-col items-center justify-center my-2">
-                    {isReady ? (
-                      <div className="text-3xl animate-bounce">
-                        {getCropIcon(plot.crop)}
-                      </div>
-                    ) : isPlanted ? (
-                      <div className="text-2xl opacity-90">
-                        {getCropIcon(plot.crop)}
-                      </div>
+                  <div className="my-1">
+                    {isWeed ? (
+                      <div className="text-xl">🌿</div>
+                    ) : isPlant ? (
+                      <div className="text-xl">{getCropIcon(tile.crop)}</div>
+                    ) : tile.animal ? (
+                      <div className="text-xl">{getAnimalIcon(tile.animal)}</div>
+                    ) : isCoop ? (
+                      <div className="text-lg opacity-70">🪿</div>
+                    ) : isPasture ? (
+                      <div className="text-lg opacity-70">🏡</div>
                     ) : (
-                      <div className="text-2xl opacity-20">🌱</div>
+                      <div className="text-lg opacity-20">🌱</div>
                     )}
-                    
-                    <span className="text-xs font-semibold mt-1 text-slate-200">
-                      {isReady ? `HARVEST ${plot.crop}` : isPlanted ? plot.crop : 'EMPTY PLOT'}
-                    </span>
+
+                    <div className="text-[10px] font-semibold text-slate-200 mt-1 truncate">
+                      {isWeed ? 'WEED' : isPlant ? tile.crop : tile.animal ? tile.animal : tile.type}
+                    </div>
                   </div>
 
-                  {/* Growth & Moisture Indicators */}
-                  {isPlanted || isReady ? (
-                    <div className="space-y-1.5">
-                      {/* Growth Bar */}
-                      <div>
-                        <div className="flex justify-between text-[10px] text-slate-400 mb-0.5">
-                          <span>Growth</span>
-                          <span>{plot.growth}%</span>
-                        </div>
-                        <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-emerald-400 rounded-full transition-all duration-300"
-                            style={{ width: `${plot.growth}%` }}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Moisture Indicator */}
-                      <div className="flex items-center justify-between text-[10px]">
-                        <span className="flex items-center gap-1 text-slate-400">
-                          <Droplet className={`w-3 h-3 ${isDry ? 'text-amber-400 animate-ping' : 'text-cyan-400'}`} />
-                          Soil Moisture
-                        </span>
-                        <span className={isDry ? 'text-amber-400 font-bold' : 'text-slate-300'}>
-                          {plot.moisture}%
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-[11px] text-slate-500 text-center italic">
-                      Ready for planting
-                    </div>
-                  )}
+                  <div className="text-[9px] text-slate-400 font-mono">
+                    {isPlant ? (
+                      <span>{tile.hoursPlanted}h / {tile.wateredToday ? 'Watered' : 'Dry'}</span>
+                    ) : tile.animal ? (
+                      <span>{tile.fedToday ? 'Fed' : 'Needs Wheat'}</span>
+                    ) : (
+                      <span>Empty</span>
+                    )}
+                  </div>
                 </div>
               );
             })}
           </div>
 
-          {/* Land Quadrant Expansion Info */}
-          {landQuadrants < 4 && (
-            <div className="mt-6 p-4 rounded-xl border border-dashed border-emerald-500/30 bg-emerald-950/10 flex items-center justify-between">
+          {/* Land Quadrant Expansion */}
+          {landQuadrants < 4 && nextLandCost && (
+            <div className="mt-5 p-4 rounded-xl border border-dashed border-emerald-500/40 bg-emerald-950/10 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <PlusCircle className="w-5 h-5 text-emerald-400" />
                 <div>
-                  <div className="text-xs font-bold text-slate-200">Expand Farm Quadrant ({landQuadrants}/4 Unlocked)</div>
-                  <div className="text-[11px] text-slate-400">Unlocks +4 additional plot slots for crop scaling</div>
+                  <div className="text-xs font-bold text-slate-200">Unlock Quadrant #{landQuadrants + 1} (+25 Tiles)</div>
+                  <div className="text-[11px] text-slate-400">Expands farm to {(landQuadrants + 1) * 25} total squares</div>
                 </div>
               </div>
-              <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20">
-                Cost: $500
+              <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/30">
+                Cost: ${nextLandCost.toLocaleString()}
               </span>
             </div>
           )}
         </div>
       </div>
 
-      {/* Side Panel: Livestock & Harvested Inventory */}
+      {/* Shed Inventory & Seeds Vault (1 Column) */}
       <div className="space-y-6">
         
-        {/* Livestock Pens */}
+        {/* Shed Capacity Meter */}
         <div className="glass-card p-6 rounded-2xl border border-slate-700/60 bg-slate-900/60 backdrop-blur-md">
-          <h3 className="text-md font-bold text-slate-100 mb-4 flex items-center gap-2">
-            🐄 Animal Husbandry Pens
-          </h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-md font-bold text-slate-100 flex items-center gap-2">
+              📦 Shed Vault ({shedUsed}/{shedCapacity})
+            </h3>
+            <span className={`text-xs font-bold ${shedUsed >= shedCapacity ? 'text-rose-400' : 'text-emerald-400'}`}>
+              {shedCapacity - shedUsed} free
+            </span>
+          </div>
 
-          <div className="space-y-3">
-            <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-950/50 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">🥛</span>
-                <div>
-                  <div className="text-xs font-bold text-slate-200">Dairy Cows</div>
-                  <div className="text-[10px] text-slate-400">Produces Milk every 12 turns</div>
-                </div>
-              </div>
-              <span className="text-sm font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
-                {animals.cows} Head
-              </span>
-            </div>
+          {/* Shed Progress Gauge */}
+          <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden mb-4">
+            <div
+              className={`h-full transition-all duration-300 ${
+                shedUsed >= shedCapacity ? 'bg-rose-500' : 'bg-emerald-400'
+              }`}
+              style={{ width: `${(shedUsed / shedCapacity) * 100}%` }}
+            />
+          </div>
 
-            <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-950/50 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">🥚</span>
-                <div>
-                  <div className="text-xs font-bold text-slate-200">Poultry Chickens</div>
-                  <div className="text-[10px] text-slate-400">Produces Eggs every 12 turns</div>
-                </div>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            {Object.keys(shedInventory).map((key) => (
+              <div key={key} className="p-2.5 rounded-xl border border-slate-800 bg-slate-950/50 flex justify-between">
+                <span className="text-slate-400">{key}</span>
+                <span className="font-bold text-slate-200">{shedInventory[key]}</span>
               </div>
-              <span className="text-sm font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/20">
-                {animals.chickens} Head
-              </span>
-            </div>
-
-            <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-950/50 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">🧶</span>
-                <div>
-                  <div className="text-xs font-bold text-slate-200">Wool Sheep</div>
-                  <div className="text-[10px] text-slate-400">Produces Wool every 12 turns</div>
-                </div>
-              </div>
-              <span className="text-sm font-bold text-cyan-400 bg-cyan-500/10 px-2.5 py-1 rounded-lg border border-cyan-500/20">
-                {animals.sheep} Head
-              </span>
-            </div>
+            ))}
           </div>
         </div>
 
-        {/* Harvested Stock Storage */}
+        {/* Seeds Storage (Unlimited Cap) */}
         <div className="glass-card p-6 rounded-2xl border border-slate-700/60 bg-slate-900/60 backdrop-blur-md">
-          <h3 className="text-md font-bold text-slate-100 mb-4 flex items-center gap-2">
-            📦 Granary & Storage Vault
+          <h3 className="text-md font-bold text-slate-100 mb-3 flex items-center gap-2">
+            🌱 Purchased Seeds Storage
           </h3>
-
-          <div className="grid grid-cols-2 gap-3">
-            {Object.keys(inventory).map((key) => (
-              <div key={key} className="p-3 rounded-xl border border-slate-800 bg-slate-950/50">
-                <div className="text-[11px] text-slate-400 font-medium">{key}</div>
-                <div className="text-lg font-bold text-slate-100">{inventory[key]} <span className="text-xs font-normal text-slate-400">units</span></div>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            {Object.keys(seedsInventory).map((key) => (
+              <div key={key} className="p-2.5 rounded-xl border border-slate-800 bg-slate-950/50 flex justify-between">
+                <span className="text-slate-400">{key}</span>
+                <span className="font-bold text-emerald-400">{seedsInventory[key]}</span>
               </div>
             ))}
           </div>
@@ -206,8 +165,18 @@ export default function FarmGrid({ gameState }) {
 function getCropIcon(crop) {
   switch (crop) {
     case 'WHEAT': return '🌾';
-    case 'CORN': return '🌽';
-    case 'SOY': return '🫘';
+    case 'CARROT': return '🥕';
+    case 'TOMATO': return '🍅';
+    case 'STRAWBERRY': return '🍓';
     default: return '🌱';
+  }
+}
+
+function getAnimalIcon(animal) {
+  switch (animal) {
+    case 'COW': return '🐄';
+    case 'GOOSE': return '🪿';
+    case 'SHEEP': return '🧶';
+    default: return '🐾';
   }
 }
