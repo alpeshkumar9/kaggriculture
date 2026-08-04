@@ -85,6 +85,15 @@ class CropFirstAgentTests(unittest.TestCase):
         )
         self.assertEqual(orders, [["SELL", "CARROT", 10]])
 
+    def test_sells_shed_stock_before_a_projected_same_turn_harvest(self):
+        orders = _sell_orders(
+            {"shed": {"CARROT": 95}, "inventories": []},
+            day=18,
+            market_state={"prices": {"CARROT": 1}},
+            projected_harvest_units=6,
+        )
+        self.assertEqual(orders, [["SELL", "CARROT", 1]])
+
     def test_never_sells_fertilizer_reserved_for_production(self):
         orders = _sell_orders(
             {"shed": {"FERTILIZER": 10}}, day=20,
