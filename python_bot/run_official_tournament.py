@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import random
 import sys
 from collections import Counter
 from dataclasses import asdict, dataclass
@@ -23,6 +24,7 @@ Agent = Callable[[dict[str, Any], Any], dict[str, Any]]
 REQUIRED_ACTIONS = ("PLANT", "WATER", "HARVEST", "SELL")
 DEFAULT_SEEDS = (1281355554, 2050554103, 1208590292, 910788726)
 MAX_ACCEPTABLE_WEEDS = 10
+RECORD_MILESTONE = 154615
 
 
 @dataclass
@@ -44,8 +46,11 @@ class EpisodeResult:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--agent", type=Path, required=True, help="Python file exposing agent(obs, configuration=None).")
-    parser.add_argument("--opponents", default="pass,random,starter", help="Comma-separated official built-in opponents.")
+    parser.add_argument("--opponents", default="pass,random,starter", help="Comma-separated built-ins; use self for candidate self-play.")
     parser.add_argument("--seeds", default=",".join(map(str, DEFAULT_SEEDS)), help="Comma-separated deterministic episode seeds.")
+    parser.add_argument("--seed-count", type=int, default=0, help="Generate this many reproducible random seeds instead of --seeds.")
+    parser.add_argument("--seed-source", type=int, default=20260804, help="Random generator seed used with --seed-count.")
+    parser.add_argument("--milestone", type=float, default=RECORD_MILESTONE, help="Final-bank milestone reported in the summary.")
     parser.add_argument("--replay-dir", type=Path, default=Path("replays/official"))
     parser.add_argument("--turns", type=int, default=720, help="Episode length; use 720 for release decisions.")
     return parser.parse_args()
@@ -119,10 +124,11 @@ def evaluate_checks(actions: Counter[str], max_plants: int, max_weeds: int, cand
     return failures
 
 
-def run_episode(candidate: Agent, opponent: str, seed: int, turns: int, replay_dir: Path) -> EpisodeResult:
+def run_episode(candidate: Agent, opponent_name: str, seed: int, turns: int, replay_dir: Path) -> EpisodeResult:
     from kaggle_environments import make
 
     environment = make("kaggriculture", configuration={"episodeSteps": turns, "seed": seed}, debug=True)
+    opponent = candidate if opponent_name == "self" else opponent_name
     environment.run([candidate, opponent])
 
     commands: Counter[str] = Counter()
@@ -141,11 +147,11 @@ def run_episode(candidate: Agent, opponent: str, seed: int, turns: int, replay_d
     checks = evaluate_checks(commands, max_plants, max_weeds, candidate_status)
 
     replay_dir.mkdir(parents=True, exist_ok=True)
-    replay = replay_dir / f"candidate-vs-{opponent}-seed-{seed}.json"
+    replay = replay_dir / f"candidate-vs-{opponent_name}-seed-{seed}.json"
     replay.write_text(json.dumps(environment.toJSON()), encoding="utf-8")
 
     return EpisodeResult(
-        opponent=opponent,
+        opponent=opponent_name,
         seed=seed,
         candidate_status=candidate_status,
         opponent_status=opponent_status,
@@ -160,7 +166,7 @@ def run_episode(candidate: Agent, opponent: str, seed: int, turns: int, replay_d
     )
 
 
-def print_summary(results: list[EpisodeResult]) -> None:
+def print_summary(results: list[EpisodeResult], milestone: float) -> None:
     wins = sum(result.outcome == "win" for result in results)
     losses = sum(result.outcome == "loss" for result in results)
     ties = len(results) - wins - losses
@@ -169,6 +175,8 @@ def print_summary(results: list[EpisodeResult]) -> None:
     print("\nOfficial Kaggriculture tournament")
     print(f"Episodes: {len(results)} | wins: {wins} | losses: {losses} | ties: {ties}")
     print(f"Candidate final bank — median: ${median(banks):.0f}, minimum: ${min(banks):.0f}, maximum: ${max(banks):.0f}")
+    over_milestone = sum(bank >= milestone for bank in banks)
+    print(f"${milestone:,.0f} milestone: {over_milestone}/{len(banks)} episodes")
     print(f"Replay/action gates: {len(results) - len(failed)}/{len(results)} passed")
     for opponent in sorted({result.opponent for result in results}):
         matchup = [result for result in results if result.opponent == opponent]
@@ -189,7 +197,7 @@ def main() -> int:
     args = parse_args()
     candidate = load_agent(args.agent)
     opponents = tuple(opponent.strip() for opponent in args.opponents.split(",") if opponent.strip())
-    seeds = tuple(int(seed.strip()) for seed in args.seeds.split(",") if seed.strip())
+    seeds = _seeds_from_args(args)
     if not opponents or not seeds:
         raise ValueError("At least one opponent and one seed are required")
 
@@ -200,9 +208,16 @@ def main() -> int:
     ]
     report = args.replay_dir / "report.json"
     report.write_text(json.dumps([asdict(result) for result in results], indent=2), encoding="utf-8")
-    print_summary(results)
+    print_summary(results, args.milestone)
     print(f"Machine-readable report: {report}")
     return 1 if any(result.checks for result in results) else 0
+
+
+def _seeds_from_args(args: argparse.Namespace) -> tuple[int, ...]:
+    if args.seed_count > 0:
+        rng = random.Random(args.seed_source)
+        return tuple(rng.randrange(1, 2**31) for _ in range(args.seed_count))
+    return tuple(int(seed.strip()) for seed in args.seeds.split(",") if seed.strip())
 
 
 if __name__ == "__main__":

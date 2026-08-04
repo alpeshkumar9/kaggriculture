@@ -28,6 +28,13 @@ The command saves official replay JSON files and returns a non-zero exit code
 when the agent fails the crop-loop checks (plant, water, harvest, sell, and no
 weeds). See `TEST_STRATEGY.md` for the release criteria.
 
+To measure a candidate against the $154,615 record on fresh scenarios, run a
+reproducible batch of self-play episodes:
+
+```bash
+python3 run_official_tournament.py --agent agent.py --opponents self --seed-count 50 --seed-source 20260804 --replay-dir replays/self-play
+```
+
 ## How to Submit to Kaggle
 1. Upload `agent.py` directly to [Kaggle Kaggriculture Submission](https://www.kaggle.com/competitions/kaggriculture/submit).
 2. Or use the Kaggle CLI:
