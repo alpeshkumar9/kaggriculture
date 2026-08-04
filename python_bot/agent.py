@@ -26,7 +26,7 @@ SEED_BUFFER = 10
 LAND_PLAN = ((4, 1600), (8, 3200))
 MOVES = ((0, -1, "NORTH"), (0, 1, "SOUTH"), (1, 0, "EAST"), (-1, 0, "WEST"))
 PRODUCTS = {"WHEAT", "CARROT", "TOMATO", "STRAWBERRY", "MELON", "EGG", "MILK", "WOOL", "FERTILIZER"}
-COMPACT_COW_TARGET = 12
+COMPACT_COW_TARGET = 8
 EARLY_GOOSE_TARGET = 0
 EARLY_SHEEP_TARGET = 0
 LATE_SHEEP_TARGET = 0
@@ -131,12 +131,8 @@ def _market_actions(farm, private, day, tiles, livestock, market_state):
     # further expansion.
     unlocked_count = len(farm.get("unlocked_quadrants", ["NW"]))
     compact_cow_target = len(_compact_cow_slots(tiles))
-    affordable_cows = max(0, int((money - 200) // 400))
-    cows_to_buy = min(
-        2, affordable_cows,
-        max(0, compact_cow_target - livestock["owned_cows"]),
-    )
-    if day <= 20 and cows_to_buy:
+    cows_to_buy = min(2, max(0, compact_cow_target - livestock["owned_cows"]))
+    if day <= 20 and cows_to_buy and money >= 400 * cows_to_buy + 500:
         market.append(["BUY_ANIMAL", "COW", cows_to_buy])
         money -= 400 * cows_to_buy
 
@@ -310,7 +306,14 @@ def _choose_worker_action(
         for target in row
     )
     use_global_liquidation = day >= 29 and ripe_melons <= 8
-    region = None if use_global_liquidation else _worker_region(tiles, worker_index, worker_count)
+    service_workers = (livestock["owned_animals"] + 3) // 4
+    crop_worker_count = max(1, worker_count - service_workers)
+    crop_worker_index = worker_index - service_workers
+    region = (
+        None
+        if use_global_liquidation or crop_worker_index < 0
+        else _worker_region(tiles, crop_worker_index, crop_worker_count)
+    )
     if tile is None:
         urgent_target = _nearest_target(
             x, y, tiles, seed_budget, day, reserved, urgent_only=True,
@@ -362,9 +365,8 @@ def _action_for_tile(tile, seed_budget, day):
     crop_data = CROPS.get(crop, {})
     if (
         day == FINAL_LIQUIDATION_DAY
-        and crop_data.get("ongoing")
-        and int(tile.get("max_lifespan_step", -1)) >= 0
-        and int(tile.get("consecutive_unwatered", 0)) >= 1
+        and 0 <= int(tile.get("max_lifespan_step", -1)) <= (day + 1) * 24
+        and int(tile.get("yield_units", 0)) <= 0
     ):
         return ["DIG"]
     if crop_data.get("ongoing") and tile.get("yield_units", 0) > 0:
@@ -460,11 +462,9 @@ def _target_priority(tile, seed_budget, day):
     crop_data = CROPS.get(crop, {})
     if (
         day == FINAL_LIQUIDATION_DAY
-        and crop_data.get("ongoing")
-        and int(tile.get("max_lifespan_step", -1)) >= 0
-        and int(tile.get("consecutive_unwatered", 0)) >= 1
+        and 0 <= int(tile.get("max_lifespan_step", -1)) <= (day + 1) * 24
     ):
-        return -3
+        return -20 if int(tile.get("yield_units", 0)) > 0 else -19
     if crop_data.get("ongoing") and tile.get("yield_units", 0) > 0:
         return 0
     if crop_data.get("ongoing") and _expires_by_next_day(tile, day):
@@ -590,7 +590,7 @@ def _livestock_action(
     carrying_wheat = inventory.get("WHEAT", 0) > 0
     carrying_fertilizer = inventory.get("FERTILIZER", 0) > 0
     at_shed = _is_shed_access(x, y, len(tiles))
-    service_workers = (livestock["owned_animals"] + 1) // 2
+    service_workers = (livestock["owned_animals"] + 3) // 4
 
     # Once a worker has an animal, finish that deployment before considering
     # another shed pickup or any routine farm service.
