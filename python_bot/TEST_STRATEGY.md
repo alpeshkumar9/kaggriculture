@@ -78,21 +78,78 @@ describe a result as verified, rebuild a release artifact, or submit it until
 this suite has completed. If the official engine is unavailable, record the
 benchmark as blocked and stop short of any performance claim.
 
-Use at least 20 deterministic episodes for each matchup:
+#### What the built-in opponents actually measure
 
-1. candidate vs `pass` — verifies basic production;
-2. candidate vs `random` — verifies robustness;
-3. candidate vs `starter` — baseline release gate;
-4. candidate vs previous approved artifact — prevents regressions.
+Measured on the official engine (final bank, 720 turns): `pass` $3,000,
+`random` $0, `starter` $3,514. Real ladder opponents finish at
+$84,682–$125,241. `agent.py` scores **$136,548 vs `starter`** and loses 6 of 7
+ladder games.
 
-Report median final bank, win/loss/tie count, error count, and the worst replay link. The official-engine tournament runner is the sole benchmark; do not substitute a custom simulator.
+The market is shared between both players. These opponents barely sell, so the
+harness market never sees a second seller and prices never behave as they do in
+a real match — which hides the price-crash failures that decide ladder games.
 
-Initial release criteria:
+**`pass`/`random`/`starter` are a liveness tier, not a performance tier.** A
+vs-`starter` bank is never evidence that a strategy change helped, and
+`RECORD_MILESTONE = 154615` is a vs-weak-opponent figure that is not comparable
+to a ladder score.
+
+#### Tiers
+
+| Tier | Matchup | Episodes | What it decides |
+| --- | --- | --- | --- |
+| Smoke | vs `pass`, `random`, `starter` | 4 seeds | Agent still farms and does not error. Pass/fail only. |
+| **Performance** | vs previous approved artifact | ≥30 paired seeds, candidate on **both** sides | **Whether the change ships.** |
+| Realism | self-play | same seeds | Behaviour under a realistic two-seller market (70k–102k band). |
+| Diagnostic | any tier | — | Whether the targeted metric actually moved. |
+
+`kaggle_environments` accepts a **file path** as an agent, so the previous
+artifact can be used directly as an opponent:
+
+```bash
+python3 run_official_tournament.py --agent agent.py --opponents ../artifacts/approved_agent.py --seed-count 30 --replay-dir replays/regression
+```
+
+Report win rate with a confidence interval, median and IQR of the final bank,
+error count, the diagnostic metrics below, and the worst replay link. The
+official-engine tournament runner is the sole benchmark; do not substitute a
+custom simulator.
+
+#### Diagnostic metrics (required alongside the bank)
+
+Derived from replay JSON, per episode and aggregated: revenue and units per
+product; realised price vs base per product; fraction of units sold below base;
+unharvested tile value at turn 720; peak tiles per crop; animals lost; peak
+animal count by species.
+
+A bank improvement with **no matching movement in the metric the change
+targeted** is treated as noise, not a result. See the per-item acceptance table
+in `../implementation_plan.md`.
+
+#### Goal gate — $160,000
+
+The project target is a **median final bank above $160,000 over ≥30 self-play seeds**
+(G1 in `../implementation_plan.md`), with a worst-seed bank ≥ $120,000 and no regression
+in head-to-head win rate against the previous artifact.
+
+Self-play is the measurement condition because it is the only one that reproduces ladder
+market pressure. Current standing is $70k–$102k. Report progress against G1 only —
+a vs-`starter` bank is never evidence of progress toward the goal.
+
+#### Release criteria
 
 - 0 invalid/error episodes;
 - 100% of replays meet all action-execution checks;
-- candidate beats `pass` in 20/20 and has a positive median final bank;
-- candidate must not be submitted unless it is at least competitive with `starter` over the fixed seed suite.
+- candidate does not regress against the previous approved artifact on win rate
+  or median bank beyond the stated tolerance;
+- the targeted diagnostic metric moved in the predicted direction and no guard
+  metric regressed.
+
+> **Known harness gap.** The runner's exit code currently gates only on
+> liveness checks (`result.checks`), never on score — a $40k regression still
+> exits 0. It also runs 4 unpaired seeds with the candidate always on side 0.
+> Work item W0 in `../implementation_plan.md` covers fixing this and is a
+> blocking prerequisite for benchmarking any strategy change.
 
 ### 5. Artifact and upload gate (every submission)
 

@@ -1,4 +1,27 @@
-# Walkthrough - Kaggle Kaggriculture Phase 1 Implementation & Verification
+# Walkthrough - Kaggle Kaggriculture Implementation & Verification
+
+> [!WARNING]
+> **Status as of 2026-08-04 — the verification below is schema/build verification only.**
+>
+> Seven official ladder replays in `logs/` show **1 win, 6 losses** (banks $47,674–$110,825
+> against opponents' $50,411–$125,241). Neither result below is evidence of competitive
+> performance:
+>
+> - The compliance test uses a simplified local simulator; its `$3000.00` final cash is a
+>   schema result, not a game result.
+> - The official-engine built-ins are far too weak to discriminate (`starter` finishes at
+>   $3,514 vs real opponents' $84,682–$125,241).
+>
+> See `implementation_plan.md` for the replay-driven diagnosis (D1–D6) and the work items
+> that address it. **W0 — rebuilding the benchmark so it can measure a strategy change — is
+> a blocking prerequisite for all other work.**
+>
+> **Goal: median final bank above $160,000 over ≥30 self-play seeds** (G1). Current standing
+> is $70k–$102k self-play; the best score by any agent across all analysed replays is
+> $125,896. Work iterates until G1 is met.
+>
+> Benchmark results for W0–W8 should be appended to this file as each item lands, so the
+> record shows what was measured rather than what was intended. Log G1–G4 every cycle.
 
 Successfully completed **Phase 1** of the winning roadmap: refactored both the **Python Submission Bot** and **React Web Simulator Engine** to achieve 100% compliance with official Kaggle Environments API schemas, game mechanics, and dynamic market formulas specified in [`overview.md`](file:///Volumes/Important/Office/White%20Way%20Web/Github/kaggriculture/overview.md).
 
