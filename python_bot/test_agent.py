@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from agent import agent, _sell_orders
 
 
-def observation(tile, seeds=None, day=0, shed=None):
+def observation(tile, seeds=None, day=0, shed=None, hires_today=0):
     return {
         "player": 0,
         "day": day,
@@ -24,7 +24,7 @@ def observation(tile, seeds=None, day=0, shed=None):
             "farmer": [0, 0],
             "hands": [],
             "unlocked_quadrants": ["NW"],
-            "hires_today": 0,
+            "hires_today": hires_today,
         }],
         "private": {"seeds": seeds or {}, "shed": shed or {}},
         "market": {"prices": {}},
@@ -47,7 +47,9 @@ class CropFirstAgentTests(unittest.TestCase):
         self.assertEqual(action["farmer"], ["HARVEST"])
 
     def test_sells_harvested_goods_without_buying_fertilizer(self):
-        action = agent(observation(None, shed={"CARROT": 4}))
+        obs = observation(None, shed={"CARROT": 4}, hires_today=10)
+        obs["market"]["prices"]["CARROT"] = 35
+        action = agent(obs)
         self.assertIn(["SELL", "CARROT", 4], action["market"])
         self.assertNotIn(["BUY_PRODUCT", "FERTILIZER", 2], action["market"])
 
@@ -73,7 +75,10 @@ class CropFirstAgentTests(unittest.TestCase):
         self.assertEqual(orders, [])
 
     def test_tomato_is_watered_and_harvested_as_an_ongoing_crop(self):
-        tomato = {"kind": "PLANT", "crop": "TOMATO", "planted_day": 4, "watered_today": False}
+        tomato = {
+            "kind": "PLANT", "crop": "TOMATO", "planted_day": 4,
+            "watered_today": False, "consecutive_unwatered": 1,
+        }
         self.assertEqual(agent(observation(tomato, day=11))["farmer"], ["WATER"])
         tomato["watered_today"] = True
         tomato["yield_units"] = 1
