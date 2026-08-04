@@ -77,10 +77,9 @@ COMMODITIES = {
     }
 }
 
-LAND_QUADRANT_COSTS = [1000, 2000] # Quadrants 2 and 3 only (never buy 4!)
-LAND_EXPANSION_THRESHOLDS = [1500, 3000]
+LAND_QUADRANT_COSTS = [1000, 2000] # Quadrants 2 and 3 only
+LAND_EXPANSION_THRESHOLDS = [1200, 2400]
 MAX_QUADRANTS = 3
-MAX_COWS = 6
 TARGET_FARMHANDS = 5
 
 TOWN_SHOP_DEMANDS = {
@@ -94,10 +93,22 @@ TOWN_SHOP_DEMANDS = {
     'FARMERS_MARKET': ['WHEAT', 'CARROT', 'TOMATO', 'STRAWBERRY']
 }
 
+def get_fibonacci_hire_cost(hires_today, mult=1):
+    fib = [1, 1, 2, 3, 5, 8, 13, 21, 34, 55]
+    idx = min(hires_today, len(fib) - 1)
+    return mult * fib[idx]
+
+def should_hire_farmhand(workload_count, money, hires_today, mult=1):
+    """
+    Workload-based Farmhand Scaling:
+    Only hire additional labor if active unwatered/unharvested tiles > (1 + hires_today) * 5
+    and money reserves are healthy.
+    """
+    cost = get_fibonacci_hire_cost(hires_today, mult)
+    needed = (1 + hires_today) * 5
+    return workload_count >= needed and money >= cost + 100
+
 def get_opponent_crop_distribution(opponent_tiles):
-    """
-    Opponent Farm Telemetry: Scans opponent's 10x10 farm grid for active crop counts.
-    """
     dist = collections.defaultdict(int)
     if not opponent_tiles:
         return dist
@@ -111,9 +122,6 @@ def get_opponent_crop_distribution(opponent_tiles):
     return dist
 
 def get_active_town_demands(unlocked_shops):
-    """
-    Town Shop Demand Tracker: Collects set of items currently demanded by active shops.
-    """
     demands = set()
     if not unlocked_shops:
         return demands
@@ -124,20 +132,38 @@ def get_active_town_demands(unlocked_shops):
                 demands.add(item)
     return demands
 
-def get_adversarial_crop_choice(day, money, unlocked_quadrants_count, step=0, opponent_tiles=None, town_shops=None):
+def get_seasonal_crop_choice(day, money, quad_count=1, step=0):
     """
-    Grandmaster Opponent Avoidance & Town Demand Matching Scheduler.
-    - Avoids crops heavily mass-produced by opponent (prevents selling into crashed market floors).
-    - Prioritizes crops demanded by active town shops (captures town inventory drain price surges).
+    Seasonal Crop Selector:
+    - Days 1-10: Fast cash turnover (Wheat & Carrot)
+    - Days 11-23: High-value crops (Melon, Strawberry, Tomato)
+    - Days 24-30: Late harvest sweep (Wheat & Carrot)
     """
-    if day >= 25:
+    if day < 10:
+        return 'CARROT' if (step % 2 == 0 or money < 30) else 'WHEAT'
+    elif day <= 23:
+        if money >= 200 and step % 3 == 0:
+            return 'MELON'
+        elif money >= 120 and step % 2 == 0:
+            return 'STRAWBERRY'
+        elif money >= 60:
+            return 'TOMATO'
+        else:
+            return 'CARROT'
+    elif day <= 27:
+        return 'CARROT' if step % 2 == 0 else 'WHEAT'
+    else:
+        return 'WHEAT' if day < 29 else None
+
+def get_adversarial_crop_choice(day, money, unlocked_quadrants_count=1, step=0, opponent_tiles=None, town_shops=None):
+    if day >= 24:
         return 'WHEAT' if day < 29 else None
 
     opponent_crops = get_opponent_crop_distribution(opponent_tiles)
     town_demands = get_active_town_demands(town_shops)
 
     candidates = ['WHEAT', 'CARROT']
-    if day >= 10 and money >= 150:
+    if day >= 10 and money >= 120:
         candidates.extend(['TOMATO', 'STRAWBERRY', 'MELON'])
 
     best_crop = 'WHEAT'
@@ -149,15 +175,12 @@ def get_adversarial_crop_choice(day, money, unlocked_quadrants_count, step=0, op
             continue
 
         score = 10.0
-        # Fast turnover bonus for Wheat/Carrot early game
         if crop == 'WHEAT': score += 15.0
         elif crop == 'CARROT': score += 12.0
 
-        # Town Demand Bonus (+20 points if town shop consumes this crop)
         if crop in town_demands:
-            score += 20.0
+            score += 25.0
 
-        # Opponent Glut Avoidance (-15 points per opponent tile of this crop)
         opp_count = opponent_crops.get(crop, 0)
         score -= opp_count * 15.0
 
@@ -167,49 +190,27 @@ def get_adversarial_crop_choice(day, money, unlocked_quadrants_count, step=0, op
 
     return best_crop
 
-def get_town_inventory_squeeze_target(item, qty, current_price, base_price, mkt_inv, day, town_shops=None):
+def calculate_market_sell_quantity(item, qty, current_price, base_price, day, shed_total=0):
     """
-    Town Demand Inventory Squeeze (Peak Price Holding):
-    If item is consumed by an active town shop, hold sales until market inventory drops <= 5,000,
-    capturing peak +30% to +50% price surges ($240-$280/unit).
+    Shed Overflow Protection & Market Sell Logic:
+    - If day >= 24 or shed_total >= 50, sell all quantity immediately to avoid cap discards.
+    - Otherwise, sell if current_price >= base_price * 0.85.
     """
     if qty <= 0:
         return 0
-    if day >= 25:
+    if day >= 24 or shed_total >= 50:
         return qty
-
-    town_demands = get_active_town_demands(town_shops)
-    if item in town_demands:
-        if mkt_inv > 5000 and current_price < base_price * 1.25:
-            return 0 # Hold inventory for price surge!
+    if current_price >= base_price * 0.85:
         return qty
-
-    if current_price >= base_price * 0.90:
-        return qty
-    return 0
+    return min(qty, 2)
 
 def should_undercut_market(item, qty, current_price, base_price, day, opponent_tiles=None):
-    """
-    Adversarial Market Undercutting:
-    If opponent has crops maturing within 1 day, liquidate shed stock 1 turn early to capture peak price.
-    """
     if qty <= 0:
         return 0
-    if day >= 25 or current_price >= base_price * 0.90:
+    if day >= 24 or current_price >= base_price * 0.85:
         return qty
+    return qty
 
-    # Scan opponent tiles for maturing crops of same item
-    if opponent_tiles:
-        for r in range(len(opponent_tiles)):
-            for c in range(len(opponent_tiles[r])):
-                t = opponent_tiles[r][c]
-                if isinstance(t, dict) and t.get('kind') == 'PLANT' and t.get('crop') == item:
-                    age = day - t.get('planted_day', 0)
-                    maturity = COMMODITIES.get(item, {}).get('first_yield_days', 2)
-                    if age >= maturity - 1: # Opponent matures tomorrow! Undercut now!
-                        return qty
-
-    return 0
 
 
 

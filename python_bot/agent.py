@@ -27,13 +27,13 @@ except ImportError:
     }
     LAND_COSTS = [1000, 2000, 4000]
 
-    def get_seasonal_crop_choice(day, money, quad_count, step=0):
+    def get_seasonal_crop_choice(day, money, quad_count=1, step=0):
         if day < 10:
             return 'CARROT' if (step % 2 == 0 or money < 30) else 'WHEAT'
-        elif day <= 22:
-            if money >= 200 and step % 4 == 0:
+        elif day <= 23:
+            if money >= 200 and step % 3 == 0:
                 return 'MELON'
-            elif money >= 120 and step % 3 == 0:
+            elif money >= 120 and step % 2 == 0:
                 return 'STRAWBERRY'
             elif money >= 60:
                 return 'TOMATO'
@@ -51,18 +51,17 @@ except ImportError:
 
     def should_hire_farmhand(workload_count, money, hires_today, mult=1):
         cost = get_fibonacci_hire_cost(hires_today, mult)
-        return workload_count >= 15 and money >= cost + 150
+        needed = (1 + hires_today) * 5
+        return workload_count >= needed and money >= cost + 100
 
-    def calculate_market_sell_quantity(item, qty, current_price, base_price, day):
+    def calculate_market_sell_quantity(item, qty, current_price, base_price, day, shed_total=0):
         if qty <= 0:
             return 0
-        if day >= 28:
+        if day >= 24 or shed_total >= 50:
             return qty
-        if current_price >= base_price * 1.05:
-            return min(qty, 5)
-        elif current_price >= base_price * 0.95:
-            return min(qty, 2)
-        return 0
+        if current_price >= base_price * 0.85:
+            return qty
+        return min(qty, 2)
 
 
 def agent(observation, configuration=None):
@@ -98,76 +97,64 @@ def agent(observation, configuration=None):
     
     market_orders = []
     
-    # Calculate farm workload (active crops needing water/harvest, unfed animals, weeds)
+    # Calculate farm workload across entire unlocked grid
     workload = 0
     rows = len(tiles)
     cols = len(tiles[0]) if rows > 0 else 0
+    empty_unlocked_tiles = 0
     for r in range(rows):
         for c in range(cols):
             t = tiles[r][c]
-            if t != "LOCKED" and isinstance(t, dict):
-                if t.get('kind') == 'WEED' or t.get('yield_units', 0) > 0 or not t.get('watered_today', True) or not t.get('fed_today', True):
-                    workload += 1
+            if t != "LOCKED":
+                if t is None:
+                    empty_unlocked_tiles += 1
+                elif isinstance(t, dict):
+                    if t.get('kind') == 'WEED' or t.get('yield_units', 0) > 0 or not t.get('watered_today', True) or not t.get('fed_today', True):
+                        workload += 1
 
     opp_id = 1 - player_id
     opp_farm = farms[opp_id] if opp_id < len(farms) else {}
     opp_tiles = opp_farm.get('tiles', [])
     town_shops = obs.get('town', {}).get('unlocked_shops', [])
 
-    # 1. Market Orders: Land Expansion (Max 3 Quadrants - Subin An #1 Strategy)
+    # 1. Market Orders: Land Expansion (Quadrants 2 & 3: $1,000, $2,000)
     quad_count = len(unlocked_quads)
     if quad_count < 3:
-        thresholds = [1500, 3000]
+        thresholds = [1200, 2400]
         thresh = thresholds[quad_count - 1]
         next_cost = LAND_COSTS[quad_count - 1]
-        if money >= thresh:
+        if money >= thresh and len(market_orders) < 10:
             market_orders.append(["BUY_LAND"])
             money -= next_cost
 
-    # 2. Market Orders: 5-Farmhand Daily Labor Scaling ($12/day Fibonacci total)
-    if hires_today < 5 and money >= 150 and len(market_orders) < 10:
-        hire_cost = get_fibonacci_hire_cost(hires_today)
-        market_orders.append(["HIRE"])
-        money -= hire_cost
-        hires_today += 1
+    # 2. Market Orders: Workload-based Farmhand Scaling
+    if hires_today < 5 and len(market_orders) < 10:
+        if should_hire_farmhand(workload + empty_unlocked_tiles, money, hires_today):
+            hire_cost = get_fibonacci_hire_cost(hires_today)
+            market_orders.append(["HIRE"])
+            money -= hire_cost
+            hires_today += 1
 
-    # 3. Market Orders: Buy Cows (6-Cow Engine - Only buy if Pasture is built & total cows < 6)
-    cows_on_tiles = sum(1 for r in range(rows) for c in range(cols) if isinstance(tiles[r][c], dict) and tiles[r][c].get('animal') == 'COW')
-    pastures_count = sum(1 for r in range(rows) for c in range(cols) if isinstance(tiles[r][c], dict) and tiles[r][c].get('kind') == 'PASTURE')
-    cows_in_shed = shed.get('COW', 0)
-    total_cows = cows_on_tiles + cows_in_shed
+    # 3. Market Orders: Fertilizer Stocking for Premium Crops
+    fertilizer_qty = shed.get('FERTILIZER', 0)
+    if fertilizer_qty < 3 and money >= 200 and day < 24 and len(market_orders) < 10:
+        market_orders.append(["BUY_PRODUCT", "FERTILIZER", 2])
+        money -= 200
 
-    if pastures_count > cows_on_tiles and total_cows < 6 and money >= 450 and len(market_orders) < 10:
-        market_orders.append(["BUY_ANIMAL", "COW", 1])
-        money -= 400
-
-    # 4. Market Orders: Wheat Stocking for Daily Cow Feed
-    wheat_total = shed.get('WHEAT', 0) + seeds.get('WHEAT', 0)
-    if wheat_total < 8 and money >= 30 and len(market_orders) < 10:
-        market_orders.append(["BUY_SEED", "WHEAT", 4])
-        money -= 40
-
-    # 5. Market Orders: Front-Running Town Demand & Selling Produce / Milk
+    # 4. Market Orders: Shed Liquidation & Continuous Selling
+    shed_total = sum(shed.values())
     for item, qty in shed.items():
         if qty > 0 and len(market_orders) < 10:
             current_price = prices.get(item, COMMODITIES.get(item, {}).get('base_price', 25))
             base_price = COMMODITIES.get(item, {}).get('base_price', 25)
-            
-            # Check if town demand has drained inventory below 10k
-            mkt_inv = inv_market.get(item, 10000)
-            if mkt_inv < 10000 and current_price < base_price:
-                current_price = base_price * 1.10
 
-            sell_qty = calculate_market_sell_quantity(item, qty, current_price, base_price, day)
-            if sell_qty == 0 and hasattr(should_undercut_market, '__call__'):
-                sell_qty = should_undercut_market(item, qty, current_price, base_price, day, opp_tiles)
-
+            sell_qty = calculate_market_sell_quantity(item, qty, current_price, base_price, day, shed_total)
             if sell_qty > 0:
                 market_orders.append(["SELL", item, sell_qty])
 
-    # 6. Market Orders: Dynamic Seed Buying (Melons, Strawberries, Carrots)
+    # 5. Market Orders: Dynamic Seed Buying
     total_seeds = sum(seeds.values())
-    if total_seeds < 4 and money >= 50 and len(market_orders) < 10:
+    if total_seeds < (empty_unlocked_tiles + 4) and money >= 20 and day < 28 and len(market_orders) < 10:
         if 'get_adversarial_crop_choice' in globals() or 'get_adversarial_crop_choice' in locals():
             crop_choice = get_adversarial_crop_choice(day, money, quad_count, step, opp_tiles, town_shops)
         else:
@@ -175,12 +162,12 @@ def agent(observation, configuration=None):
 
         if crop_choice:
             cost = COMMODITIES.get(crop_choice, {}).get('seed_cost', 10)
-            buy_qty = 2 if money < 200 else 4
-            if money >= cost * buy_qty:
+            buy_qty = min(8, max(2, int(money // cost)))
+            if buy_qty > 0 and money >= cost * buy_qty:
                 market_orders.append(["BUY_SEED", crop_choice, buy_qty])
                 money -= cost * buy_qty
 
-    # 5. Worker Actions (Farmer & Hired Farmhands)
+    # 6. Worker Actions (Farmer & Hired Farmhands)
     all_workers = [farmer_pos] + list(hands_pos)
     reserved_targets = set()
     worker_actions = []
@@ -204,36 +191,13 @@ def agent(observation, configuration=None):
                     act = ["WATER"]
                 elif not fertilized and shed.get('FERTILIZER', 0) > 0 and current_tile.get('crop') in ['TOMATO', 'STRAWBERRY', 'MELON']:
                     act = ["FERTILIZE"]
-            elif kind in ['COOP', 'PASTURE']:
-                animal = current_tile.get('animal')
-                fed = current_tile.get('fed_today', False)
-                cared = current_tile.get('cared_today', False)
-                yield_units = current_tile.get('yield_units', 0)
-                if animal:
-                    if not fed and shed.get('WHEAT', 0) > 0:
-                        act = ["FEED"]
-                    elif fed and not cared:
-                        act = ["CARE"]
-                    elif fed and cared and current_tile.get('care_count_today', 0) < 2:
-                        act = ["CARE"]
-                    elif yield_units > 0:
-                        act = ["HARVEST"]
-                    elif current_tile.get('fertilizer_available', False):
-                        act = ["COLLECT_FERTILIZER"]
 
-        elif current_tile is None: # Empty unlocked tile
-            pasture_total = sum(1 for r in range(rows) for c in range(cols) if isinstance(tiles[r][c], dict) and tiles[r][c].get('kind') == 'PASTURE')
-            if pasture_total < 6 and money >= 200:
-                act = ["BUILD_PASTURE"]
-            else:
-                planted_count = sum(1 for r in range(rows) for c in range(cols) if isinstance(tiles[r][c], dict) and tiles[r][c].get('kind') == 'PLANT')
-                max_allowed = 8 + len(hands_pos) * 8
-                if planted_count < max_allowed:
-                    available_crops = [c for c, q in seeds.items() if q > 0]
-                    if available_crops:
-                        act = ["PLANT", available_crops[0]]
+        elif current_tile is None: # Empty unlocked tile -> PLANT seed if available
+            available_crops = [c for c, q in seeds.items() if q > 0]
+            if available_crops:
+                act = ["PLANT", available_crops[0]]
 
-        # If no immediate action on current tile, BFS pathfind to nearest unreserved work target
+        # If no immediate action on current tile, BFS pathfind across entire unlocked grid
         if act == ["PASS"]:
             move_dir, target_coords = get_best_move(w_x, w_y, tiles, seeds, reserved_targets)
             if move_dir:
@@ -255,7 +219,8 @@ def agent(observation, configuration=None):
 
 def get_best_move(fx, fy, tiles, seeds, reserved_targets=None):
     """
-    Finds shortest path direction (NORTH, SOUTH, EAST, WEST) to nearest unreserved actionable tile.
+    Full-Grid BFS Pathfinder:
+    Calculates shortest path direction (NORTH, SOUTH, EAST, WEST) across all unlocked tiles.
     """
     if not tiles:
         return None, None
@@ -278,21 +243,19 @@ def get_best_move(fx, fy, tiles, seeds, reserved_targets=None):
 
     while queue:
         cx, cy, path = queue.popleft()
-        if len(path) > 12: # Depth limit
+        if len(path) > 20: # Path depth limit
             break
 
-        # Check if tile needs action and is not reserved by another worker
-        if 0 <= cy <= 2 and 0 <= cx <= 2: # Restrict to 3x3 shed-adjacent cluster for max velocity
-            t = tiles[cy][cx]
-            if t != "LOCKED" and (cx, cy) not in reserved_targets:
-                if (cx, cy) != (fx, fy):
-                    planted_count = sum(1 for r in range(3) for c in range(3) if isinstance(tiles[r][c], dict) and tiles[r][c].get('kind') == 'PLANT')
-                    if t is None and sum(seeds.values()) > 0 and planted_count < 8:
+        # Check tile for actionable work across entire unlocked grid
+        t = tiles[cy][cx]
+        if t != "LOCKED" and (cx, cy) not in reserved_targets:
+            if (cx, cy) != (fx, fy):
+                if t is None and sum(seeds.values()) > 0:
+                    return path[0], (cx, cy)
+                elif isinstance(t, dict):
+                    kind = t.get('kind')
+                    if kind == 'WEED' or t.get('yield_units', 0) > 0 or not t.get('watered_today', True) or not t.get('fed_today', True):
                         return path[0], (cx, cy)
-                    elif isinstance(t, dict):
-                        kind = t.get('kind')
-                        if kind == 'WEED' or t.get('yield_units', 0) > 0 or not t.get('watered_today', True) or not t.get('fed_today', True):
-                            return path[0], (cx, cy)
 
         for dx, dy, move in directions:
             nx, ny = cx + dx, cy + dy
