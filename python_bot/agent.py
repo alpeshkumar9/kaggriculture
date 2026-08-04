@@ -9,7 +9,8 @@ try:
     from strategy_rules import (
         COMMODITIES, LAND_QUADRANT_COSTS as LAND_COSTS,
         get_seasonal_crop_choice, get_fibonacci_hire_cost,
-        should_hire_farmhand, calculate_market_sell_quantity
+        should_hire_farmhand, calculate_market_sell_quantity,
+        get_adversarial_crop_choice, should_undercut_market
     )
 except ImportError:
     # Standalone Fallback for single-file Kaggle submission
@@ -108,6 +109,11 @@ def agent(observation, configuration=None):
                 if t.get('kind') == 'WEED' or t.get('yield_units', 0) > 0 or not t.get('watered_today', True) or not t.get('fed_today', True):
                     workload += 1
 
+    opp_id = 1 - player_id
+    opp_farm = farms[opp_id] if opp_id < len(farms) else {}
+    opp_tiles = opp_farm.get('tiles', [])
+    town_shops = obs.get('town', {}).get('unlocked_shops', [])
+
     # 1. Market Orders: Land Expansion
     quad_count = len(unlocked_quads)
     if quad_count < 4:
@@ -125,7 +131,7 @@ def agent(observation, configuration=None):
         money -= hire_cost
         hires_today += 1
 
-    # 3. Market Orders: Front-Running Town Demand & Tiered Selling
+    # 3. Market Orders: Front-Running Town Demand, Tiered Selling & Adversarial Undercutting
     for item, qty in shed.items():
         if qty > 0 and len(market_orders) < 10:
             current_price = prices.get(item, COMMODITIES.get(item, {}).get('base_price', 25))
@@ -137,13 +143,20 @@ def agent(observation, configuration=None):
                 current_price = base_price * 1.10 # Price boost expectation from town demand
 
             sell_qty = calculate_market_sell_quantity(item, qty, current_price, base_price, day)
+            if sell_qty == 0 and hasattr(should_undercut_market, '__call__'):
+                sell_qty = should_undercut_market(item, qty, current_price, base_price, day, opp_tiles)
+
             if sell_qty > 0:
                 market_orders.append(["SELL", item, sell_qty])
 
-    # 4. Market Orders: Dynamic Seasonal Seed Buying
+    # 4. Market Orders: Dynamic Adversarial Seed Buying (Town Demand + Opponent Avoidance)
     total_seeds = sum(seeds.values())
     if total_seeds < 3 and money >= 50 and len(market_orders) < 10:
-        crop_choice = get_seasonal_crop_choice(day, money, quad_count, step)
+        if 'get_adversarial_crop_choice' in globals() or 'get_adversarial_crop_choice' in locals():
+            crop_choice = get_adversarial_crop_choice(day, money, quad_count, step, opp_tiles, town_shops)
+        else:
+            crop_choice = get_seasonal_crop_choice(day, money, quad_count, step)
+
         if crop_choice:
             cost = COMMODITIES.get(crop_choice, {}).get('seed_cost', 10)
             buy_qty = 2 if money < 200 else 4

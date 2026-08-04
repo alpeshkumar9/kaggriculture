@@ -3,6 +3,8 @@ Official Strategy Rules & Constants for Kaggle Kaggriculture Competition.
 Fully compliant with official specs in overview.md and AGENTS.md.
 """
 
+import collections
+
 COMMODITIES = {
     'WHEAT': {
         'type': 'One-time',
@@ -78,44 +80,112 @@ COMMODITIES = {
 LAND_QUADRANT_COSTS = [1000, 2000, 4000]
 LAND_EXPANSION_THRESHOLDS = [2500, 5000, 9000]
 
-def get_base_price(item):
-    if item in COMMODITIES:
-        return COMMODITIES[item].get('base_price', 25)
-    return 25
+TOWN_SHOP_DEMANDS = {
+    'BAKERY': ['EGG', 'WHEAT'],
+    'PIZZA_SHOP': ['MILK', 'TOMATO', 'WHEAT'],
+    'BRUNCH_SPOT': ['EGG', 'WHEAT', 'STRAWBERRY'],
+    'YARN_STORE': ['WOOL'],
+    'ICE_CREAM_SHOP': ['STRAWBERRY', 'MILK', 'WHEAT'],
+    'PET_CAFE': ['CARROT'],
+    'SMOOTHIE_SHOP': ['STRAWBERRY', 'MILK'],
+    'FARMERS_MARKET': ['WHEAT', 'CARROT', 'TOMATO', 'STRAWBERRY']
+}
 
-def get_next_land_cost(unlocked_quadrants_count):
-    if unlocked_quadrants_count < 4:
-        return LAND_QUADRANT_COSTS[unlocked_quadrants_count - 1]
-    return None
+def get_opponent_crop_distribution(opponent_tiles):
+    """
+    Opponent Farm Telemetry: Scans opponent's 10x10 farm grid for active crop counts.
+    """
+    dist = collections.defaultdict(int)
+    if not opponent_tiles:
+        return dist
+    for r in range(len(opponent_tiles)):
+        for c in range(len(opponent_tiles[r])):
+            t = opponent_tiles[r][c]
+            if isinstance(t, dict) and t.get('kind') == 'PLANT':
+                crop = t.get('crop')
+                if crop:
+                    dist[crop] += 1
+    return dist
 
-def get_seasonal_crop_choice(day, money, unlocked_quadrants_count, step=0):
+def get_active_town_demands(unlocked_shops):
     """
-    High Velocity ROI Crop Scheduler:
-    Prioritizes fast-turnover Wheat & Carrots ($140 profit / 2 days) to build maximum cash.
+    Town Shop Demand Tracker: Collects set of items currently demanded by active shops.
     """
-    if day < 20:
-        return 'WHEAT' if step % 2 == 0 else 'CARROT'
-    elif day <= 27:
-        return 'WHEAT'
-    else:
+    demands = set()
+    if not unlocked_shops:
+        return demands
+    for shop in unlocked_shops:
+        shop_upper = str(shop).upper()
+        if shop_upper in TOWN_SHOP_DEMANDS:
+            for item in TOWN_SHOP_DEMANDS[shop_upper]:
+                demands.add(item)
+    return demands
+
+def get_adversarial_crop_choice(day, money, unlocked_quadrants_count, step=0, opponent_tiles=None, town_shops=None):
+    """
+    Grandmaster Opponent Avoidance & Town Demand Matching Scheduler.
+    - Avoids crops heavily mass-produced by opponent (prevents selling into crashed market floors).
+    - Prioritizes crops demanded by active town shops (captures town inventory drain price surges).
+    """
+    if day >= 25:
         return 'WHEAT' if day < 29 else None
 
-def get_fibonacci_hire_cost(hires_today, mult=1):
-    fib = [1, 1, 2, 3, 5, 8, 13, 21, 34, 55]
-    idx = min(hires_today, len(fib) - 1)
-    return mult * fib[idx]
+    opponent_crops = get_opponent_crop_distribution(opponent_tiles)
+    town_demands = get_active_town_demands(town_shops)
 
-def should_hire_farmhand(workload_count, money, hires_today, mult=1):
-    cost = get_fibonacci_hire_cost(hires_today, mult)
-    if workload_count >= 12 and money >= cost + 200:
-        return True
-    return False
+    candidates = ['WHEAT', 'CARROT']
+    if day >= 10 and money >= 150:
+        candidates.extend(['TOMATO', 'STRAWBERRY', 'MELON'])
 
-def calculate_market_sell_quantity(item, qty, current_price, base_price, day):
+    best_crop = 'WHEAT'
+    best_score = -999.0
+
+    for crop in candidates:
+        base_cost = COMMODITIES[crop]['seed_cost']
+        if money < base_cost:
+            continue
+
+        score = 10.0
+        # Fast turnover bonus for Wheat/Carrot early game
+        if crop == 'WHEAT': score += 15.0
+        elif crop == 'CARROT': score += 12.0
+
+        # Town Demand Bonus (+20 points if town shop consumes this crop)
+        if crop in town_demands:
+            score += 20.0
+
+        # Opponent Glut Avoidance (-15 points per opponent tile of this crop)
+        opp_count = opponent_crops.get(crop, 0)
+        score -= opp_count * 15.0
+
+        if score > best_score:
+            best_score = score
+            best_crop = crop
+
+    return best_crop
+
+def should_undercut_market(item, qty, current_price, base_price, day, opponent_tiles=None):
+    """
+    Adversarial Market Undercutting:
+    If opponent has crops maturing within 1 day, liquidate shed stock 1 turn early to capture peak price.
+    """
     if qty <= 0:
         return 0
     if day >= 25 or current_price >= base_price * 0.90:
         return qty
+
+    # Scan opponent tiles for maturing crops of same item
+    if opponent_tiles:
+        for r in range(len(opponent_tiles)):
+            for c in range(len(opponent_tiles[r])):
+                t = opponent_tiles[r][c]
+                if isinstance(t, dict) and t.get('kind') == 'PLANT' and t.get('crop') == item:
+                    age = day - t.get('planted_day', 0)
+                    maturity = COMMODITIES.get(item, {}).get('first_yield_days', 2)
+                    if age >= maturity - 1: # Opponent matures tomorrow! Undercut now!
+                        return qty
+
     return 0
+
 
 
