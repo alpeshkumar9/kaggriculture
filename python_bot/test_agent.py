@@ -10,7 +10,7 @@ import sys
 import unittest
 
 sys.path.insert(0, os.path.dirname(__file__))
-from agent import agent, _sell_orders
+from agent import _premium_crop_plan, _sell_orders, agent
 
 
 def observation(tile, seeds=None, day=0, shed=None, hires_today=0):
@@ -32,6 +32,18 @@ def observation(tile, seeds=None, day=0, shed=None, hires_today=0):
 
 
 class CropFirstAgentTests(unittest.TestCase):
+    def test_ice_cream_after_pizza_selects_the_milestone_crop_plan(self):
+        plan = _premium_crop_plan(
+            {"unlocked_shops": ["PIZZA_SHOP", "ICE_CREAM_SHOP"]}
+        )
+        self.assertEqual(plan, (10, 40, 19, 5))
+
+    def test_non_pizza_opening_keeps_the_reliable_default_plan(self):
+        plan = _premium_crop_plan(
+            {"unlocked_shops": ["FARMERS_MARKET", "PIZZA_SHOP"]}
+        )
+        self.assertEqual(plan, (10, 30, 40, 6))
+
     def test_plants_available_seed_on_empty_tile(self):
         action = agent(observation(None, {"CARROT": 1}))
         self.assertEqual(action["farmer"], ["PLANT", "CARROT"])

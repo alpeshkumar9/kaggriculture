@@ -20,6 +20,7 @@ CROPS = {
 HANDS_PER_DAY = 13
 HIRE_COSTS = (1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377)
 SEED_BUFFER = 10
+MAX_SEED_PURCHASE = 12
 # The fourth quadrant costs $4k with too little remaining season to recover
 # its labour and weed-management cost.  The proven high-output replay uses
 # three quadrants, so expansion stops after NE and SW.
@@ -30,6 +31,8 @@ COMPACT_COW_TARGET = 10
 COWS_PER_SERVICE_WORKER = 5
 FERTILIZER_BATCH_SIZE = 6
 MAX_SELL_ORDER_TYPES = 5
+PREMIUM_SELL_BATCH = 8
+STAPLE_SELL_BATCH = 20
 STRAWBERRY_PRIORITY_DAY = 10
 LAST_PLANTING_DAY = 28
 FINAL_GLOBAL_MELON_THRESHOLD = 8
@@ -40,7 +43,9 @@ STRAWBERRY_TARGET = 30
 TOMATO_TARGET = 0
 MELON_TARGET = 40
 SHED_CAPACITY = 100
-FINAL_LIQUIDATION_DAY = 28
+WHEAT_RESERVE_DAYS = 3
+CROP_WORKLOAD_PER_WORKER = 6
+FINAL_LIQUIDATION_DAY = 29
 BASE_PRICES = {
     "WHEAT": 25,
     "CARROT": 35,
@@ -61,7 +66,7 @@ SELL_PRICE_MULTIPLIERS = {
 }
 
 
-def agent(observation, configuration=None):
+def _agent_impl(observation, configuration=None):
     """Return legal worker and market actions for one Kaggriculture turn."""
     obs = observation if isinstance(observation, dict) else getattr(observation, "__dict__", {})
     farms = obs.get("farms", [])
@@ -76,7 +81,12 @@ def agent(observation, configuration=None):
 
     private = obs.get("private", {}) or {}
     day = int(obs.get("day", 0))
-    strawberry_priority_day, strawberry_target = _premium_crop_plan(
+    (
+        strawberry_priority_day,
+        strawberry_target,
+        melon_target,
+        fertilizer_batch_size,
+    ) = _premium_crop_plan(
         obs.get("town", {})
     )
     workers = [farm.get("farmer", [0, 0]), *farm.get("hands", [])]
@@ -90,6 +100,7 @@ def agent(observation, configuration=None):
             position, tiles, seed_budget, day, reserved,
             inventories[index] if index < len(inventories) else {}, private, livestock,
             index, len(workers), strawberry_priority_day,
+            fertilizer_batch_size,
         ))
 
     projected_harvest_units = 0
@@ -107,6 +118,7 @@ def agent(observation, configuration=None):
         "market": _market_actions(
             farm, private, day, tiles, livestock, obs.get("market", {}),
             projected_harvest_units, strawberry_priority_day, strawberry_target,
+            melon_target,
         ),
     }
 
@@ -120,6 +132,7 @@ def _market_actions(
     projected_harvest_units=0,
     strawberry_priority_day=STRAWBERRY_PRIORITY_DAY,
     strawberry_target=STRAWBERRY_TARGET,
+    melon_target=MELON_TARGET,
 ):
     money = float(farm.get("money", 0))
     market = []
@@ -192,7 +205,7 @@ def _market_actions(
         livestock["owned_animals"] + cows_to_buy
         + geese_to_buy + early_sheep_to_buy + sheep_to_buy
     )
-    wheat_needed = max(0, protected_animals * 3 - wheat_on_hand)
+    wheat_needed = max(0, protected_animals * WHEAT_RESERVE_DAYS - wheat_on_hand)
     if protected_animals and wheat_needed and money >= wheat_needed * BASE_PRICES["WHEAT"]:
         market.append(["BUY_PRODUCT", "WHEAT", wheat_needed])
         money -= wheat_needed * BASE_PRICES["WHEAT"]
@@ -224,19 +237,19 @@ def _market_actions(
     crop = _next_crop(
         private.get("seeds", {}), private.get("shed", {}), day, tiles,
         market_state.get("prices", {}) if isinstance(market_state, dict) else {},
-        strawberry_priority_day, strawberry_target,
+        strawberry_priority_day, strawberry_target, melon_target,
     )
     target_seed_count = {
         "STRAWBERRY": strawberry_target,
         "TOMATO": TOMATO_TARGET,
-        "MELON": MELON_TARGET,
+        "MELON": melon_target,
     }.get(crop, SEED_BUFFER)
     crop_seed_count = int(private.get("seeds", {}).get(crop, 0))
     payroll_reserve = 0 if day >= FINAL_LIQUIDATION_DAY else sum(HIRE_COSTS[:desired_hands])
     spendable = max(0, money - payroll_reserve)
     if day < LAST_PLANTING_DAY and crop_seed_count < min(open_tiles, target_seed_count) and spendable >= CROPS[crop]["cost"]:
         quantity = min(
-            12,
+            MAX_SEED_PURCHASE,
             max(1, min(open_tiles, target_seed_count) - crop_seed_count),
             int(spendable // CROPS[crop]["cost"]),
         )
@@ -254,7 +267,10 @@ def _desired_hands(tiles):
             if not isinstance(tile, dict):
                 continue
             workload += 3 if tile.get("animal") else tile.get("kind") in {"PLANT", "WEED"}
-    total_workers = max(5, (workload + 5) // 6)
+    total_workers = max(
+        5,
+        (workload + CROP_WORKLOAD_PER_WORKER - 1) // CROP_WORKLOAD_PER_WORKER,
+    )
     return min(HANDS_PER_DAY, total_workers - 1)
 
 
@@ -262,14 +278,22 @@ def _premium_crop_plan(town_state):
     """Use early staple demand only when it can finance a larger premium block."""
     shops = town_state.get("unlocked_shops", []) if isinstance(town_state, dict) else []
     if shops and shops[0] == "PIZZA_SHOP":
-        return 9, 35
-    return STRAWBERRY_PRIORITY_DAY, STRAWBERRY_TARGET
+        if len(shops) >= 2 and shops[1] == "ICE_CREAM_SHOP":
+            return 10, 40, 19, 5
+        if len(shops) >= 2 and shops[1] == "FARMERS_MARKET":
+            return 9, 35, 40, FERTILIZER_BATCH_SIZE
+        return 10, STRAWBERRY_TARGET, 19, FERTILIZER_BATCH_SIZE
+    return (
+        STRAWBERRY_PRIORITY_DAY, STRAWBERRY_TARGET, MELON_TARGET,
+        FERTILIZER_BATCH_SIZE,
+    )
 
 
 def _next_crop(
     seeds, shed, day, tiles, prices=None,
     strawberry_priority_day=STRAWBERRY_PRIORITY_DAY,
     strawberry_target=STRAWBERRY_TARGET,
+    melon_target=MELON_TARGET,
 ):
     """Choose the highest-value crop whose production window still fits."""
     strawberries = sum(
@@ -284,7 +308,7 @@ def _next_crop(
     # flooding its extremely glut-sensitive market.
     if strawberry_priority_day <= day <= 16 and strawberries < strawberry_target:
         return "STRAWBERRY"
-    if 4 <= day <= 16 and melons < MELON_TARGET:
+    if 4 <= day <= 16 and melons < melon_target:
         return "MELON"
     tomatoes = sum(
         isinstance(tile, dict) and tile.get("kind") == "PLANT" and tile.get("crop") == "TOMATO"
@@ -306,6 +330,7 @@ def _choose_worker_action(
     position, tiles, seed_budget, day, reserved, inventory, private, livestock,
     worker_index, worker_count,
     strawberry_priority_day=STRAWBERRY_PRIORITY_DAY,
+    fertilizer_batch_size=FERTILIZER_BATCH_SIZE,
 ):
     x, y = position
     if not _in_bounds(x, y, tiles):
@@ -343,7 +368,7 @@ def _choose_worker_action(
 
     livestock_action = _livestock_action(
         x, y, tile, inventory, tiles, private, livestock, reserved, day,
-        worker_index,
+        worker_index, fertilizer_batch_size,
     )
     if livestock_action:
         return livestock_action
@@ -620,7 +645,7 @@ def _sell_orders(
         # Three feed-days cover a placement delay and a missed route without
         # leaving an animal exposed to the two-day escape rule.
         if item == "WHEAT" and day < FINAL_LIQUIDATION_DAY:
-            quantity = max(0, quantity - owned_cows * 3)
+            quantity = max(0, quantity - owned_cows * WHEAT_RESERVE_DAYS)
             if quantity == 0:
                 continue
         base_price = BASE_PRICES[item]
@@ -632,7 +657,10 @@ def _sell_orders(
         elif day == FINAL_LIQUIDATION_DAY:
             sell_quantity = min(quantity, overflow)
         elif price_is_healthy:
-            sell_quantity = min(quantity, 8 if item in PREMIUM_PRODUCTS else 20)
+            sell_quantity = min(
+                quantity,
+                PREMIUM_SELL_BATCH if item in PREMIUM_PRODUCTS else STAPLE_SELL_BATCH,
+            )
         else:
             # Release only enough low-priced stock to prevent losing a future
             # harvest to the 100-item shed cap.
@@ -670,7 +698,7 @@ def _livestock_state(tiles, private, day):
 
 def _livestock_action(
     x, y, tile, inventory, tiles, private, livestock, reserved, day,
-    worker_index,
+    worker_index, fertilizer_batch_size=FERTILIZER_BATCH_SIZE,
 ):
     """Run cow logistics before non-essential crop work.
 
@@ -789,7 +817,7 @@ def _livestock_action(
     ):
         return [
             "PICKUP", "FERTILIZER",
-            min(FERTILIZER_BATCH_SIZE, int(private.get("shed", {}).get("FERTILIZER", 0))),
+            min(fertilizer_batch_size, int(private.get("shed", {}).get("FERTILIZER", 0))),
         ]
 
     if worker_index >= service_workers:
@@ -914,3 +942,8 @@ def _move_to(start_x, start_y, tiles, targets, reserved):
             visited.add((next_x, next_y))
             queue.append((next_x, next_y, first_move or move))
     return None
+
+
+def agent(observation, configuration=None):
+    """Kaggle submission entry point; intentionally the final callable."""
+    return _agent_impl(observation, configuration)
