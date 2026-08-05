@@ -1139,6 +1139,24 @@ Never report the goal as reached on a smoke-tier bank. G1 is the only bar that c
 
 ---
 
+## Current checkpoint — Cycle 5 (2026-08-05)
+
+- **Landed:** the narrow fertilizer-pickup weed guard and W9a configuration support.
+- **Verified:** 36 unit tests; 30-seed self-play median **$82,488**, liveness 30/30;
+  60 side-swapped adversary episodes at **60% G0**, **−18% G3**, liveness 60/60.
+- **Rejected:** three G3 seed-specific variants; broad crop rescue; six-sheep W12 routing.
+  W12 eliminated escapes in its experiment but damaged the competitive gate when retained.
+- **Still open:** the independent 30 held-out seeds contain seed 391611974 at **−37%**;
+  G1 remains far below $160,000. The next cycle must trace a fresh losing seed or improve the
+  benchmark's per-day labour/cash diagnostics before another strategy change. Do not retry
+  sheep until a schedule predicts pasture placement, feed trips, and crop-worker displacement.
+
+Release evidence is stored in `replays/final-selfplay-30-seed-report.json` and
+`replays/final-adversary-30-seed-report.json`. The failed W12 control is retained as
+`replays/w9a-w12-release-gate-30-seed-report.json` so the rejection remains reproducible.
+
+---
+
 ## Risks and open questions
 
 - **Pasture/coop capacity.** Sheep and cows both need pasture; adding 7 sheep while keeping

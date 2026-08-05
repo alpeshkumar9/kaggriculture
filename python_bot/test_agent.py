@@ -10,7 +10,9 @@ import sys
 import unittest
 
 sys.path.insert(0, os.path.dirname(__file__))
-from agent import _premium_crop_plan, _sell_orders, agent
+from agent import (
+    _episode_config, _livestock_action, _premium_crop_plan, _sell_orders, agent,
+)
 
 
 def observation(tile, seeds=None, day=0, shed=None, hires_today=0):
@@ -32,6 +34,45 @@ def observation(tile, seeds=None, day=0, shed=None, hires_today=0):
 
 
 class CropFirstAgentTests(unittest.TestCase):
+    def test_configuration_derives_episode_limits(self):
+        config = _episode_config({
+            "episodeSteps": 120, "turnsPerDay": 12,
+            "shedCapacity": 40, "maxMarketOrdersPerTurn": 3,
+            "farmHandCostMult": 2,
+        })
+        self.assertEqual(config["season_days"], 10)
+        self.assertEqual(config["last_planting_day"], 8)
+        self.assertEqual(config["final_liquidation_day"], 9)
+        self.assertEqual(config["shed_capacity"], 40)
+        self.assertEqual(config["max_market_orders"], 3)
+        self.assertEqual(config["farm_hand_cost_mult"], 2)
+
+    def test_configuration_caps_market_orders(self):
+        action = agent(
+            observation(None, {"CARROT": 1}),
+            {"maxMarketOrdersPerTurn": 1},
+        )
+        self.assertEqual(len(action["market"]), 1)
+
+    def test_short_episode_liquidates_on_derived_final_day(self):
+        crop = {
+            "kind": "PLANT", "crop": "CARROT", "planted_day": -1,
+            "yield_units": 1, "watered_today": False,
+        }
+        action = agent(
+            observation(crop, day=1),
+            {"episodeSteps": 48, "turnsPerDay": 24},
+        )
+        self.assertEqual(action["farmer"], ["HARVEST"])
+
+    def test_configured_shed_capacity_controls_overflow_sale(self):
+        orders = _sell_orders(
+            {"shed": {"CARROT": 40}, "inventories": [{"MELON": 10}]},
+            day=18, market_state={"prices": {"CARROT": 1}},
+            shed_capacity=45,
+        )
+        self.assertEqual(orders, [["SELL", "CARROT", 5]])
+
     def test_ice_cream_after_pizza_selects_the_milestone_crop_plan(self):
         plan = _premium_crop_plan(
             {"unlocked_shops": ["PIZZA_SHOP", "ICE_CREAM_SHOP"]}
@@ -119,6 +160,17 @@ class CropFirstAgentTests(unittest.TestCase):
             market_state={"prices": {"FERTILIZER": 95}}, owned_cows=1,
         )
         self.assertEqual(orders, [["SELL", "FERTILIZER", 3]])
+
+    def test_crop_backlog_prevents_another_fertilizer_pickup(self):
+        livestock = {
+            "owned_animals": 0, "unfed": [], "deployments_assigned": 0,
+            "crop_rescue_needed": True,
+        }
+        action = _livestock_action(
+            4, 4, None, {}, [[None] * 10 for _ in range(10)],
+            {"shed": {"FERTILIZER": 6}}, livestock, set(), 20, 0, 6,
+        )
+        self.assertIsNone(action)
 
     def test_tomato_is_watered_and_harvested_as_an_ongoing_crop(self):
         tomato = {

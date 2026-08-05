@@ -91,6 +91,7 @@ ADAPTIVE_SELL_BATCH = 100
 
 def _agent_impl(observation, configuration=None):
     """Return legal worker and market actions for one Kaggriculture turn."""
+    episode = _episode_config(configuration)
     obs = observation if isinstance(observation, dict) else getattr(observation, "__dict__", {})
     farms = obs.get("farms", [])
     player = obs.get("player", 0)
@@ -123,7 +124,8 @@ def _agent_impl(observation, configuration=None):
             position, tiles, seed_budget, day, reserved,
             inventories[index] if index < len(inventories) else {}, private, livestock,
             index, len(workers), strawberry_priority_day,
-            fertilizer_batch_size,
+            fertilizer_batch_size, episode["turns_per_day"],
+            episode["final_liquidation_day"],
         ))
 
     projected_harvest_units = 0
@@ -135,12 +137,14 @@ def _agent_impl(observation, configuration=None):
         if isinstance(tile, dict):
             projected_harvest_units += max(0, int(tile.get("yield_units", 0)))
 
-    step = day * 24 + int(obs.get("hour", 0))
-    supply_streak = _supply_pressure(player, step, obs.get("market", {}))
+    step = day * episode["turns_per_day"] + int(obs.get("hour", 0))
+    supply_streak = _supply_pressure(
+        player, step, obs.get("market", {}), episode["turns_per_day"],
+    )
     market_actions = _market_actions(
         farm, private, day, tiles, livestock, obs.get("market", {}),
         projected_harvest_units, strawberry_priority_day, strawberry_target,
-        melon_target, supply_streak,
+        melon_target, supply_streak, episode,
     )
     _record_issued_orders(player, market_actions)
 
@@ -153,6 +157,33 @@ def _agent_impl(observation, configuration=None):
 
 def _pass_action():
     return {"farmer": ["PASS"], "hands": [], "market": []}
+
+
+def _episode_config(configuration=None):
+    """Normalize configurable engine knobs while preserving official defaults."""
+    if isinstance(configuration, dict):
+        get_value = configuration.get
+    else:
+        get_value = lambda key, default: getattr(configuration, key, default)
+
+    turns_per_day = max(1, int(get_value("turnsPerDay", 24)))
+    episode_steps = max(1, int(get_value("episodeSteps", 720)))
+    season_days = max(1, (episode_steps + turns_per_day - 1) // turns_per_day)
+    return {
+        "turns_per_day": turns_per_day,
+        "episode_steps": episode_steps,
+        "season_days": season_days,
+        "last_planting_day": max(0, season_days - 2),
+        "final_liquidation_day": max(0, season_days - 1),
+        "shed_capacity": max(1, int(get_value("shedCapacity", SHED_CAPACITY))),
+        "max_market_orders": max(0, int(get_value("maxMarketOrdersPerTurn", 10))),
+        "farm_hand_cost_mult": max(0.0, float(get_value("farmHandCostMult", 1))),
+        "board_size": max(1, int(get_value("boardSize", 10))),
+        "starting_money": float(get_value("startingMoney", 3000)),
+        "weed_spawn_chance": max(0.0, float(get_value("weedSpawnChance", 0.005))),
+        "town_shop_unlock_interval": max(1, int(get_value("townShopUnlockInterval", 3))),
+        "town_shop_sell_interval": max(1, int(get_value("townShopSellInterval", 4))),
+    }
 
 
 # Keyed by player index because a self-play harness may hand the *same* module
@@ -229,7 +260,11 @@ def _market_actions(
     strawberry_target=STRAWBERRY_TARGET,
     melon_target=MELON_TARGET,
     supply_streak=None,
+    episode=None,
 ):
+    episode = episode or _episode_config()
+    final_day = episode["final_liquidation_day"]
+    last_planting_day = episode["last_planting_day"]
     money = float(farm.get("money", 0))
     market = []
 
@@ -244,11 +279,11 @@ def _market_actions(
         for tile in row
     ):
         desired_hands = min(HANDS_PER_DAY, desired_hands + 1)
-    if day >= 29:
+    if day >= final_day:
         desired_hands = min(HANDS_PER_DAY, desired_hands + 1)
     hires_today = int(farm.get("hires_today", 0))
     for hire_index in range(hires_today, desired_hands):
-        hire_cost = HIRE_COSTS[hire_index]
+        hire_cost = HIRE_COSTS[hire_index] * episode["farm_hand_cost_mult"]
         if money < hire_cost:
             break
         market.append(["HIRE"])
@@ -261,6 +296,7 @@ def _market_actions(
     sell_orders = _sell_orders(
         private, day, market_state, livestock["owned_animals"],
         projected_harvest_units, supply_streak,
+        shed_capacity=episode["shed_capacity"], final_liquidation_day=final_day,
     )[:MAX_SELL_ORDER_TYPES]
     market.extend(sell_orders)
 
@@ -306,7 +342,7 @@ def _market_actions(
     # check only runs in the end-of-day update, so an animal left unfed then
     # costs nothing.  Without this guard the reserve is sold and re-bought on
     # the same turn, every episode.
-    if day < FINAL_LIQUIDATION_DAY and protected_animals and wheat_needed and money >= wheat_needed * BASE_PRICES["WHEAT"]:
+    if day < final_day and protected_animals and wheat_needed and money >= wheat_needed * BASE_PRICES["WHEAT"]:
         market.append(["BUY_PRODUCT", "WHEAT", wheat_needed])
         money -= wheat_needed * BASE_PRICES["WHEAT"]
 
@@ -338,6 +374,7 @@ def _market_actions(
         private.get("seeds", {}), private.get("shed", {}), day, tiles,
         market_state.get("prices", {}) if isinstance(market_state, dict) else {},
         strawberry_priority_day, strawberry_target, melon_target,
+        last_planting_day,
     )
     target_seed_count = {
         "STRAWBERRY": strawberry_target,
@@ -345,9 +382,11 @@ def _market_actions(
         "MELON": melon_target,
     }.get(crop, SEED_BUFFER)
     crop_seed_count = int(private.get("seeds", {}).get(crop, 0))
-    payroll_reserve = 0 if day >= FINAL_LIQUIDATION_DAY else sum(HIRE_COSTS[:desired_hands])
+    payroll_reserve = 0 if day >= final_day else (
+        sum(HIRE_COSTS[:desired_hands]) * episode["farm_hand_cost_mult"]
+    )
     spendable = max(0, money - payroll_reserve)
-    if day < LAST_PLANTING_DAY and crop_seed_count < min(open_tiles, target_seed_count) and spendable >= CROPS[crop]["cost"]:
+    if day < last_planting_day and crop_seed_count < min(open_tiles, target_seed_count) and spendable >= CROPS[crop]["cost"]:
         quantity = min(
             MAX_SEED_PURCHASE,
             max(1, min(open_tiles, target_seed_count) - crop_seed_count),
@@ -356,7 +395,7 @@ def _market_actions(
         if quantity:
             market.append(["BUY_SEED", crop, quantity])
 
-    return market[:10]
+    return market[:episode["max_market_orders"]]
 
 
 def _desired_hands(tiles):
@@ -394,6 +433,7 @@ def _next_crop(
     strawberry_priority_day=STRAWBERRY_PRIORITY_DAY,
     strawberry_target=STRAWBERRY_TARGET,
     melon_target=MELON_TARGET,
+    last_planting_day=LAST_PLANTING_DAY,
 ):
     """Choose the highest-value crop whose production window still fits."""
     strawberries = sum(
@@ -419,8 +459,8 @@ def _next_crop(
     if 4 <= day <= 21 and tomatoes < TOMATO_TARGET:
         return "TOMATO"
     prices = prices or BASE_PRICES
-    if day >= LAST_PLANTING_DAY:
-        return "CARROT" if day <= 27 else "WHEAT"
+    if day >= last_planting_day:
+        return "CARROT" if day < last_planting_day else "WHEAT"
     wheat_rate = (float(prices.get("WHEAT", 25)) * 4 - 10) / 4
     carrot_rate = (float(prices.get("CARROT", 35)) * 3 - 20) / 3
     return "WHEAT" if wheat_rate >= carrot_rate else "CARROT"
@@ -431,6 +471,8 @@ def _choose_worker_action(
     worker_index, worker_count,
     strawberry_priority_day=STRAWBERRY_PRIORITY_DAY,
     fertilizer_batch_size=FERTILIZER_BATCH_SIZE,
+    turns_per_day=SUPPLY_WINDOW_TURNS,
+    final_liquidation_day=FINAL_LIQUIDATION_DAY,
 ):
     x, y = position
     if not _in_bounds(x, y, tiles):
@@ -443,7 +485,7 @@ def _choose_worker_action(
         item != "MELON" and inventory.get(item, 0) > 0 for item in PRODUCTS
     )
     if (
-        day == FINAL_LIQUIDATION_DAY
+        day == final_liquidation_day
         and carrying_non_melon
         and isinstance(tile, dict)
         and (
@@ -451,7 +493,7 @@ def _choose_worker_action(
             or (
                 tile.get("kind") == "PLANT"
                 and int(tile.get("yield_units", 0)) <= 0
-                and 0 <= int(tile.get("max_lifespan_step", -1)) <= (day + 1) * 24
+                and 0 <= int(tile.get("max_lifespan_step", -1)) <= (day + 1) * turns_per_day
             )
         )
     ):
@@ -459,8 +501,8 @@ def _choose_worker_action(
         return ["DIG"]
     if (
         (inventory.get("MELON", 0) > 0 and day <= 16)
-        or (day == FINAL_LIQUIDATION_DAY and carrying_non_melon)
-        or (day >= 29 and carrying_products)
+        or (day == final_liquidation_day and carrying_non_melon)
+        or (day >= final_liquidation_day and carrying_products)
     ):
         if _is_shed_access(x, y, len(tiles)):
             return ["DROP"]
@@ -479,7 +521,10 @@ def _choose_worker_action(
     action = (
         None
         if (x, y) in compact_cow_slots and tile is None
-        else _action_for_tile(tile, seed_budget, day, strawberry_priority_day)
+        else _action_for_tile(
+            tile, seed_budget, day, strawberry_priority_day,
+            turns_per_day, final_liquidation_day,
+        )
     )
     ripe_melons = sum(
         isinstance(target, dict)
@@ -489,7 +534,7 @@ def _choose_worker_action(
         for target in row
     )
     use_global_liquidation = (
-        day >= 29 and ripe_melons <= FINAL_GLOBAL_MELON_THRESHOLD
+        day >= final_liquidation_day and ripe_melons <= FINAL_GLOBAL_MELON_THRESHOLD
     )
     service_workers = (
         max(1, livestock["owned_animals"] // COWS_PER_SERVICE_WORKER)
@@ -506,6 +551,8 @@ def _choose_worker_action(
         urgent_target = _nearest_target(
             x, y, tiles, seed_budget, day, reserved, urgent_only=True,
             allowed=region, strawberry_priority_day=strawberry_priority_day,
+            turns_per_day=turns_per_day,
+            final_liquidation_day=final_liquidation_day,
         )
         if urgent_target is not None:
             direction, coordinates = urgent_target
@@ -520,11 +567,15 @@ def _choose_worker_action(
     target = _nearest_target(
         x, y, tiles, seed_budget, day, reserved, allowed=region,
         strawberry_priority_day=strawberry_priority_day,
+        turns_per_day=turns_per_day,
+        final_liquidation_day=final_liquidation_day,
     )
     if target is None:
         target = _nearest_target(
             x, y, tiles, seed_budget, day, reserved, urgent_only=True,
             strawberry_priority_day=strawberry_priority_day,
+            turns_per_day=turns_per_day,
+            final_liquidation_day=final_liquidation_day,
         )
     if target is None:
         return ["PASS"]
@@ -536,8 +587,10 @@ def _choose_worker_action(
 def _action_for_tile(
     tile, seed_budget, day,
     strawberry_priority_day=STRAWBERRY_PRIORITY_DAY,
+    turns_per_day=SUPPLY_WINDOW_TURNS,
+    final_liquidation_day=FINAL_LIQUIDATION_DAY,
 ):
-    if day >= 29:
+    if day >= final_liquidation_day:
         # Nothing planted or watered on the last day can pay back, so every
         # hand-turn goes to banking yield that is already standing -- from any
         # crop or animal, not just melon.  Anything left in the ground at turn
@@ -556,14 +609,14 @@ def _action_for_tile(
     crop = tile.get("crop")
     crop_data = CROPS.get(crop, {})
     if (
-        day == FINAL_LIQUIDATION_DAY
-        and 0 <= int(tile.get("max_lifespan_step", -1)) <= (day + 1) * 24
+        day == final_liquidation_day
+        and 0 <= int(tile.get("max_lifespan_step", -1)) <= (day + 1) * turns_per_day
         and int(tile.get("yield_units", 0)) <= 0
     ):
         return ["DIG"]
     if crop_data.get("ongoing") and tile.get("yield_units", 0) > 0:
         return ["HARVEST"]
-    if crop_data.get("ongoing") and _expires_by_next_day(tile, day):
+    if crop_data.get("ongoing") and _expires_by_next_day(tile, day, turns_per_day):
         return ["DIG"]
     harvest_day = crop_data.get("harvest_day")
     if harvest_day is not None and day - int(tile.get("planted_day", day)) >= harvest_day:
@@ -596,6 +649,8 @@ def _available_crop(
 def _nearest_target(
     start_x, start_y, tiles, seed_budget, day, reserved, urgent_only=False,
     allowed=None, strawberry_priority_day=STRAWBERRY_PRIORITY_DAY,
+    turns_per_day=SUPPLY_WINDOW_TURNS,
+    final_liquidation_day=FINAL_LIQUIDATION_DAY,
 ):
     queue = deque([(start_x, start_y, None)])
     visited = {(start_x, start_y)}
@@ -609,6 +664,7 @@ def _nearest_target(
         ):
             priority = _target_priority(
                 tiles[y][x], seed_budget, day, strawberry_priority_day,
+                turns_per_day, final_liquidation_day,
             )
             if priority is not None and (not urgent_only or priority < 3):
                 candidates.setdefault(priority, (first_move, (x, y)))
@@ -639,9 +695,11 @@ def _worker_region(tiles, worker_index, worker_count):
 def _target_priority(
     tile, seed_budget, day,
     strawberry_priority_day=STRAWBERRY_PRIORITY_DAY,
+    turns_per_day=SUPPLY_WINDOW_TURNS,
+    final_liquidation_day=FINAL_LIQUIDATION_DAY,
 ):
     """Smaller values are assigned first across the whole farm."""
-    if day >= 29:
+    if day >= final_liquidation_day:
         return -10 if _has_standing_yield(tile, day) else None
     if tile is None:
         return 3 if _available_crop(seed_budget, day, strawberry_priority_day) else None
@@ -650,19 +708,19 @@ def _target_priority(
     if tile.get("kind") == "WEED":
         # Clearing a weed immediately protects the small worker budget from
         # accumulating a permanent traversal and planting bottleneck.
-        return -1 if day < FINAL_LIQUIDATION_DAY else 2
+        return -1 if day < final_liquidation_day else 2
     if tile.get("kind") != "PLANT":
         return None
     crop = tile.get("crop")
     crop_data = CROPS.get(crop, {})
     if (
-        day == FINAL_LIQUIDATION_DAY
-        and 0 <= int(tile.get("max_lifespan_step", -1)) <= (day + 1) * 24
+        day == final_liquidation_day
+        and 0 <= int(tile.get("max_lifespan_step", -1)) <= (day + 1) * turns_per_day
     ):
         return -20 if int(tile.get("yield_units", 0)) > 0 else -19
     if crop_data.get("ongoing") and tile.get("yield_units", 0) > 0:
         return 0
-    if crop_data.get("ongoing") and _expires_by_next_day(tile, day):
+    if crop_data.get("ongoing") and _expires_by_next_day(tile, day, turns_per_day):
         return -1
     harvest_day = crop_data.get("harvest_day")
     if harvest_day is not None and day - int(tile.get("planted_day", day)) >= harvest_day:
@@ -694,13 +752,13 @@ def _needs_water(tile, day):
     return not tile.get("watered_today", False)
 
 
-def _expires_by_next_day(tile, day):
+def _expires_by_next_day(tile, day, turns_per_day=SUPPLY_WINDOW_TURNS):
     """True after an ongoing crop's last held yield has been collected."""
     max_lifespan_step = int(tile.get("max_lifespan_step", -1))
     return (
         tile.get("yield_units", 0) <= 0
         and max_lifespan_step >= 0
-        and max_lifespan_step <= (day + 1) * 24
+        and max_lifespan_step <= (day + 1) * turns_per_day
     )
 
 
@@ -714,6 +772,8 @@ def _sell_orders(
     surplus_to_capitulate=SUPPLY_SURPLUS_TO_CAPITULATE,
     reserve_cut=ADAPTIVE_RESERVE_CUT,
     adaptive_batch=ADAPTIVE_SELL_BATCH,
+    shed_capacity=SHED_CAPACITY,
+    final_liquidation_day=FINAL_LIQUIDATION_DAY,
 ):
     """Return market-aware sales while preserving shed and livestock reserves."""
     shed = private.get("shed", {})
@@ -737,7 +797,7 @@ def _sell_orders(
     )
     overflow = max(
         0,
-        total_stock + incoming_stock + projected_harvest_units - SHED_CAPACITY,
+        total_stock + incoming_stock + projected_harvest_units - shed_capacity,
     )
     fertilizer_reserve = 10 if 19 <= day <= 25 else 0
     excess_fertilizer = max(
@@ -751,7 +811,7 @@ def _sell_orders(
         # Wheat is operating inventory, not sale inventory, while cows exist.
         # Three feed-days cover a placement delay and a missed route without
         # leaving an animal exposed to the two-day escape rule.
-        if item == "WHEAT" and day < FINAL_LIQUIDATION_DAY:
+        if item == "WHEAT" and day < final_liquidation_day:
             quantity = max(0, quantity - owned_cows * WHEAT_RESERVE_DAYS)
             if quantity == 0:
                 continue
@@ -767,10 +827,8 @@ def _sell_orders(
             ratio *= reserve_cut
         target_price = base_price * ratio
         price_is_healthy = item == "FERTILIZER" or quoted_price >= target_price
-        if day >= 29 or (day >= FINAL_LIQUIDATION_DAY and item not in {"STRAWBERRY", "MILK", "WOOL"}):
+        if day >= final_liquidation_day:
             sell_quantity = quantity
-        elif day == FINAL_LIQUIDATION_DAY:
-            sell_quantity = min(quantity, overflow)
         elif price_is_healthy:
             batch = PREMIUM_SELL_BATCH if item in PREMIUM_PRODUCTS else STAPLE_SELL_BATCH
             if out_supplied:
@@ -810,6 +868,13 @@ def _livestock_state(tiles, private, day):
         "owned_geese": owned_geese,
         "owned_animals": owned_cows + owned_sheep + owned_geese,
         "unfed": [(x, y) for x, y, tile in animals if not tile.get("fed_today", False)],
+        "crop_rescue_needed": sum(
+            isinstance(tile, dict)
+            and tile.get("kind") == "PLANT"
+            and not tile.get("watered_today", False)
+            and int(tile.get("consecutive_unwatered", 0)) >= 1
+            for row in tiles for tile in row
+        ) >= CROP_WORKLOAD_PER_WORKER,
         "deployments_assigned": 0,
     }
 
@@ -929,6 +994,7 @@ def _livestock_action(
     if (
         19 <= day <= 25
         and worker_index >= service_workers
+        and not livestock["crop_rescue_needed"]
         and at_shed
         and private.get("shed", {}).get("FERTILIZER", 0) > 0
     ):

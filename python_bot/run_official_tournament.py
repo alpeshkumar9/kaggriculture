@@ -163,8 +163,13 @@ class TradeLog:
             log.live_farms = state[0].observation.farms
             return original_market(state, env)
 
-        def logged_commit(op, item, price, farm, private, market):
-            ok = original_commit(op, item, price, farm, private, market)
+        def logged_commit(op, item, price, farm, private, market, *engine_args):
+            # ``shed_capacity`` became an explicit seventh argument in
+            # kaggle-environments 1.32.4.  Forward optional engine arguments so
+            # the diagnostic wrapper remains compatible with both engine APIs.
+            ok = original_commit(
+                op, item, price, farm, private, market, *engine_args,
+            )
             if ok:
                 player = next(
                     (i for i, candidate in enumerate(log.live_farms) if candidate is farm), -1

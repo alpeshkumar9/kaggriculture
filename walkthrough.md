@@ -542,8 +542,49 @@ fixture.
 
 ---
 
+## Cycle 5 — weed liveness, W9a configuration, and W12 diagnosis (2026-08-05)
+
+**Accepted: narrow weed routing.** Seed 1232444148 reached 12 weeds because workers kept
+starting new fertilizer pickups while six or more already-dry crops needed service. Blocking
+only that optional pickup during the backlog reduced the exact seed to 5 weeds. Broader rescue
+modes were rejected: pausing fertilizer collection/delivery/purchase fixed weeds but collapsed
+G0. The narrow version reproduces the accepted gate on the original 30 seeds:
+
+| gate | result | status |
+| --- | ---: | --- |
+| G0 adversary, 60 paired episodes | 60% | MET |
+| G3 worst seed | −18% | MET |
+| G1 self-play median, 30 seeds | $82,488 | −0.9% vs W11; guard held |
+| Liveness | 90/90 | pass |
+| Peak weeds | 8 adversary / 6 self-play | pass |
+
+**Accepted: W9a configuration.** `agent.py` now reads both mapping-style and attribute-style
+episode configuration. `turnsPerDay`, `episodeSteps`, `shedCapacity`,
+`maxMarketOrdersPerTurn`, `farmHandCostMult`, board/start/weed values, and town intervals are
+normalized in one place. Supply history uses the configured day length; liquidation and last
+planting derive from season length; overflow, order count, and payroll use their configured
+limits. Focused custom-config tests pass, and the default regression seed remains exactly
+$67,426 after the change.
+
+**Diagnosed but rejected: W12 / six late sheep.** Extending pasture placement beyond ten
+slots and making `consecutive_unfed >= 1` an emergency feed priority reduced animal loss from
+3.20 to 0.00 per episode on ten seeds and raised wool from 19.8 to 36.4 units/episode. The
+strategy still completed only 4.7 sheep on average by day 22 and scored a $70,279 self-play
+median. Worse, retaining the routing/feed changes with sheep disabled collapsed the full G0
+gate from 60% to 28%, worsened G3 to −53%, and introduced an 11-weed failure. All W12 behavior
+was therefore reverted; `LATE_SHEEP_TARGET` remains zero. The experiment establishes that
+escape prevention is necessary but not sufficient—the labour and cash schedule must be
+co-designed before wool can ship.
+
+**G3 follow-up.** Three targeted changes on seed 391611974—early demand-driven strawberry,
+reserve cut 0.35, and reserve cut 0—improved its bank but only to −28% to −31% against the
+dumper, still outside the −20% gate. They were reverted. The wider 60-seed G3 failure at
+−37% therefore remains open even though the release 30-seed set passes.
+
+---
+
 ## Schema compliance
 
-`python3 -m unittest python_bot/test_agent.py python_bot/test_agent_allocator.py` — 31 tests,
+`python3 -m unittest python_bot/test_agent.py python_bot/test_agent_allocator.py` — 36 tests,
 all passing: 720 valid turns, Kaggle action schema, price/town-demand models exact against
 the engine. Unit tests never establish a score change; the tournament harness does.
