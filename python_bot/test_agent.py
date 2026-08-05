@@ -65,6 +65,15 @@ class CropFirstAgentTests(unittest.TestCase):
         )
         self.assertEqual(action["farmer"], ["HARVEST"])
 
+    def test_final_day_harvests_animal_yield_instead_of_servicing_it(self):
+        cow = {
+            "kind": "PASTURE", "animal": "COW", "yield_units": 3,
+            "fed_today": False, "cared_today": False,
+            "fertilizer_available": True,
+        }
+        action = agent(observation(cow, day=29))
+        self.assertEqual(action["farmer"], ["HARVEST"])
+
     def test_configured_shed_capacity_controls_overflow_sale(self):
         orders = _sell_orders(
             {"shed": {"CARROT": 40}, "inventories": [{"MELON": 10}]},

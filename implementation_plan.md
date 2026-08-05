@@ -1189,6 +1189,19 @@ Release evidence is stored in `replays/final-selfplay-30-seed-report.json` and
   (7/17 with the same failure). The next cycle should trace one of the eight remaining exact
   losses rather than retune this timing against a single replay.
 
+## Current checkpoint — Cycle 8 (2026-08-05)
+
+- **Accepted:** skip non-paying livestock servicing on the final liquidation day; standing
+  animal and crop yield still use the global harvest path.
+- **Primary gate:** exact replay roster **9/17 → 10/17 wins (53% → 59%)**, median bank
+  **$95,486 → $97,565**, 17/17 live.
+- **Target metric:** average unharvested value **$3,403 → $683**; episode 90147946 flipped
+  from a $433 loss to a $1,158 win.
+- **Guards:** self-play median **$91,513**, 30/30 live; adversary **52/60 (87%)**, worst
+  margin **−14%**, 60/60 live; 43 unit tests pass.
+- **Rejected:** day-28 liquidation, maximum final-day hiring, and the inert global-region
+  threshold change. Seven exact roster losses remain.
+
 ## Risks and open questions
 
 - **Pasture/coop capacity.** Sheep and cows both need pasture; adding 7 sheep while keeping

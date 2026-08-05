@@ -657,3 +657,42 @@ Verification: 42 unit tests pass; roster 17/17, self-play 30/30, and adversary 6
 pass. Reports: `replays/cycle7-roster-baseline.json`,
 `replays/cycle7-demand-strawberry-day8.json`, `replays/cycle7-selfplay-30.json`, and
 `replays/cycle7-adversary-30.json`.
+
+---
+
+## Cycle 8 — final-day livestock service bypass (2026-08-05)
+
+The closest Cycle-7 loss, replay 90147946, finished only $433 behind while leaving 33 wheat
+and 17 melon units standing, worth $5,075 at base prices. A retained official trace showed
+that day 29 spent only 11 actions harvesting and 74 passing while workers continued issuing
+`PICKUP`, `CARE`, and fertilizer-service actions. Those actions cannot create another payable
+livestock cycle before turn 720, and `_livestock_action` ran before the existing all-product
+liquidation router.
+
+The accepted fix skips `_livestock_action` on the derived final liquidation day. Existing
+standing animal yield is still collected by `_has_standing_yield`, through the same route as
+crop yield. No opponent, seed, price, or new tuning literal is involved.
+
+| metric | Cycle 7 | Cycle 8 |
+| --- | ---: | ---: |
+| Exact-roster wins | 9/17 (53%) | **10/17 (59%)** |
+| Candidate median bank | $95,486 | **$97,565** |
+| Unharvested value/episode | $3,403 | **$683** |
+| 90147946 result | $74,157 vs $74,590 (loss) | **$75,771 vs $74,613 (win)** |
+| Self-play median, 30 seeds | $88,177 | **$91,513** |
+| Adversary G0, 60 episodes | 80% | **87%** |
+| Adversary G3 worst margin | −17% | **−14%** |
+| Liveness | all pass | **107/107 pass** |
+
+Two related experiments were rejected. Moving liquidation to day 28 reduced standing value
+but regressed the roster to 8/17 and median bank to $92,638. Hiring the maximum workforce on
+day 29 reduced standing value on 90062890 but payroll and market timing worsened its margin.
+The farm-wide region-threshold change was byte-for-byte inert on the focused trace and was
+also reverted, leaving the accepted change attributable to the service bypass alone.
+
+Seven exact losses remain: 89980458, 89983749, 90006347, 90062890, 90108226, 90112980, and
+90120436. The next closest is 90062890 at −$675; its remaining $3,000 standing value was not
+solved economically by extra final-day hires.
+
+Verification: 43 unit tests pass. Reports: `replays/cycle8-accepted-roster.json`,
+`replays/cycle8-selfplay-30.json`, and `replays/cycle8-adversary-30.json`.

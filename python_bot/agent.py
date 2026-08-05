@@ -517,10 +517,12 @@ def _choose_worker_action(
             return ["DROP"]
         return _move_to(x, y, tiles, _shed_targets(len(tiles)), reserved) or ["PASS"]
 
-    livestock_action = _livestock_action(
-        x, y, tile, inventory, tiles, private, livestock, reserved, day,
-        worker_index, fertilizer_batch_size,
-    )
+    livestock_action = None
+    if day < final_liquidation_day:
+        livestock_action = _livestock_action(
+            x, y, tile, inventory, tiles, private, livestock, reserved, day,
+            worker_index, fertilizer_batch_size,
+        )
     if livestock_action:
         return livestock_action
     # Keep the northwest shed-access cell clear for the first compact cow.
