@@ -696,3 +696,53 @@ solved economically by extra final-day hires.
 
 Verification: 43 unit tests pass. Reports: `replays/cycle8-accepted-roster.json`,
 `replays/cycle8-selfplay-30.json`, and `replays/cycle8-adversary-30.json`.
+
+---
+
+## Cycle 9 — eight-cow crop-capacity portfolio (2026-08-05)
+
+Rather than tune one replay at a time, this cycle tested shared-market portfolio changes over
+the complete roster. Two observation-driven candidates were rejected: pausing milk expansion
+after a one-day milk-supply surplus did not activate early enough to alter the 10-cow build,
+and expanding strawberries to 40 after a healthy quote raised strawberry output without
+adding a win. Both preserve 10/17 and are not in the artifact.
+
+The accepted general change reduces the named compact-cow target from 10 to **8**. This is a
+portfolio rebalance, not an opponent rule: milk is the product with the most frequent
+below-base sales in the remaining losses, while strawberries retain recurring shop demand.
+The two freed pasture/service slots reduce wheat purchases and let the existing crop planner
+reach a larger strawberry block.
+
+| metric | Cycle 8 | Cycle 9 |
+| --- | ---: | ---: |
+| Exact-roster wins | 10/17 (59%) | **11/17 (65%)** |
+| Candidate median bank | $97,565 | **$102,813** |
+| Peak cows | 9.9 | **8.0** |
+| Milk units/episode | 261.4 | **218.2** |
+| Strawberry revenue/episode | $39,044 | **$45,534** |
+| Self-play median, 30 seeds | $91,513 | **$105,098** |
+| Adversary G0, 60 episodes | 87% | **92%** |
+| Adversary G3 worst margin | −14% | **−6%** |
+
+It flips two opponents in the same roster run: 89980458 ($94,576 vs $94,041) and 90062890
+($95,294 vs $89,785). Six exact losses remain: 89983092, 89983749, 90006347, 90108226,
+90112980, and 90120436. The 30/30 self-play and 60/60 adversary liveness guards pass.
+
+The trade-off is a small animal-loss signal (0.33/episode in self-play and 0.45 against the
+adversary), so the next cycle should trace the affected feed route before adding sheep or
+expanding the herd. Verification: 43 unit tests pass. Reports:
+`replays/cycle9-eight-cows.json`, `replays/cycle9-eight-cows-selfplay-30.json`, and
+`replays/cycle9-eight-cows-adversary-30.json`.
+
+---
+
+## Cycle 10 experiment — sheep diversification rejected (2026-08-05)
+
+The six remaining ghosts all use a six-sheep wool stream, so this was tested as a portfolio
+mechanism: a seven-cow herd plus six sheep, with 13 compact livestock slots and day-10--12
+purchase timing. It was rejected. The current allocator's service-worker share and wheat
+carrying path made the combined herd consume worker turns needed for premium crops: wheat
+purchases rose to $108,575 per episode, strawberry revenue fell to $27,261, and the exact
+roster collapsed to **4/17 wins** (from 11/17). All 17 episodes remained live, but liveness
+does not compensate for the competitive regression. The artifact remains the eight-cow,
+no-sheep policy. Report: `replays/cycle10-seven-cow-six-sheep.json`.

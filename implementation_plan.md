@@ -1202,6 +1202,19 @@ Release evidence is stored in `replays/final-selfplay-30-seed-report.json` and
 - **Rejected:** day-28 liquidation, maximum final-day hiring, and the inert global-region
   threshold change. Seven exact roster losses remain.
 
+## Current checkpoint — Cycle 9 (2026-08-05)
+
+- **Accepted:** lower `COMPACT_COW_TARGET` from 10 to 8, shifting labour, feed, and land
+  capacity into the existing strawberry crop path.
+- **Primary gate:** exact replay roster **10/17 → 11/17 wins (59% → 65%)**, median bank
+  **$97,565 → $102,813**, 17/17 live.
+- **Target metric:** milk units **261.4 → 218.2/episode**, while strawberry revenue rises
+  **$39,044 → $45,534/episode**. It flips 89980458 and 90062890.
+- **Guards:** self-play median **$105,098**, 30/30 live; adversary **55/60 (92%)**, worst
+  margin **−6%**, 60/60 live; 43 unit tests pass.
+- **Open:** animal loss rose to 0.33–0.45/episode. Diagnose feed routing before any herd
+  expansion; six exact roster losses remain.
+
 ## Risks and open questions
 
 - **Pasture/coop capacity.** Sheep and cows both need pasture; adding 7 sheep while keeping

@@ -10,9 +10,7 @@ import sys
 import unittest
 
 sys.path.insert(0, os.path.dirname(__file__))
-from agent import (
-    _episode_config, _livestock_action, _premium_crop_plan, _sell_orders, agent,
-)
+from agent import _episode_config, _livestock_action, _premium_crop_plan, _sell_orders, agent
 
 
 def observation(tile, seeds=None, day=0, shed=None, hires_today=0):
