@@ -79,9 +79,15 @@ class CropFirstAgentTests(unittest.TestCase):
         )
         self.assertEqual(plan, (10, 40, 19, 5))
 
-    def test_non_pizza_opening_keeps_the_reliable_default_plan(self):
+    def test_non_pizza_strawberry_demand_advances_priority(self):
         plan = _premium_crop_plan(
             {"unlocked_shops": ["FARMERS_MARKET", "PIZZA_SHOP"]}
+        )
+        self.assertEqual(plan, (8, 30, 40, 6))
+
+    def test_non_pizza_without_strawberry_demand_keeps_default_plan(self):
+        plan = _premium_crop_plan(
+            {"unlocked_shops": ["BAKERY", "YARN_STORE"]}
         )
         self.assertEqual(plan, (10, 30, 40, 6))
 

@@ -618,3 +618,42 @@ The eleven current losses are 89980458, 89983092, 89983749, 89989543, 90006347,
 non-competitive built-ins as the primary opponent test. The next strategy cycle should trace
 one of the high-value losses (preferably 90120436 or 90112980), form one measurable
 hypothesis, and then require improvement across the full roster rather than on that seed alone.
+
+---
+
+## Cycle 7 — demand-timed strawberry priority (2026-08-05)
+
+The fresh roster baseline reproduced Cycle 6 exactly: **6/17 wins (35%)**, median bank
+**$84,845**, and 17/17 liveness. The largest losses exposed the same crop-allocation failure:
+against episodes 90108226, 90112980, and 90120436 the candidate reached 45–54 melon tiles but
+only 16–21 strawberry tiles. Melon has no shop demand and a quadratic glut curve; those town
+schedules had unlocked strawberry demand while melon occupied the available land.
+
+The accepted change keeps the default day-10 strawberry priority until the observation shows
+a strawberry-buying shop, then advances it to the named day-8 strategy target. It does not
+special-case an opponent or seed. A day-6 candidate moved the intended production metrics but
+remained at 6/17 wins and produced a 12-weed liveness failure; a demand-gated day-6 candidate
+reached 7/17 but retained the failure. Both were rejected.
+
+| metric | baseline | accepted day 8 |
+| --- | ---: | ---: |
+| Exact-roster wins | 6/17 (35%) | **9/17 (53%)** |
+| Candidate median bank | $84,845 | **$95,486** |
+| Strawberry revenue/episode | $24,944 | **$37,964** |
+| Peak strawberry tiles | 26.4 | **36.1** |
+| Peak melon tiles | 39.4 | **26.8** |
+| Roster liveness | 17/17 | **17/17** |
+| Self-play median, 30 seeds | $82,488 accepted reference | **$88,177** |
+| Adversary G0, 60 paired episodes | 60% accepted reference | **80%** |
+| Adversary G3 worst margin | −18% accepted reference | **−17%** |
+
+Per-opponent accepted outcomes: wins against 89978502, 89983092, 89984407, 89985050,
+89989543, 90060119, 90091984, 90115034, and 90157524; losses against 89980458, 89983749,
+90006347, 90062890, 90108226, 90112980, 90120436, and 90147946. The aggregate roster gate
+is met, although the one-episode-per-opponent floor remains red for every loss and is not a
+statistically meaningful fractional rate on an exact ghost.
+
+Verification: 42 unit tests pass; roster 17/17, self-play 30/30, and adversary 60/60 liveness
+pass. Reports: `replays/cycle7-roster-baseline.json`,
+`replays/cycle7-demand-strawberry-day8.json`, `replays/cycle7-selfplay-30.json`, and
+`replays/cycle7-adversary-30.json`.

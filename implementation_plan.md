@@ -1174,6 +1174,21 @@ Release evidence is stored in `replays/final-selfplay-30-seed-report.json` and
 
 ---
 
+## Current checkpoint — Cycle 7 (2026-08-05)
+
+- **Accepted:** observation-driven strawberry timing. When the town exposes strawberry
+  demand, priority advances from day 10 to the named day-8 target; otherwise the original
+  plan is unchanged.
+- **Primary gate:** exact replay roster **6/17 → 9/17 wins (35% → 53%)**, with 17/17
+  liveness. Median candidate bank rose **$84,845 → $95,486**.
+- **Target metric:** peak strawberry tiles **26.4 → 36.1** and strawberry revenue
+  **$24,944 → $37,964/episode**; peak melon tiles fell **39.4 → 26.8**.
+- **Guards:** 30-seed self-play median **$88,177**, 30/30 live; adversary **48/60 (80%)**,
+  worst margin **−17%**, 60/60 live; 42 unit tests pass.
+- **Rejected:** unconditional day-6 timing (6/17 and a weed failure) and demand-gated day 6
+  (7/17 with the same failure). The next cycle should trace one of the eight remaining exact
+  losses rather than retune this timing against a single replay.
+
 ## Risks and open questions
 
 - **Pasture/coop capacity.** Sheep and cows both need pasture; adding 7 sheep while keeping
