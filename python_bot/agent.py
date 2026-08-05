@@ -68,6 +68,25 @@ SELL_PRICE_MULTIPLIERS = {
     "STRAWBERRY": 1.00,
     "MELON": 1.00,
 }
+# W11 — adaptive reserve price.  The reserve above is correct against a patient
+# opponent and wrong against one that dumps: holding for a price the opponent is
+# actively destroying just moves the sale to a worse turn.  These govern how the
+# reserve responds once the opponent is measurably out-supplying the town.
+#
+# The window is one game day.  A first attempt counted *consecutive* turns of
+# net inflow and never fired: opponents sell in bursts after a harvest and sit
+# idle in between, so the measured streak never exceeded 1 for any product.
+# Summing over a day nets the bursts against the town's drain, which is the
+# quantity that actually decides whether the price recovers.
+SUPPLY_WINDOW_TURNS = 24
+SUPPLY_SURPLUS_TO_CAPITULATE = 0
+# Measured over 120 paired episodes against the W10 adversary: the batch is the
+# lever and the reserve cut is not.  Batch 100 scored 64%/62% at reserve cuts
+# 0.35/0.55; batch 40 scored 59%/59% at cuts 0.55/0.75.  Since the cut shows no
+# consistent effect it is left at the middle value rather than tuned to the
+# single best-scoring run, which would be fitting noise on this fixture.
+ADAPTIVE_RESERVE_CUT = 0.55
+ADAPTIVE_SELL_BATCH = 100
 
 
 def _agent_impl(observation, configuration=None):
@@ -116,19 +135,91 @@ def _agent_impl(observation, configuration=None):
         if isinstance(tile, dict):
             projected_harvest_units += max(0, int(tile.get("yield_units", 0)))
 
+    step = day * 24 + int(obs.get("hour", 0))
+    supply_streak = _supply_pressure(player, step, obs.get("market", {}))
+    market_actions = _market_actions(
+        farm, private, day, tiles, livestock, obs.get("market", {}),
+        projected_harvest_units, strawberry_priority_day, strawberry_target,
+        melon_target, supply_streak,
+    )
+    _record_issued_orders(player, market_actions)
+
     return {
         "farmer": actions[0] if actions else ["PASS"],
         "hands": actions[1:],
-        "market": _market_actions(
-            farm, private, day, tiles, livestock, obs.get("market", {}),
-            projected_harvest_units, strawberry_priority_day, strawberry_target,
-            melon_target,
-        ),
+        "market": market_actions,
     }
 
 
 def _pass_action():
     return {"farmer": ["PASS"], "hands": [], "market": []}
+
+
+# Keyed by player index because a self-play harness may hand the *same* module
+# to both sides; keeping one entry per side stops one player's history from
+# being read as the other's.
+_SUPPLY_MEMORY = {}
+
+
+def _supply_pressure(player, step, market_state, window=SUPPLY_WINDOW_TURNS):
+    """Net units the opponent has added to the market over the last game day.
+
+    The engine moves market inventory by exactly ``our trades + theirs - the
+    town drain`` (`kaggriculture.py:635,642,712-717`), so subtracting the
+    quantity we ourselves put through the market leaves ``their sales - the
+    drain``.  Summed over a day, a positive figure means the market is filling
+    faster than the town empties it.  That is a statement about tomorrow's
+    price rather than today's: the quote is going to be lower, so waiting for a
+    reserve price is waiting for something that is not coming.
+
+    Deliberately not modelled: the town drain itself.  Omitting it is what
+    makes the figure mean *net* oversupply rather than gross opponent volume,
+    and net oversupply is the condition that actually makes patience lose.
+    """
+    inventory = market_state.get("inventory", {}) if isinstance(market_state, dict) else {}
+    memory = _SUPPLY_MEMORY.get(player)
+    # A step that does not advance is a new episode in a reused process.
+    if memory is None or step <= memory["step"]:
+        memory = {"step": step, "inventory": {}, "traded": {}, "history": {}}
+        _SUPPLY_MEMORY[player] = memory
+
+    history = memory["history"]
+    for item, level in inventory.items():
+        if item not in PRODUCTS:
+            continue
+        previous = memory["inventory"].get(item)
+        if previous is None:
+            continue
+        residual = (int(level) - previous) - memory["traded"].get(item, 0)
+        window_residuals = history.setdefault(item, deque(maxlen=window))
+        window_residuals.append(residual)
+
+    memory["step"] = step
+    memory["inventory"] = {
+        item: int(level) for item, level in inventory.items() if item in PRODUCTS
+    }
+    memory["traded"] = {}
+    # A partial window would read a single harvest burst as a trend.
+    return {
+        item: sum(residuals)
+        for item, residuals in history.items()
+        if len(residuals) == residuals.maxlen
+    }
+
+
+def _record_issued_orders(player, orders):
+    """Remember what we put through the market so the next turn can net it out."""
+    memory = _SUPPLY_MEMORY.get(player)
+    if memory is None:
+        return
+    traded = memory["traded"]
+    for order in orders:
+        if len(order) != 3 or order[1] not in PRODUCTS:
+            continue
+        if order[0] == "SELL":
+            traded[order[1]] = traded.get(order[1], 0) + int(order[2])
+        elif order[0] == "BUY_PRODUCT":
+            traded[order[1]] = traded.get(order[1], 0) - int(order[2])
 
 
 def _market_actions(
@@ -137,6 +228,7 @@ def _market_actions(
     strawberry_priority_day=STRAWBERRY_PRIORITY_DAY,
     strawberry_target=STRAWBERRY_TARGET,
     melon_target=MELON_TARGET,
+    supply_streak=None,
 ):
     money = float(farm.get("money", 0))
     market = []
@@ -168,7 +260,7 @@ def _market_actions(
     # between calls instead of collapsing it with one shed-wide dump.
     sell_orders = _sell_orders(
         private, day, market_state, livestock["owned_animals"],
-        projected_harvest_units,
+        projected_harvest_units, supply_streak,
     )[:MAX_SELL_ORDER_TYPES]
     market.extend(sell_orders)
 
@@ -618,6 +710,10 @@ def _in_bounds(x, y, tiles):
 
 def _sell_orders(
     private, day, market_state, owned_cows=0, projected_harvest_units=0,
+    supply_streak=None,
+    surplus_to_capitulate=SUPPLY_SURPLUS_TO_CAPITULATE,
+    reserve_cut=ADAPTIVE_RESERVE_CUT,
+    adaptive_batch=ADAPTIVE_SELL_BATCH,
 ):
     """Return market-aware sales while preserving shed and livestock reserves."""
     shed = private.get("shed", {})
@@ -661,17 +757,28 @@ def _sell_orders(
                 continue
         base_price = BASE_PRICES[item]
         quoted_price = float(prices.get(item, base_price))
-        target_price = base_price * SELL_PRICE_MULTIPLIERS.get(item, 1.0)
+        # W11: once the opponent is adding more of this product per day than
+        # the town removes, the reserve is a price the market is not going to
+        # offer again.  Cut it and clear larger tranches while the quote is
+        # still above the floor, rather than meeting the reserve on day 29 at $1.
+        out_supplied = (supply_streak or {}).get(item, 0) > surplus_to_capitulate
+        ratio = SELL_PRICE_MULTIPLIERS.get(item, 1.0)
+        if out_supplied:
+            ratio *= reserve_cut
+        target_price = base_price * ratio
         price_is_healthy = item == "FERTILIZER" or quoted_price >= target_price
         if day >= 29 or (day >= FINAL_LIQUIDATION_DAY and item not in {"STRAWBERRY", "MILK", "WOOL"}):
             sell_quantity = quantity
         elif day == FINAL_LIQUIDATION_DAY:
             sell_quantity = min(quantity, overflow)
         elif price_is_healthy:
-            sell_quantity = min(
-                quantity,
-                PREMIUM_SELL_BATCH if item in PREMIUM_PRODUCTS else STAPLE_SELL_BATCH,
-            )
+            batch = PREMIUM_SELL_BATCH if item in PREMIUM_PRODUCTS else STAPLE_SELL_BATCH
+            if out_supplied:
+                # The small tranche exists to let town consumption rebuild the
+                # price between calls.  It cannot rebuild faster than the
+                # opponent is destroying it, so pacing only defers the sale.
+                batch = max(batch, adaptive_batch)
+            sell_quantity = min(quantity, batch)
         else:
             # Release only enough low-priced stock to prevent losing a future
             # harvest to the 100-item shed cap.

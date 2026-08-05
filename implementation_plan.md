@@ -104,11 +104,14 @@ The gates, reordered so the primary one is the one the ladder actually scores:
 
 | # | Condition | Bar | Today |
 | --- | --- | --- | --- |
-| **G0** | **Win rate vs the adversarial opponent** (W10), ≥30 paired seeds | **≥ 60%** | **3%** (2/60) |
-| G2 | Head-to-head vs previous approved artifact | win rate ≥ 60%, never < 50% | 50–52% |
-| G3 | Worst-seed bank vs the adversary — robustness, not a lucky seed | no seed loses by > 20% | −55% |
-| G4 | Smoke tier vs `pass`/`random`/`starter` | 100% pass, 0 errors | passing |
-| G1 | Self-play median final bank, ≥30 seeds — **capability tracker, not a gate** | report only | ~$80k |
+| **G0** | **Win rate vs the adversarial opponent** (W10), ≥30 paired seeds | **≥ 60%** | **63%** / 62% at 60 seeds |
+| G2 | Head-to-head vs previous approved artifact | win rate ≥ 60%, never < 50% | **85%** |
+| G3 | Worst-seed bank vs the adversary — robustness, not a lucky seed | no seed loses by > 20% | −18% at 30 seeds, **−37% at 60** |
+| G4 | Smoke tier vs `pass`/`random`/`starter` | 100% pass, 0 errors | passing; 2 weed-cap misses off-tier |
+| G1 | Self-play median final bank, ≥30 seeds — **capability tracker, not a gate** | report only | **$83,244** |
+
+Today's column is W11 as measured on 2026-08-05; the pre-W11 artifact scored G0 3%, G2 50–52%,
+G3 −55%, G1 $80,656.
 
 **G0 replaces G1 as the acceptance gate.** G1 stays in the table because absolute capability
 does matter against a stronger opponent — an agent that cannot produce cannot win — but it is
@@ -909,6 +912,66 @@ defensive agent that wins by denying the opponent while producing nothing is not
 **Note:** this is the *only* item in the plan aimed at win rate rather than at bank, and it
 requires no additional production. It is the cheapest untested lever remaining.
 
+#### Outcome — LARGELY SUCCESSFUL, one gate still open (Cycle 4)
+
+**G0 3% → 63%.** The single largest movement any change in this plan has produced. G2 went
+50–52% → **85%**, and G1 rose $80,656 → $83,244 rather than falling, so the "defensive agent
+that produces nothing" failure mode did not occur.
+
+| gate | pre-W11 | W11 | verdict |
+| --- | ---: | ---: | --- |
+| **G0** win rate vs adversary, 30 seeds | 3% | **63%** | **MET** |
+| G0 at 60 seeds (30 held out) | 13% | 62% | MET |
+| G2 vs previous artifact | 50–52% | **85%** | MET |
+| G1 self-play median | $80,656 | $83,244 | up 3.2% — guard held |
+| G3 worst seed, 30 seeds | −55% | −18% | MET |
+| **G3 worst seed, 60 seeds** | −55% | **−37%** | **NOT MET** |
+
+**The change.** `_supply_pressure` reconstructs the opponent's net supply from the shared
+market inventory. The engine moves inventory by exactly *our trades + theirs − the town
+drain*, so subtracting what we ourselves put through the market leaves *their sales − the
+drain*. Summed over a game day, a positive figure means the market is filling faster than the
+town empties it — a statement about tomorrow's price, not today's. When that holds for a
+product, the reserve is cut and the sell batch raised.
+
+**Two findings that contradict the item as written.**
+
+1. **The stated metric did not move.** W11 named "melon/premium realised price against the
+   dumper" as the metric that must move. It did not: melon stayed at **85% below base and a
+   realised ~$115**, and milk got slightly *worse*. The win came from **volume** instead —
+   melon 156.5 → 187.1 units/episode, wheat 102.9 → 165.3, and end-of-season unharvested
+   value $5,008 → $2,738. Selling earlier frees shed capacity and capital, which compounds
+   into more production. The hypothesis was right about the defect and wrong about the
+   mechanism of the cure.
+2. **The reserve cut is not the lever; the batch size is.** Over 120 paired episodes per
+   configuration: batch 100 scored 64%/62% at reserve cuts 0.35/0.55, while batch 40 scored
+   59%/59% at cuts 0.55/0.75. The batch effect is consistent across both reserve levels; the
+   reserve effect is not consistent across either batch. The shipped configuration therefore
+   takes batch 100 and leaves the cut at the middle value 0.55, rather than adopting the
+   single top-scoring run — which at a ~4.5pp standard error would be fitting noise on a
+   fixture. This is consistent with (1): throughput, not price discipline.
+
+**A first attempt that measured zero.** The initial estimator counted *consecutive* turns of
+net inflow. It produced a byte-identical benchmark, and instrumentation showed why: the
+measured streak never exceeded **1** for any product, because opponents sell in bursts after
+a harvest and sit idle between. Summing over a one-day window fixed it. Recording this
+because the failure was invisible in the result and only a direct trace found it.
+
+**Two defects left open, neither hidden:**
+
+- **G3 fails on the wider seed set** (−37% on seed 391611974, outside the first 30). This is
+  *pre-existing and improved, not introduced*: the previous artifact scores −55% on the same
+  60 seeds. W11 halves the worst-case collapse without clearing the 20% bar.
+- **A weed-cap liveness regression on one seed.** Seed 1232444148 reaches 11–12 weed tiles
+  against the harness limit of 10, in the self-play and head-to-head tiers; the previous
+  artifact is clean at 90/90 and 30/30. Cause is mechanical: more cash buys more land, peak
+  melon tiles go 32.4 → 38.0 against an unchanged labour cap, so weeding falls behind. It is
+  one seed and the harness cap is a heuristic rather than a game rule, but it is a real
+  regression and should be closed by the labour routing, not by raising the cap.
+
+Both belong to the next cycle. Neither is a reason to withhold W11, which clears G0 and G2
+and improves G1 and G3.
+
 ---
 
 ## Validation gate
@@ -993,7 +1056,9 @@ only as a record. W0 landed; W9c was built, rejected on G2, and survives as
 | Order | Item | Rationale |
 | ---: | --- | --- |
 | 1 | ~~**W10** adversarial opponent~~ | **Done, Cycle 4.** Two-constant dumper beats us 58–2 over 30 paired seeds; G0 = 3%. Unblocked. |
-| 2 | **W11** adaptive reserve price | **The G0 attempt.** The one lever aimed at win rate, needing no extra production. |
+| 2 | ~~**W11** adaptive reserve price~~ | **Done, Cycle 4.** G0 3% → 63%, G2 → 85%. Leaves G3 at −37% on 60 seeds and a one-seed weed-cap regression. |
+| 2a | **G3 robustness** — why seed 391611974 collapses | Now the only failing gate. Pre-existing (−55% before W11), so it is a standing weakness, not W11 fallout. Trace the seed, do not infer. |
+| 2b | **Weed-cap regression** on seed 1232444148 | 11–12 weeds vs a limit of 10, caused by W11's extra land against an unchanged labour cap. Fix the routing; do not raise the cap. |
 | 3 | **W9a** read `configuration` | Independent bug fix, cheap, unrelated to G0. |
 | 4 | **W12** animal-escape diagnosis | Unblocks wool ($81,668/season at above-base prices) — but only after G0 is measurable. |
 

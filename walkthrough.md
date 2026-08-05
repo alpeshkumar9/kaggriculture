@@ -477,6 +477,71 @@ is frozen.
 
 ---
 
+## Cycle 4 — W11, adaptive reserve price (2026-08-05)
+
+**What changed in `agent.py`.** `_supply_pressure` reconstructs the opponent's net supply
+from the shared market inventory: the engine moves inventory by exactly *our trades + theirs
+− the town drain*, so netting out the quantity we ourselves issued leaves *their sales − the
+drain*. Summed over a one-day window, a positive figure means the market is filling faster
+than the town empties it. For those products the reserve price is cut and the sell batch
+raised. State is kept per player index so a self-play harness handing the same module to both
+sides cannot cross-contaminate, and resets when the step counter fails to advance.
+
+**Measured, all against the W10 adversary unless stated.**
+
+| gate | pre-W11 | W11 | |
+| --- | ---: | ---: | --- |
+| G0, 30 seeds / 60 episodes | 3% | **63%** | MET |
+| G0, 60 seeds / 120 episodes (30 held out) | 13% | 62% | MET |
+| G2 vs previous artifact, 60 episodes | 50–52% | **85%** | MET |
+| G1 self-play median, 30 seeds | $80,656 | $83,244 | +3.2% |
+| G3 worst seed, 30 seeds | −55% | −18% | MET |
+| G3 worst seed, 60 seeds | −55% | −37% | **NOT MET** |
+| Smoke | 90/90 | 90/90 | pass |
+
+Our median bank against the adversary rose $70,254 → $74,800.
+
+**The estimator that measured nothing.** The first version counted *consecutive* turns of net
+inflow and returned a byte-identical benchmark — every product, every diagnostic, to the
+dollar. Instrumenting the live signal showed the cause: the streak never exceeded **1** for
+any product, because opponents sell in bursts after a harvest and idle in between, so three
+consecutive rising turns never occur. The same instrumentation showed where the damage was —
+melon held below base on 262 turns, carrot on 331. A one-day summing window fires correctly
+(melon: 102 surplus-days, 37 of them while we held melon) and produced the result above.
+
+**The gain is volume, not price — the hypothesis was wrong about its own mechanism.** W11
+predicted that realised premium prices would rise. They did not: melon stayed at **85% below
+base, realised ~$115**, and milk drifted from 50% to 52% below base. What moved was
+throughput — melon 156.5 → 187.1 units/episode, wheat 102.9 → 165.3, unharvested value at
+season end $5,008 → $2,738. Selling earlier frees shed capacity and capital, which compounds
+into more production. Worth recording as a case where the diagnosis was right, the fix worked,
+and the stated causal story was wrong.
+
+**Tuning, and the limit placed on it.** Four configurations at 120 paired episodes each:
+
+| reserve cut | batch 40 | batch 100 |
+| ---: | ---: | ---: |
+| 0.35 | — | **64%** |
+| 0.55 | 59% | 62% |
+| 0.75 | 59% | — |
+
+The batch effect holds at both reserve levels; the reserve effect holds at neither. Shipped
+configuration is batch 100 with the cut left at 0.55 — *not* the top-scoring 0.35/100 run,
+because at a ~4.5pp standard error a 2pp gap is noise and adopting it would be fitting the
+fixture.
+
+**Two defects left open.**
+
+1. **G3 on the wider seed set** — seed 391611974, $32,984 vs $51,979 (−37%). Pre-existing:
+   the previous artifact scores −55% on the same 60 seeds. W11 halves it without clearing the
+   20% bar. This is now the only failing gate.
+2. **Weed-cap regression, one seed.** Seed 1232444148 hits 11–12 weed tiles against the
+   harness limit of 10 in the self-play and head-to-head tiers; the previous artifact is clean
+   at 90/90 and 30/30. Mechanical cause: more cash buys more land (peak melon tiles 32.4 →
+   38.0) against an unchanged labour cap. Fix the routing rather than the cap.
+
+---
+
 ## Schema compliance
 
 `python3 -m unittest python_bot/test_agent.py python_bot/test_agent_allocator.py` — 31 tests,
