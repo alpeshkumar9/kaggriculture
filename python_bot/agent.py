@@ -31,7 +31,7 @@ MAX_SEED_PURCHASE = 12
 LAND_PLAN = ((4, 1600), (8, 3200))
 MOVES = ((0, -1, "NORTH"), (0, 1, "SOUTH"), (1, 0, "EAST"), (-1, 0, "WEST"))
 PRODUCTS = {"WHEAT", "CARROT", "TOMATO", "STRAWBERRY", "MELON", "EGG", "MILK", "WOOL", "FERTILIZER"}
-COMPACT_COW_TARGET = 10
+COMPACT_COW_TARGET = 8
 COWS_PER_SERVICE_WORKER = 5
 FERTILIZER_BATCH_SIZE = 6
 MAX_SELL_ORDER_TYPES = 5
@@ -377,7 +377,9 @@ def _market_actions(
     crop = _next_crop(
         private.get("seeds", {}), private.get("shed", {}), day, tiles,
         market_state.get("prices", {}) if isinstance(market_state, dict) else {},
-        strawberry_priority_day, strawberry_target, melon_target,
+        strawberry_priority_day,
+        strawberry_target,
+        melon_target,
         last_planting_day,
     )
     target_seed_count = {
