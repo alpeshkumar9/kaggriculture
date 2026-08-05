@@ -39,35 +39,116 @@ speculative; this revision replaces it with work items derived from measured rep
 >    production that binds first (Cycle 1), so raising output per hand-turn comes before
 >    adding animals to service.
 
+> [!CAUTION]
+> **Cycle 3 ran on 2026-08-05 and closed steps 1 and 2 of Cycle 2's next-cycle list. Both
+> failed, and the failures point at the acceptance gate itself, not at the strategy.**
+>
+> 6. **Freeing labour does not raise the bank.** Porting the allocator's `_needs_water` —
+>    the strongest named lead on the labour constraint, and strictly more faithful to the
+>    engine — cost **−$12,600** median. The hand-turns were genuinely freed; they were spent
+>    planting wheat at net zero margin. Relieving the constraint is not sufficient while the
+>    marginal use of a spare hand is worthless.
+> 7. **Wool is blocked by animal escapes, not by feed or market access.** Both affordable
+>    sheep configurations lost $21k–$27k. A real bug was found and confirmed en route (the
+>    feed *buy* target counts unowned animals while the sell guard counts owned ones, so the
+>    gap is bought and sold back daily — wheat turnover 1,706 units → 105 when fixed), but
+>    with the churn removed the sheep runs still **lose 4.10 animals per episode** against a
+>    baseline 0.02. Sheep are bought and then starve.
+> 8. **G1 is the wrong acceptance gate, and this is now measured three times.** Self-play is
+>    a *mirror match* — the opponent is a copy of the candidate, so a symmetric improvement
+>    lifts both sides and the win rate cannot move off ~50% at any bank level. Three
+>    independent changes improved self-play bank and did nothing to head-to-head:
+>
+>    | change | self-play bank | head-to-head |
+>    | --- | ---: | ---: |
+>    | Cycle 1 allocator | $86,282 vs $79,407 | **23%** |
+>    | Cycle 3 counter fix | +$1,982 | 52% |
+>    | Cycle 3 counter + standing-wheat | +$2,893 | 50% |
+>
+>    Premise 4 above ("G1 stays as specified") is not refuted on feasibility — the band
+>    argument still holds — but it is **superseded on relevance**. The ladder ranks on
+>    win/loss only. `walkthrough.md` recorded in Cycle 1 that *"G2 is the closer proxy for
+>    rating than G1"*; the plan wrote that down and kept optimising G1 anyway. Cycle 3 is the
+>    third payment of that cost.
+>
+> Also settled: **G1 asks for more bank while sharing a market than the agent earns with a
+> monopoly.** Against `pass`, with no competitor at all, it banks $133,477. G1 wants $160,000
+> in self-play, where an equally strong opponent is taking half the demand. That is not a
+> stretch target on the same axis — it is a target on an axis the competition does not score.
+
 ---
 
-## GOAL — $160,000, non-negotiable
+## GOAL — beat opponents, measured against an opponent that can beat us
 
-**The bot must score above $160,000. Work does not stop until it does.** Strategy and
-benchmark are iterated together, in cycles, until the target is met and held.
+**The competition ranks on win/loss only.** From `overview.md`: *"The actual coin difference
+in a match does not affect the rating change—only the win, loss, or tie outcome matters."*
+The goal is therefore **win rate against a real adversary**, and bank is a diagnostic that
+explains win rate rather than a target in its own right.
+
+This is a revision, not a softening. G1 was the goal for Cycles 1–3 and produced three
+changes that raised self-play bank while leaving head-to-head at 50%, 52% and 23%. The reason
+is structural and was not appreciated when the target was set: **self-play is a mirror match**
+— the opponent is a copy of the candidate. Improving the candidate improves the opponent
+identically, so self-play win rate is pinned near 50% at any bank level, and self-play *bank*
+measures capability without ever testing superiority. See Cycle 3 callout, premise 8.
 
 ### The target must name its measurement context
 
-A bank figure is meaningless without stating who the opponent was. Our agent already scores
-**$136,548 against `starter`** while losing 6 of 7 ladder games, and `RECORD_MILESTONE =
-154615` is a vs-weak-opponent number (D6). Hitting "160k" against `pass` would be trivial and
-would teach us nothing. The goal is therefore defined against the hardest honest condition:
+A bank figure is meaningless without stating who the opponent was — the agent scores
+**$136,548 vs `starter`**, **$133,477 vs `pass`** and **$70k–$102k** against real ladder
+agents, all with identical code. What changes is who is taking the other half of the demand.
+Any bar quoted without its opponent is unusable, and `RECORD_MILESTONE = 154615` is a
+vs-weak-opponent number (D6).
+
+The gates, reordered so the primary one is the one the ladder actually scores:
 
 | # | Condition | Bar | Today |
 | --- | --- | --- | --- |
-| **G1** | **Self-play median final bank**, ≥30 seeds | **≥ $160,000** | $70k–$102k |
-| G2 | Head-to-head vs previous approved artifact | win rate ≥ 60% | not measured |
-| G3 | Worst-seed self-play bank | ≥ $120,000 | ~$70k |
+| **G0** | **Win rate vs the adversarial opponent** (W10), ≥30 paired seeds | **≥ 60%** | **3%** (2/60) |
+| G2 | Head-to-head vs previous approved artifact | win rate ≥ 60%, never < 50% | 50–52% |
+| G3 | Worst-seed bank vs the adversary — robustness, not a lucky seed | no seed loses by > 20% | −55% |
 | G4 | Smoke tier vs `pass`/`random`/`starter` | 100% pass, 0 errors | passing |
+| G1 | Self-play median final bank, ≥30 seeds — **capability tracker, not a gate** | report only | ~$80k |
 
-**G1 is the goal.** Self-play is the only condition that reproduces ladder market pressure —
-two real sellers competing into a shared price curve — and it currently lands in the same
-70k–102k band as our real ladder results. G3 exists so the target is reached by a robust
-strategy rather than by one lucky seed.
+**G0 replaces G1 as the acceptance gate.** G1 stays in the table because absolute capability
+does matter against a stronger opponent — an agent that cannot produce cannot win — but it is
+reported, not gated on, and **no change is accepted or rejected on G1 alone**. A change that
+raises G1 and lowers G0 is a regression.
 
-For scale: the best score across all 8 replays analysed, by anyone, is **$125,896**. G1 asks
-for ~27% above the strongest agent observed, under harder conditions than that agent faced.
-This is a stretch target by construction, not an extrapolation of current play.
+**The $160,000 figure is retired as a gate.** For the record of why, so it is not
+reintroduced: it is ~27% above the best score by any agent in any analysed replay ($125,896),
+and above what this agent banks with the entire market to itself and no competitor
+($133,477). Meanwhile ladder opponents finish at **$84,682–$125,241** — a range the agent is
+already inside at $70k–$102k. The gap that loses 6 of 7 ladder games is therefore not a
+2× production gap; it is close games lost in a shared market. That is what G0 measures.
+
+### Is there a secondary bank floor? No — decided Cycle 4
+
+There is **no absolute bank gate at any number.** Not $160k, not $120k, not $80k. The W10
+measurement settled it: the adversary wins at a median bank of **$83,366**, and it wins by a
+median of only 13%. Any absolute floor above that would reject a change that beats the
+adversary 70% of the time — which is the one thing the ladder actually pays for. Any floor
+below it would never bind and is decoration.
+
+What replaces it is a **relative no-collapse guard**, already written into W11: G1 may not
+fall more than 10% from the accepted artifact's G1. That blocks the real failure mode — an
+agent that wins by denying the opponent while producing nothing — without asserting a
+production number the evidence does not support.
+
+The feasibility argument for a higher ceiling (the untapped egg and wheat curves below) is
+untouched by this. It remains a reason to *pursue* more bank; it is not a reason to *reject*
+a change that banks less and wins more.
+
+~~**G1 is the goal.**~~ Superseded by G0. Self-play remains the *cleanest* bank measurement —
+two real sellers competing into a shared price curve, landing in the same 70k–102k band as
+our real ladder results — which is why it is still reported. But it is a mirror match, so it
+cannot separate a real improvement from one that lifts both sides equally, and that is
+exactly the failure recorded in the Cycle 3 callout. G3 now measures robustness against the
+W10 adversary rather than against a copy of ourselves.
+
+For scale, kept because it is the reason $160,000 was retired rather than merely missed: the
+best score across all 8 replays analysed, by anyone, is **$125,896**, and the W10 adversary —
+the first local opponent that actually beats us — wins at a median of **$83,366**.
 
 ### One caveat, stated once, then we proceed
 
@@ -224,7 +305,7 @@ that direction; do not add new hard-coded numbers on top.
 
 Every work item carries this in addition to its own metric: **no new hard-coded decision
 literals, and the item's own targets must be adjustable without touching decision logic.**
-After G1 is met, the immediate next question is *"what is the new binding constraint"* — the
+After G0 is met, the immediate next question is *"what is the new binding constraint"* — the
 iteration protocol below is written to keep running, not to terminate.
 
 ---
@@ -728,6 +809,108 @@ critical path rather than behind a tuning phase. Mitigations:
 
 ---
 
+### W10 — An opponent that can beat us *(blocking prerequisite for G0)*
+
+**The problem.** There is no adversary in the repo. `pass`, `random` and `starter` are a
+liveness test (measured: $3,000 / $0 / $3,514). Self-play is a mirror. Head-to-head against
+the previous artifact is a near-mirror. So the condition that loses 6 of 7 ladder games —
+a competent opponent competing into the same price curve — **has never been reproduced
+locally**, and no change has ever been tested against it.
+
+The ladder agents' code is not available; `logs/` holds replay JSON, which is a recording,
+not a policy. Three ways to close the gap, cheapest first:
+
+1. **Open-loop replay agent** (~15 lines): return `steps[turn][idx]["action"]` from the JSON,
+   ignoring the observation. Faithful to what the winner did, and their *market* orders are
+   already state-blind (74% of ladder sell orders exceed available stock and silently fail).
+   But their *farm* actions assume their board: against a different opponent, workers move
+   onto tiles that are not theirs, harvests hit empty ground, production collapses and they
+   have nothing left to sell. Degrades into a weak opponent. Sanity check only.
+2. **Dumper derived from `agent.py`** — *do this first.* No log parsing. Copy the agent and
+   change two constants: `SELL_PRICE_MULTIPLIERS` → all `0.0` (so `price_is_healthy` at
+   `agent.py:665` is always true and it never waits for a price), and `PREMIUM_SELL_BATCH` /
+   `STAPLE_SELL_BATCH` → large (so it clears the shed instead of 8/20 units a turn). The
+   result farms competently — so it *has* stock — and dumps immediately, taking the scarcity
+   premium first. That is exactly the mechanism already measured as costing us melon revenue
+   **$27.4k → $18.2k** in Cycle 1. Runs today via `--opponents`; genuinely not a mirror.
+3. **Behavioural clone from the logs**: extract the winner's policy statistics across all 720
+   steps — sell timing and volume per product, planting mix, hire curve, land timing — and
+   write a closed-loop policy reproducing them. Most faithful, most work. Promote only if (2)
+   fails to reproduce the ladder losses.
+
+**Acceptance:** the dumper **beats the current `agent.py`** over ≥30 paired seeds. That is
+the success condition — an adversary that loses to us is not an adversary, and if (2) cannot
+beat us, escalate to (3) rather than declaring the agent healthy. On success this is the
+first local reproduction of the ladder result, and G0 becomes measurable.
+
+**Guard:** the dumper is a *test fixture*, never a submission candidate. It must not be
+tuned to win; it is fixed once built so that G0 stays comparable across cycles.
+
+#### Outcome — BUILT AND ACCEPTED (Cycle 4)
+
+Approach (2) was enough; (1) and (3) were not needed. `python_bot/opponent_dumper.py` is a
+frozen copy of `agent.py` at commit `93f333a` with exactly the two constant changes above —
+`SELL_PRICE_MULTIPLIERS` all `0.0` (extended to *every* product, since the `.get(item, 1.0)`
+fallback would otherwise have left MILK/WOOL/EGG patient and made it only a partial dumper)
+and both sell batches raised to the shed capacity of 100.
+
+The harness gained a fourth tier. `--adversary <file>` runs paired, sides swapped, and is
+now where G0 and G3 are decided; G1 was demoted to a printed tracker and no longer fails the
+run, matching the gate table above.
+
+**Result over 30 paired seeds (60 episodes):**
+
+| | value |
+| --- | --- |
+| **G0 win rate** | **3%** — 2 wins, 0 ties, 58 losses |
+| Our median bank | $70,254 |
+| **Adversary median bank** | **$83,366** (range $46,320–$128,479) |
+| Median margin | −13% |
+| **G3 worst seed** | 718043812 swapped, $51,174 vs $114,368 = **−55%** |
+| Liveness | 60/60 passed, 0 errors |
+
+Acceptance was *the dumper beats us*, and it does, 58–2. **This is the first local
+reproduction of the ladder result** — we lose 6 of 7 ladder games, and we lose 58 of 60 here.
+Two independent signs the fixture is faithful rather than merely strong:
+
+- the adversary finishes at a median $83,366, essentially on top of the observed ladder band
+  of **$84,682–$125,241**, while we finish at $70,254 — the same shape as the real gap;
+- the losses are not blowouts. Median margin is −13% and our best seed is +29%; these are
+  close games lost in a shared market, exactly what the retired $160k target mis-diagnosed
+  as a 2× production gap.
+
+The mechanism is visible in the diagnostics: **82% of our melon units and 50% of our milk
+units clear below base price**, at a realised $114 against a $250 melon base. We wait for a
+price that the dumper has already taken. Strawberry, which it cannot flood as fast, still
+clears at $260 against a $120 base — 0% below base. That is W11's target, and it is now
+measurable.
+
+G0 is live. Every subsequent change is judged on it.
+
+### W11 — Adaptive reserve price *(the G0 attempt)*
+
+**The defect.** The sell logic holds stock until the quoted price recovers to a fixed
+multiple of base. Against a patient opponent that is optimal — which is precisely why
+self-play looks healthy and hides this. Against a dumper, patience hands the scarcity premium
+to whoever sells first and we sell into the floor. Cycle 1 measured the result (melon $27.4k
+→ $18.2k) and tried lowering the reserve ratios and raising planned volume; **neither moved
+G2 off 23%**, because both are static responses to a dynamic opponent.
+
+**The change.** Make the reserve price a function of the opponent's observed selling rate.
+Market inventory is in the observation, and the engine's price curve and town-drain schedule
+are exact and already asserted in `test_agent_allocator.py` — so the inventory trend
+separates *our* sales and the town's drain from the residual, which is the opponent's supply.
+Sell aggressively into a curve the opponent is draining; stay patient when they are not.
+
+**Metric that must move:** G0 win rate, and melon/premium realised price against the dumper.
+**Guard that must not regress:** G2 never below 50%, and G1 not down more than 10% — a purely
+defensive agent that wins by denying the opponent while producing nothing is not the goal.
+
+**Note:** this is the *only* item in the plan aimed at win rate rather than at bank, and it
+requires no additional production. It is the cheapest untested lever remaining.
+
+---
+
 ## Validation gate
 
 Per `AGENTS.md`, no item above may be described as verified, packaged, or submitted until it
@@ -791,22 +974,38 @@ improvement.
 **W0 first, and alone.** It changes no game decisions, so its own validation is simply that
 it reproduces the known defects in the current agent (see W0 acceptance).
 
-The route to G1 is direct. Constant tuning is not on the critical path — see *The tension,
-and how it is resolved*.
+**Superseded after Cycle 3.** The sequencing below was built around reaching G1 and is kept
+only as a record. W0 landed; W9c was built, rejected on G2, and survives as
+`python_bot/agent_allocator.py`; W1 was measured twice and rejected both times.
 
 | Order | Item | Rationale |
 | ---: | --- | --- |
-| 1 | **W0** benchmark | Blocking. Nothing downstream is measurable without it. |
-| 2 | **W9a** read `configuration` | Independent bug fix; unblocks season-relative logic in W9c. |
-| 3 | **W2** distressed-sale defect | Few lines, ~$29k leak, no tuning judgement. Clean baseline. |
-| 4 | **W1** sheep constants + day-0 herd schedule | Two constants, largest measured single effect (P2). Cheap insurance if W9 slips. |
-| 5 | **W6** starvation guard | Correctness invariant; protects W1's investment. |
-| 6 | **W9b** price model | Validate to ≥89% against replay quotes; close or bound the WHEAT scarcity gap. |
-| 7 | **W9c** marginal-revenue allocator | **The G1 attempt.** |
+| 1 | ~~**W0** benchmark~~ | Landed. The most valuable asset in the repo — Cycle 3 alone caught four plausible regressions with it. |
+| 2 | **W9a** read `configuration` | Still unshipped, still a live bug, independent of everything else. |
+| 3 | ~~**W2** distressed-sale defect~~ | Landed. |
+| 4 | ~~**W1** sheep constants~~ | Rejected twice (Cycles 1 and 3). Blocked on animal escapes — see W12. |
+| 5 | **W6** starvation guard | Now the *precondition* for W1, not its protection. See W12. |
+| 6 | ~~**W9b** price model~~ | Landed, and exact rather than 89% — read from the engine. |
+| 7 | ~~**W9c** allocator~~ | Built, rejected on G2 (23%). Kept as reference. |
 
-Benchmark each alone so attribution stays readable. Steps 1–5 are expected to land somewhere
-around 110–130k — that is a by-product, not the target, and no effort should be spent tuning
-it further.
+### Current sequencing — the G0 route
+
+| Order | Item | Rationale |
+| ---: | --- | --- |
+| 1 | ~~**W10** adversarial opponent~~ | **Done, Cycle 4.** Two-constant dumper beats us 58–2 over 30 paired seeds; G0 = 3%. Unblocked. |
+| 2 | **W11** adaptive reserve price | **The G0 attempt.** The one lever aimed at win rate, needing no extra production. |
+| 3 | **W9a** read `configuration` | Independent bug fix, cheap, unrelated to G0. |
+| 4 | **W12** animal-escape diagnosis | Unblocks wool ($81,668/season at above-base prices) — but only after G0 is measurable. |
+
+**W12 — why sheep starve** is new from Cycle 3 and not yet written up as a full item. The
+measurement: with the feed churn removed, the late-sheep configuration still loses **4.10
+animals per episode** (baseline 0.02) and reaches only 3.8 of 6 sheep ordered. Animals are
+bought, placed, and then not serviced. That is a labour-routing failure in
+`_livestock_action`, and it is the actual blocker on every livestock item in this plan —
+W1 was rejected twice for what is probably this bug. Diagnose before retrying W1 or W8.
+
+Benchmark each alone so attribution stays readable. **Do not tune toward a bank figure**;
+report G1 and let G0 decide.
 
 **W3, W4, W5, W7, W8 are not implemented as tuning passes.** They become seed values,
 the fallback path, and acceptance checks for W9c. Promote one to real work only if W9c
@@ -817,10 +1016,17 @@ what was measured rather than what was intended.
 
 ---
 
-## Iteration protocol — run until G1 is met
+## Iteration protocol — run until G0 is met
 
-The goal is a **loop**, not a checklist. W0–W8 are the first pass; if they land and G1 is
-still unmet, the loop continues with new hypotheses generated the same way this plan was.
+The goal is a **loop**, not a checklist. W0–W9 were the first pass; W10–W12 are the second,
+and the loop continues with new hypotheses generated the same way this plan was.
+
+**One method rule, added after Cycle 3.** Of that cycle's four hypotheses, the two stated by
+reading the code were both wrong — the `owned_cows` parameter at `agent.py:695` is
+misleadingly named but is passed `owned_animals`, and routing feed from own production did
+not make the herd solvent. The one that held was traced from a specific measured anomaly
+(1,706 wheat units of turnover) back to the line that produced it. **Trace from a measurement
+to its cause; do not infer a cause from reading the code and then go looking for a win.**
 
 ### One cycle
 
@@ -831,11 +1037,13 @@ still unmet, the loop continues with new hypotheses generated the same way this 
 3. **Form one hypothesis** targeting that constraint, with a predicted direction for a
    specific metric.
 4. **Implement the smallest change** that tests it.
-5. **Benchmark it alone.** Accept only if both the bank *and* the predicted metric move
-   (per-item acceptance rules above). Revert otherwise — a change that helps the bank
-   without moving its target metric is noise and will not compound.
-6. **Repeat.** If G1 is met, run two more cycles to confirm it holds across fresh seeds
-   before declaring the goal reached.
+5. **Benchmark it alone.** Accept only if **G0** and the item's predicted metric both move,
+   and no guard regresses. Revert otherwise. A change that helps self-play bank without
+   moving G0 is not evidence of anything — that exact pattern has now been produced three
+   times by three unrelated changes.
+6. **Repeat.** If G0 is met, run two more cycles on fresh seeds to confirm it holds, then
+   raise the adversary (escalate W10 from the dumper to the behavioural clone) rather than
+   raising a bank number.
 
 ### When the benchmark is the blocker
 

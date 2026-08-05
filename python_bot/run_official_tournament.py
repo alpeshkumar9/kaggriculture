@@ -13,6 +13,10 @@ Three tiers, per `implementation_plan.md`:
   into one shared price curve, which is what the ladder does.
 * **head-to-head** — candidate vs ``--baseline`` (the previous approved
   artifact), sides swapped on every seed (goal G2).
+* **adversary**  — candidate vs ``--adversary`` (the W10 dumper), sides swapped
+  on every seed.  **This is the acceptance gate** (G0/G3): the ladder ranks on
+  win/loss only, and this is the only local tier that reproduces a competent
+  opponent competing into the same price curve.
 
 Diagnostics are exact: ``_commit_unit`` in the official engine is wrapped for
 the duration of an episode, so every executed trade — not every *ordered*
@@ -43,11 +47,18 @@ DEFAULT_SEEDS = (1281355554, 2050554103, 1208590292, 910788726)
 MAX_ACCEPTABLE_WEEDS = 10
 WEED_CHECK_LAST_DAY = 25
 
-# G1/G3 live here so raising the bar past $160,000 is a one-line change.
-GOAL_MEDIAN_BANK = 160_000
-GOAL_WORST_BANK = 120_000
+# G0: the acceptance gate — win rate against the W10 adversary.
+GOAL_ADVERSARY_WIN_RATE = 0.60
+# G3: robustness, not a lucky seed — no single seed may lose by more than this
+# fraction of the adversary's bank.
+GOAL_WORST_SEED_MARGIN = 0.20
+# G1 is a capability tracker, reported and never gated on (see the Cycle 3
+# callout in implementation_plan.md): three changes have raised self-play bank
+# while head-to-head win rate stayed at 50%, 52% and 23%.
+REPORT_MEDIAN_BANK = 160_000
 # G2: candidate must not lose to the previous approved artifact.
 GOAL_HEAD_TO_HEAD_WIN_RATE = 0.60
+GOAL_HEAD_TO_HEAD_FLOOR = 0.50
 
 SMOKE_OPPONENTS = ("pass", "random", "starter")
 
@@ -503,8 +514,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seeds", default=",".join(map(str, DEFAULT_SEEDS)))
     parser.add_argument("--seed-count", type=int, default=0, help="Generate this many reproducible seeds instead of --seeds.")
     parser.add_argument("--seed-source", type=int, default=20260804)
-    parser.add_argument("--goal", type=float, default=GOAL_MEDIAN_BANK, help="G1: required self-play median final bank.")
-    parser.add_argument("--worst-goal", type=float, default=GOAL_WORST_BANK, help="G3: required self-play worst-seed bank.")
+    parser.add_argument("--adversary", type=Path, default=None, help="W10 adversary; run paired, sides swapped. This is the G0 gate.")
+    parser.add_argument("--g0-goal", type=float, default=GOAL_ADVERSARY_WIN_RATE, help="G0: required win rate vs --adversary.")
+    parser.add_argument("--worst-margin", type=float, default=GOAL_WORST_SEED_MARGIN, help="G3: no seed may lose to the adversary by more than this fraction.")
+    parser.add_argument("--goal", type=float, default=REPORT_MEDIAN_BANK, help="G1 reference line for the self-play bank report. Never gated on.")
     parser.add_argument("--h2h-goal", type=float, default=GOAL_HEAD_TO_HEAD_WIN_RATE, help="G2: required win rate vs --baseline.")
     parser.add_argument("--replay-dir", type=Path, default=None, help="Write full replay JSON here (large; off by default).")
     parser.add_argument("--report", type=Path, default=Path("replays/report.json"))
@@ -545,6 +558,8 @@ def main() -> int:
         tiers.extend(("smoke", name, False) for name in SMOKE_OPPONENTS)
     if args.baseline:
         tiers.append(("head-to-head", str(args.baseline), True))
+    if args.adversary:
+        tiers.append(("adversary", str(args.adversary), True))
 
     replay_dir = str(args.replay_dir) if args.replay_dir else None
     job_tiers: list[str] = []
@@ -566,7 +581,7 @@ def main() -> int:
 
     print("\nOfficial Kaggriculture tournament")
     summaries = []
-    for tier in ("smoke", "self-play", "head-to-head"):
+    for tier in ("smoke", "self-play", "head-to-head", "adversary"):
         if tier not in by_tier:
             continue
         summary = summarise_tier(tier, by_tier[tier])
@@ -580,22 +595,42 @@ def main() -> int:
             failures.append(f"liveness gate failed on {result.opponent} seed {result.seed}")
             break
 
+    adversary = by_tier.get("adversary", [])
+    if adversary:
+        win_rate = sum(r.outcome == "win" for r in adversary) / len(adversary)
+        print(
+            f"\nG0 adversary win rate {win_rate:.0%} / {args.g0_goal:.0%} — "
+            f"{'MET' if win_rate >= args.g0_goal else 'NOT MET'}"
+        )
+        if win_rate < args.g0_goal:
+            failures.append(f"G0 win rate {win_rate:.0%} below {args.g0_goal:.0%}")
+        # G3 is robustness: a 60% win rate carried by blowouts on half the
+        # seeds and collapses on the rest is not a strategy we can ship.
+        def _margin(result: EpisodeResult) -> float:
+            return (result.candidate_bank - result.opponent_bank) / max(result.opponent_bank, 1.0)
+
+        worst = min(adversary, key=_margin)
+        margin = _margin(worst)
+        print(
+            f"G3 worst seed {worst.seed}{' swapped' if worst.swapped else ''}: "
+            f"${worst.candidate_bank:,.0f} vs ${worst.opponent_bank:,.0f} "
+            f"({margin:+.0%}) / {-args.worst_margin:+.0%} — "
+            f"{'MET' if margin >= -args.worst_margin else 'NOT MET'}"
+        )
+        if margin < -args.worst_margin:
+            failures.append(
+                f"G3 seed {worst.seed} lost by {-margin:.0%}, over {args.worst_margin:.0%}"
+            )
+
     self_play = by_tier.get("self-play", [])
     if self_play:
         banks = [result.candidate_bank for result in self_play]
-        g1, g3 = median(banks), min(banks)
+        # Reported, never gated: self-play is a mirror match, so a symmetric
+        # improvement lifts both sides and says nothing about win rate.
         print(
-            f"\nG1 self-play median ${g1:,.0f} / ${args.goal:,.0f} — "
-            f"{'MET' if g1 >= args.goal else 'NOT MET'}"
+            f"\nG1 self-play median ${median(banks):,.0f} "
+            f"(reference ${args.goal:,.0f}), worst ${min(banks):,.0f} — tracker only"
         )
-        print(
-            f"G3 self-play worst  ${g3:,.0f} / ${args.worst_goal:,.0f} — "
-            f"{'MET' if g3 >= args.worst_goal else 'NOT MET'}"
-        )
-        if g1 < args.goal:
-            failures.append(f"G1 median ${g1:,.0f} below ${args.goal:,.0f}")
-        if g3 < args.worst_goal:
-            failures.append(f"G3 worst seed ${g3:,.0f} below ${args.worst_goal:,.0f}")
 
     head_to_head = by_tier.get("head-to-head", [])
     if head_to_head:
@@ -604,7 +639,11 @@ def main() -> int:
             f"G2 head-to-head win rate {win_rate:.0%} / {args.h2h_goal:.0%} — "
             f"{'MET' if win_rate >= args.h2h_goal else 'NOT MET'}"
         )
-        if win_rate < args.h2h_goal:
+        # The floor is the hard part of G2: a candidate that loses to the
+        # artifact it replaces is a regression regardless of anything else.
+        if win_rate < GOAL_HEAD_TO_HEAD_FLOOR:
+            failures.append(f"G2 win rate {win_rate:.0%} below the {GOAL_HEAD_TO_HEAD_FLOOR:.0%} floor")
+        elif win_rate < args.h2h_goal:
             failures.append(f"G2 win rate {win_rate:.0%} below {args.h2h_goal:.0%}")
 
     args.report.parent.mkdir(parents=True, exist_ok=True)

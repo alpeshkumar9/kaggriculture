@@ -425,6 +425,58 @@ units of turnover — back to the line that produced it. Trace, do not infer.
 
 ---
 
+## Cycle 4 — W10, the adversarial opponent (2026-08-05)
+
+**What was built.** `python_bot/opponent_dumper.py`: a frozen copy of `agent.py` at commit
+`93f333a` with two constants changed — `SELL_PRICE_MULTIPLIERS` set to `0.0` for every
+product, and `PREMIUM_SELL_BATCH`/`STAPLE_SELL_BATCH` raised from 8/20 to the shed capacity
+of 100. It farms exactly as we do and sells everything the turn it exists.
+
+`run_official_tournament.py` gained an `--adversary` tier: paired, sides swapped, and it is
+where G0 and G3 are now decided. G1 was demoted to a printed tracker and no longer fails the
+run, per the revised gate table.
+
+**Command.**
+
+```bash
+python3 python_bot/run_official_tournament.py --agent python_bot/agent.py --opponents "" --adversary python_bot/opponent_dumper.py --seed-count 30
+```
+
+**Measured, 30 paired seeds / 60 episodes.**
+
+| | |
+| --- | --- |
+| G0 win rate | **3%** — 2 wins, 0 ties, 58 losses |
+| Our bank | median $70,254 (min $35,395, max $114,326) |
+| Adversary bank | median $83,366 (min $46,320, max $128,479) |
+| Margin | median −13%, best +29%, worst −55% |
+| G3 worst seed | 718043812 swapped, $51,174 vs $114,368 |
+| Liveness | 60/60, 0 errors |
+
+Split by side: 0/30 as player 0, 2/30 swapped.
+
+**What this establishes.** W10's acceptance was *the dumper beats `agent.py`*, and it does,
+58–2. Approach (2) from the plan was sufficient; the replay agent and the behavioural clone
+were not needed. This is the **first local reproduction of the ladder result** — 6 of 7
+ladder losses, 58 of 60 here — and G0 is now a measurable gate.
+
+The fixture is faithful, not merely strong: the adversary's median $83,366 lands on the
+observed ladder band of $84,682–$125,241, and the losses are close (median −13%) rather than
+blowouts. That is direct evidence against the retired $160k premise — the gap is close games
+in a shared market, not a 2× production shortfall.
+
+**The mechanism, from the candidate-side diagnostics.** Against the dumper, **82% of our
+melon units and 50% of our milk units clear below base**, melon realising $114.4 against a
+$250 base. Strawberry — the one product the dumper cannot flood as fast — still realises
+$260.1 against a $120 base, 0% below base. We are waiting for a price the opponent has
+already taken. That is precisely W11's target and it now has a metric.
+
+**Guard.** `opponent_dumper.py` is a fixed test fixture. It must never be tuned, never
+re-synced with `agent.py`, and never submitted; G0 is only comparable across cycles while it
+is frozen.
+
+---
+
 ## Schema compliance
 
 `python3 -m unittest python_bot/test_agent.py python_bot/test_agent_allocator.py` — 31 tests,

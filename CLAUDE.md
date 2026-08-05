@@ -31,11 +31,19 @@ rating.**
 
 ## The goal
 
-**Median final bank above $160,000 over ≥30 self-play seeds** (G1). Current standing:
-$70k–$102k self-play. Best score by *any* agent across all analysed replays: $125,896.
+**Win rate ≥ 60% against an adversarial opponent** (G0), because the ladder ranks on
+win/loss only — coin margin does not affect rating. Current standing: no such opponent
+exists yet (W10 builds it); head-to-head against the previous artifact sits at 50–52%.
 
-Work iterates — strategy and benchmark together — until G1 is met, then the bar is raised.
-See the Iteration Protocol in the plan.
+**Self-play bank (G1) is a capability tracker, not a gate.** Currently ~$80k. Do not accept
+or reject a change on G1 alone. Self-play is a *mirror match* — the opponent is a copy of the
+candidate — so a symmetric improvement lifts both sides and win rate stays pinned near 50%.
+Three changes have now raised self-play bank while head-to-head stayed at 50%, 52% and 23%.
+
+The retired $160,000 target is above the best score by any agent in any analysed replay
+($125,896) and above what this agent banks with no competitor at all ($133,477). Ladder
+opponents finish at $84,682–$125,241 — a range we are already inside. See the plan's Cycle 3
+callout before reintroducing any bank-based gate.
 
 ## Non-negotiables
 
@@ -69,12 +77,19 @@ See the Iteration Protocol in the plan.
 python3 -m unittest python_bot.test_agent python_bot.test_agent_allocator
 ```
 
-The release gate. Self-play is the default opponent; `--baseline` adds the paired
-head-to-head (G2) and `--smoke` adds the vs-built-in liveness tier. Exits non-zero when
-G1/G2/G3 or the liveness checks fail.
+The release gate. `--adversary` runs the paired G0/G3 tier against the W10 dumper — **this
+is the acceptance gate**; `--baseline` adds the paired head-to-head (G2); `--smoke` adds the
+vs-built-in liveness tier; self-play is the default opponent and reports G1 without gating on
+it. Exits non-zero when G0/G2/G3 or the liveness checks fail.
 
 ```bash
-python3 python_bot/run_official_tournament.py --agent python_bot/agent.py --seed-count 30 --smoke --baseline python_bot/agent_allocator.py
+python3 python_bot/run_official_tournament.py --agent python_bot/agent.py --seed-count 30 --smoke --adversary python_bot/opponent_dumper.py --baseline python_bot/agent_allocator.py
+```
+
+The G0 measurement alone — 30 paired seeds vs the adversary, no other tier:
+
+```bash
+python3 python_bot/run_official_tournament.py --agent python_bot/agent.py --opponents "" --adversary python_bot/opponent_dumper.py --seed-count 30
 ```
 
 A quick during-development check — 30 self-play seeds, ~35s on 11 workers, no gate:
@@ -82,6 +97,9 @@ A quick during-development check — 30 self-play seeds, ~35s on 11 workers, no 
 ```bash
 python3 python_bot/run_official_tournament.py --agent python_bot/agent.py --seed-count 30 --no-gate
 ```
+
+`python_bot/opponent_dumper.py` is a **frozen test fixture** — never tune it, never re-sync
+it with `agent.py`, never submit it. G0 is only comparable across cycles while it is fixed.
 
 `kaggle_environments` accepts a **file path** as an agent, so any previous artifact works
 directly as `--baseline` or in `--opponents`. Full replay JSON is off by default (it is
