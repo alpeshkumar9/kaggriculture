@@ -36,3 +36,6 @@ yarn-error.log*
 
 # Benchmark output (regenerate with run_official_tournament.py)
 replays/
+
+# Submission bundle (regenerate with package_submission.py)
+python_bot/submission.tar.gz

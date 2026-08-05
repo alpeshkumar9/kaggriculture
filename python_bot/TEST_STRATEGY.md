@@ -153,14 +153,18 @@ a vs-`starter` bank is never evidence of progress toward the goal.
 
 ### 5. Artifact and upload gate (every submission)
 
-Package the exact file that is tested.  For an archive, it must expose `agent` at archive-root `main.py`; `my_agent` alone is insufficient.
+Upload the exact file that is tested.  `agent.py` is self-contained (stdlib only), so it
+is submitted as a **single file renamed to `main.py`** — Kaggle requires the entry point to
+be `main.py` exposing an `agent` function, and will not find it under any other name.
 
 ```bash
-tar -tzf submission.tar.gz
-tar -xOf submission.tar.gz main.py | rg '^def agent\('
+cp python_bot/agent.py main.py
+python3 -c "from main import agent; assert callable(agent)"
+kaggle competitions submit kaggriculture -f main.py -m "<commit hash> — <benchmark median>"
 ```
 
-Then execute the extracted archive with the official-engine smoke test.  Upload only that verified artifact, including its commit hash and benchmark report in the submission message or release notes.
+Verify the copy imports standalone before uploading, and include the commit hash and
+benchmark report in the submission message or release notes.
 
 ## Delivery order
 

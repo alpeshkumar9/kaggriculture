@@ -353,17 +353,75 @@ unexploited and pays above base. It cannot be reached through the current feedin
 `agent.py` was reverted to 594d160 byte-for-byte; 31 tests pass. Nothing from this cycle is
 in the artifact.
 
+### Step 3 — feed economics: one real bug found, still not shippable
+
+Two follow-ups were measured after steps 1 and 2, both aimed at the feed loop.
+
+**Routing feed from standing wheat** (count ripe wheat on our own tiles toward the feed
+reserve so it is not bought back from the market): 30 seeds, median $80,032 against the
+$80,656 baseline — **flat**. Wheat purchases fell $9,487 → $7,527, but harvested-for-sale
+wheat fell by nearly as much, so net feed cost moved $4,184 → $4,012. Peak weeds 9 → 11 with
+a liveness failure. Rejected. Re-tested with `LATE_SHEEP_TARGET = 6` it cut the churn from
+$86,027 to $60,137 of wheat purchases but the bank was still $67,755 — **the hypothesis that
+own-production feed makes herd expansion solvent is falsified.**
+
+**The counter bug** was then traced rather than guessed, and it is real. The feed *buy*
+target (`agent.py:212`) is `protected_animals * WHEAT_RESERVE_DAYS`, where
+`protected_animals` includes `cows_to_buy + geese_to_buy + early_sheep_to_buy +
+sheep_to_buy` — animals **not owned**. The *sell* guard (`agent.py:695`) reserves
+`owned_animals * WHEAT_RESERVE_DAYS` — animals **owned**. The two never agree while a
+purchase is pending, and `sheep_to_buy` is recomputed as `6 - owned_sheep` every day while
+`BUY_ANIMAL` only fires on days 16-18, so a ~24-unit gap is bought and sold back daily for
+the rest of the season. At baseline `cows_to_buy` reaches 0 once the herd completes, which
+is exactly why the churn is invisible there and explodes with sheep.
+
+Zeroing the counters when the order does not actually fire eliminates it: with
+`LATE_SHEEP_TARGET = 6`, wheat turnover collapsed from 1,706 units / $60,137 to 105 units /
+$6,850. The diagnosis is confirmed.
+
+**It still does not ship.** The fix alone, 60 seeds, against the same 60-seed baseline:
+
+| | baseline | counter fix |
+| --- | ---: | ---: |
+| Self-play median | $78,780 | $80,762 (+$1,982) |
+| Wheat purchases | $9,638 | $8,038 |
+| Head-to-head (120 ep) | — | 52% (62-6-52) |
+| Self-play liveness | 60/60 | **59/60** |
+| Smoke liveness | 90/90 | **178/180** |
+
++2.5% median, a head-to-head indistinguishable from a coin flip, and **liveness failures the
+baseline does not have**. Bundled with the standing-wheat change it read as +$2,893, but that
+bundle also failed liveness — the extra was not coming from the fix. Rejected by G2 and the
+liveness guard. `agent.py` is byte-identical to the pre-cycle artifact; 31 tests pass.
+
 ### Where this leaves the plan
 
-Steps 1 and 2 are now measured and closed. The next lever is not more labour and not more
-animals — it is **the marginal use of a hand-turn and the feed economics that price it**:
+Steps 1, 2 and 3 are measured and closed. Three separate attempts to convert freed labour or
+cheaper feed into bank produced +2.5% at best, all of it inside the noise band that the
+$42k-$120k per-seed spread implies. **Whatever caps this agent near $80k is not watering,
+not wool, and not feed churn.**
 
-1. **Make wheat feed cheaper than wheat bought.** The feed reserve buys at market; the farm
-   grows wheat at $10/seed for 6 units. Routing feed from own production instead of
-   `BUY_PRODUCT` is what would make any herd expansion — wool included — solvent. This is
-   the precondition step 2 actually needed, and it was not identified before.
-2. **Then re-run step 2.** Wool is worth $81,668 a season at above-base prices.
-3. G1-vs-G2 adaptive reserve price, and W9a, are unchanged and independent.
+What the cycle did establish, and what the next one should start from:
+
+1. **The counter bug is real code, worth fixing on its own merits** once something else makes
+   herd expansion viable — it is what made the wool experiments unreadable. It is not worth
+   shipping alone at the current 10-cow configuration.
+2. **Wool is now blocked on animal escapes, not on feed.** With the churn removed, the
+   late-sheep run still lost **4.10 animals per episode** (baseline loses 0.02) and reached
+   only 3.8 of 6 sheep. Sheep are being bought and then starving. That is a
+   placement-and-servicing labour failure and it is the next thing to measure — not a market
+   or feed question.
+3. **The $80k ceiling needs a different explanation.** Cycle 2 measured 34% market capture
+   with no competitor at all; three labour/feed interventions have now failed to move it.
+   The remaining untested explanation is the crop mix itself — melon is 83% below base and
+   sold past its drain, and strawberry is the only product realising above base at volume.
+4. G1-vs-G2 adaptive reserve price, and W9a, are unchanged and independent.
+
+A note on method for the next cycle: two of this cycle's four hypotheses were stated from
+reading the code and both were wrong (the `owned_cows` parameter at `agent.py:695` is
+misleadingly named but receives `owned_animals`, and standing-wheat routing did not make the
+herd solvent). The one that held was traced from a specific measured anomaly — 1,706 wheat
+units of turnover — back to the line that produced it. Trace, do not infer.
 
 ---
 

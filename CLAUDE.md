@@ -59,7 +59,9 @@ See the Iteration Protocol in the plan.
    through as parameters, as `strawberry_target` already is.
 
 5. **Preserve submission compatibility.** `agent.py` stays a single self-contained entry
-   point for `kaggle_environments`, under the 100 MiB packaging limit.
+   point for `kaggle_environments` — stdlib imports only, exposing `agent(observation,
+   configuration)`. It is submitted as a single file **renamed to `main.py`**, which is the
+   entry-point name Kaggle requires. Never add a local-module import to it.
 
 ## Commands
 

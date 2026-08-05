@@ -4,13 +4,25 @@ Submission kit for the **Kaggle Kaggriculture Competition**.
 
 ## Files
 - `agent.py`: Single self-contained Python entrypoint function (`agent(observation, configuration)`) for Kaggle submission.
-- `test_agent.py`: Automated 720-turn benchmark test runner.
-- `run_official_tournament.py`: Official-engine replay and benchmark runner.
+- `agent_allocator.py`: Experimental marginal-revenue allocator. **Rejected** (23% head-to-head); kept as a reference, not shipped.
+- `test_agent.py` / `test_agent_allocator.py`: Schema and engine-model unit tests.
+- `run_official_tournament.py`: Official-engine benchmark runner and release gate.
+- `measure_market_ceiling.py`: Town-demand and market-ceiling measurement.
+
+## How to Submit
+`agent.py` is stdlib-only and self-contained, so it is uploaded as a single file — renamed
+to `main.py`, which is the entry-point name Kaggle requires:
+
+```bash
+cp agent.py main.py
+python3 -c "from main import agent; assert callable(agent)"
+kaggle competitions submit kaggriculture -f main.py -m "v1"
+```
 
 ## How to Test Locally
-Run the unit tests using Python 3:
+Run the unit tests from the repository root:
 ```bash
-python3 -m unittest test_agent.py
+python3 -m unittest python_bot.test_agent python_bot.test_agent_allocator
 ```
 
 ## Official-Engine Tournament Gate
