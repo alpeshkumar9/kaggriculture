@@ -78,29 +78,22 @@ describe a result as verified, rebuild a release artifact, or submit it until
 this suite has completed. If the official engine is unavailable, record the
 benchmark as blocked and stop short of any performance claim.
 
-#### What the built-in opponents actually measure
+#### Replay-derived opponents
 
-Measured on the official engine (final bank, 720 turns): `pass` $3,000,
-`random` $0, `starter` $3,514. Real ladder opponents finish at
-$84,682–$125,241. `agent.py` scores **$136,548 vs `starter`** and loses 6 of 7
-ladder games.
-
-The market is shared between both players. These opponents barely sell, so the
-harness market never sees a second seller and prices never behave as they do in
-a real match — which hides the price-crash failures that decide ladder games.
-
-**`pass`/`random`/`starter` are a liveness tier, not a performance tier.** A
-vs-`starter` bank is never evidence that a strategy change helped, and
-`RECORD_MILESTONE = 154615` is a vs-weak-opponent figure that is not comparable
-to a ladder score.
+Every full JSON replay in `logs/` becomes one opponent. The primary fixture is
+an exact action ghost running on the replay's original seed and seat. Its final
+bank should remain near the source bank; a large divergence means the fixture
+or engine version needs investigation. A secondary parameter profile is also
+generated for cross-seed fuzzing, but is not treated as an exact clone.
 
 #### Tiers
 
 | Tier | Matchup | Episodes | What it decides |
 | --- | --- | --- | --- |
-| Smoke | vs `pass`, `random`, `starter` | 4 seeds | Agent still farms and does not error. Pass/fail only. |
-| **Performance** | vs previous approved artifact | ≥30 paired seeds, candidate on **both** sides | **Whether the change ships.** |
-| Realism | self-play | same seeds | Behaviour under a realistic two-seller market (70k–102k band). |
+| **Replay roster** | every logged Kaggle opponent, original seed and seat | one exact replay per log | Primary competitive coverage and per-opponent failures. |
+| **Performance** | vs previous approved artifact | ≥30 paired seeds, candidate on **both** sides | Whether a change regresses the shipped agent. |
+| Cross-seed profiles | generated `profile_*.py` agents | held-out paired seeds | Robustness fuzzing; approximate, not exact cloning. |
+| Self-play | candidate mirror | same seeds | Production and shared-market tracker. |
 | Diagnostic | any tier | — | Whether the targeted metric actually moved. |
 
 `kaggle_environments` accepts a **file path** as an agent, so the previous
@@ -134,7 +127,7 @@ in head-to-head win rate against the previous artifact.
 
 Self-play is the measurement condition because it is the only one that reproduces ladder
 market pressure. Current standing is $70k–$102k. Report progress against G1 only —
-a vs-`starter` bank is never evidence of progress toward the goal.
+the replay roster and previous-artifact gates decide whether progress is real.
 
 #### Release criteria
 
@@ -171,7 +164,7 @@ benchmark report in the submission message or release notes.
 1. Fix the entry point and use `run_official_tournament.py` as the release gate.
 2. Replace the current profit-claiming test with decision and trace assertions.
 3. Implement a conservative wheat/carrot loop until it passes every replay gate.
-4. Benchmark against `starter`.
+4. Benchmark against the replay-derived roster.
 5. Add one strategic feature at a time (farmhands, land, then livestock), rerunning the entire suite after each feature.
 
 No price prediction, fertilizer optimisation, land expansion, or livestock code should be enabled until the conservative crop loop passes the official-engine replay checks.

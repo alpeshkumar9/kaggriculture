@@ -585,6 +585,36 @@ dumper, still outside the −20% gate. They were reverted. The wider 60-seed G3 
 
 ## Schema compliance
 
-`python3 -m unittest python_bot/test_agent.py python_bot/test_agent_allocator.py` — 36 tests,
+`python3 -m unittest python_bot.test_agent python_bot.test_agent_allocator python_bot.test_replay_opponents` — 41 tests,
 all passing: 720 valid turns, Kaggle action schema, price/town-demand models exact against
 the engine. Unit tests never establish a score change; the tournament harness does.
+
+---
+
+## Cycle 6 — replay-derived opponent roster (2026-08-05)
+
+Every complete competition JSON in `logs/` now produces one opponent. The 17 primary
+opponents replay the logged rival's actual actions on its original seed and seat; their final
+banks closely reproduce the source range (roughly $50k–$150k). Both source wins and losses
+are included. Episode 90006347 has no account-name match, so its higher-scoring seat is used
+and that fallback is recorded in `profiles.json`.
+
+The first ghost implementation exposed an important indexing error: replay observation step
+N is the state *after* action N, so an agent receiving observation step N must return the
+recorded action at N+1. Correcting that offset changed the ghosts from inert fixtures into
+real competitors. The builder also emits approximate behavioural profiles for unfamiliar
+seeds, but those are secondary fuzz tests because they do not reproduce path-dependent worker
+movement.
+
+| gate | result | status |
+| --- | ---: | --- |
+| Exact logged opponents | 17/17 live | pass |
+| Aggregate wins | 6/17 (35%) | below 50% gate |
+| Candidate median bank | $84,845 | baseline |
+| Candidate range | $46,475–$133,219 | baseline |
+
+The eleven current losses are 89980458, 89983092, 89983749, 89989543, 90006347,
+90060119, 90062890, 90108226, 90112980, 90120436, and 90147946. This roster replaces
+non-competitive built-ins as the primary opponent test. The next strategy cycle should trace
+one of the high-value losses (preferably 90120436 or 90112980), form one measurable
+hypothesis, and then require improvement across the full roster rather than on that seed alone.

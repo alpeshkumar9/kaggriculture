@@ -1,0 +1,113 @@
+{
+  "summaries": [
+    {
+      "tier": "self-play",
+      "episodes": 1,
+      "wins": 0,
+      "ties": 0,
+      "losses": 1,
+      "win_rate": 0.0,
+      "median_bank": 64600.0,
+      "min_bank": 64600.0,
+      "max_bank": 64600.0,
+      "gate_failures": 1
+    }
+  ],
+  "episodes": [
+    {
+      "opponent": "self",
+      "seed": 1232444148,
+      "swapped": false,
+      "candidate_status": "DONE",
+      "opponent_status": "DONE",
+      "candidate_bank": 64600.0,
+      "opponent_bank": 74170.0,
+      "outcome": "loss",
+      "actions": {
+        "PASS": 797,
+        "HIRE": 301,
+        "BUY_ANIMAL": 5,
+        "BUY_PRODUCT": 125,
+        "BUY_SEED": 117,
+        "PICKUP": 324,
+        "NORTH": 1123,
+        "WEST": 1144,
+        "BUILD_PASTURE": 10,
+        "PLACE": 10,
+        "PLANT": 192,
+        "WATER": 1151,
+        "FEED": 230,
+        "EAST": 833,
+        "CARE": 230,
+        "SOUTH": 794,
+        "COLLECT_FERTILIZER": 219,
+        "SELL": 189,
+        "HARVEST": 308,
+        "DIG": 64,
+        "BUY_LAND": 2,
+        "DROP": 23,
+        "FERTILIZE": 46
+      },
+      "max_plants": 63,
+      "max_weeds": 12,
+      "max_weeds_scored": 12,
+      "checks": [
+        "12 weed tile(s) on or before day 25 (limit: 10)"
+      ],
+      "replay": "replays\\trace-1232444148\\candidate-vs-self-seed-1232444148.json",
+      "revenue": {
+        "FERTILIZER": 13471.0,
+        "CARROT": 1640.0,
+        "WHEAT": 8553.0,
+        "MILK": 21365.0,
+        "MELON": 21371.0,
+        "STRAWBERRY": 31040.0
+      },
+      "units_sold": {
+        "FERTILIZER": 215,
+        "CARROT": 54,
+        "WHEAT": 205,
+        "MILK": 270,
+        "MELON": 102,
+        "STRAWBERRY": 147
+      },
+      "realised_price": {
+        "FERTILIZER": 62.65581395348837,
+        "CARROT": 30.37037037037037,
+        "WHEAT": 41.72195121951219,
+        "MILK": 79.12962962962963,
+        "MELON": 209.51960784313727,
+        "STRAWBERRY": 211.156462585034
+      },
+      "below_base_fraction": {
+        "FERTILIZER": 0.9906976744186047,
+        "CARROT": 0.8518518518518519,
+        "WHEAT": 0.0,
+        "MILK": 0.7444444444444445,
+        "MELON": 0.7450980392156863,
+        "STRAWBERRY": 0.0
+      },
+      "spend": {
+        "COW": 4000.0,
+        "WHEAT": 9929.0,
+        "CARROT": 580.0,
+        "MELON": 2160.0,
+        "STRAWBERRY": 3700.0,
+        "FERTILIZER": 2105.0
+      },
+      "peak_tiles": {
+        "CARROT": 19,
+        "COW": 10,
+        "WHEAT": 25,
+        "MELON": 19,
+        "STRAWBERRY": 36
+      },
+      "peak_animals": 10,
+      "final_animals": 10,
+      "animals_lost": 0,
+      "unharvested_value": 3020.0,
+      "final_shed_units": 3,
+      "herd_complete_day": 9
+    }
+  ]
+}

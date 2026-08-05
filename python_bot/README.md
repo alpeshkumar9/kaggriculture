@@ -22,7 +22,7 @@ kaggle competitions submit kaggriculture -f main.py -m "v1"
 ## How to Test Locally
 Run the unit tests from the repository root:
 ```bash
-python3 -m unittest python_bot.test_agent python_bot.test_agent_allocator
+python3 -m unittest python_bot.test_agent python_bot.test_agent_allocator python_bot.test_replay_opponents
 ```
 
 ## Official-Engine Tournament Gate
@@ -44,29 +44,39 @@ calling the change verified, rebuilding a release artifact, or submitting it.
 If the official engine cannot run, report that the benchmark is blocked; unit
 tests alone never establish a score improvement.
 
-### ⚠️ The built-in opponents measure liveness, not performance
+### Replay-derived opponent roster
 
-Measured on the official engine, final bank after 720 turns:
+The default tournament uses one opponent for every full Kaggle replay in `logs/`.
+Each replay ghost issues the real opponent's submitted actions on the original
+competition seed and original seat. This preserves genuine crop, livestock,
+expansion and market decisions, including opponents from games we won and lost.
 
-| Agent | Final bank |
-| --- | ---: |
-| `pass` | $3,000 (starting money) |
-| `random` | $0 |
-| `starter` | $3,514 |
-| Real ladder opponents | $84,682 – $125,241 |
+```bash
+python3 build_replay_opponents.py
+python3 run_official_tournament.py --agent agent.py --report ../replays/replay-ghost-roster-report.json
+```
 
-The strongest built-in scores about **3% of a real opponent**. `agent.py` scores
-**$136,548 against `starter`** and still loses 6 of 7 games on the ladder.
+The builder also creates `profile_<episode>.py` cross-seed approximations. These
+are useful for fuzzing unfamiliar seeds, but the exact replay ghosts are the
+primary fidelity test. Add new full replay JSON files to `logs/` and rerun the
+builder to extend both sets.
 
-The market is *shared* between both players. Because these opponents barely sell,
-the harness market never sees a second seller and prices do not behave as they do
-in a real game — which hides exactly the price-crash failures that lose ladder
-matches.
+The current 17-opponent exact roster is deliberately difficult: `agent.py` wins
+6/17 source matches (35%). This is the new baseline, not a release pass. Opponent
+final banks remain in the real-log range, so failures are now visible instead of
+being hidden by non-competitive fixtures.
 
-**Use `pass`/`random`/`starter` as a smoke test only.** Never quote a
-vs-`starter` bank as evidence that a change helped.
+By default each tournament removes old raw replay directories under the
+repository's `replays/` directory. Compact JSON summary reports are always
+retained because they preserve benchmark history cheaply. Pass
+`--keep-old-replays` when an experiment's full state/action trace is needed for
+diagnosis.
 
 ### Measuring an actual strategy change
+
+The replay roster is the primary competitive measurement. The candidate is
+reported separately against every source opponent and must also clear the
+aggregate win-rate gate.
 
 Self-play puts a realistic second seller in the shared market and reproduces the
 real ladder score band (70k–102k on the default seeds):
@@ -83,12 +93,8 @@ artifact can be used as the opponent directly:
 python3 run_official_tournament.py --agent agent.py --opponents ../artifacts/approved_agent.py --seed-count 30 --replay-dir replays/regression
 ```
 
-> **Note:** `RECORD_MILESTONE = 154615` in `run_official_tournament.py` is a
-> vs-weak-opponent figure and is **not** comparable to a ladder score. Do not
-> treat it as a target. Work item W0 in `../implementation_plan.md` covers
-> rebuilding this harness so its exit code gates on score regression, pairs seeds
-> across both sides, and reports the diagnostic metrics that explain wins and
-> losses.
+Previous-artifact matches are paired across both seats. Replay ghosts remain on
+their source seat because their recorded worker path is seed- and seat-specific.
 
 ## How to Submit to Kaggle
 1. Upload `agent.py` directly to [Kaggle Kaggriculture Submission](https://www.kaggle.com/competitions/kaggriculture/submit).

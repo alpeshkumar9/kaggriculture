@@ -1157,6 +1157,23 @@ Release evidence is stored in `replays/final-selfplay-30-seed-report.json` and
 
 ---
 
+## Current checkpoint — Cycle 6 (2026-08-05)
+
+- **Benchmark upgraded:** all 17 complete Kaggle logs are now executable opponents, each on
+  its original seed and seat. The set includes games the account won and lost.
+- **Current result:** 6/17 wins (**35%**), 17/17 liveness passes, candidate median **$84,845**.
+  The new 50% aggregate roster gate is red and is now the primary competitive signal.
+- **Fidelity:** logged-opponent banks reproduce the real source range (about $50k–$150k).
+  Cross-seed behavioural profiles exist for fuzzing but are not promotion evidence.
+- **Next:** diagnose a high-value exact loss, starting with episode 90120436 or 90112980.
+  Change one mechanism, then rerun all 17 exact opponents. Accept only a roster-wide gain
+  without regression against the previous artifact and self-play guards.
+- **Housekeeping:** tournament runs remove bulky raw replay directories under `replays/` by
+  default while retaining every compact JSON summary report; use `--keep-old-replays` when
+  a full state/action trace is needed for diagnosis.
+
+---
+
 ## Risks and open questions
 
 - **Pasture/coop capacity.** Sheep and cows both need pasture; adding 7 sheep while keeping

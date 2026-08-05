@@ -52,20 +52,11 @@ kaggriculture/
 4. **Benchmark Every Strategy Change:** Any change to `python_bot/agent.py` that can alter game decisions must be run through `python_bot/run_official_tournament.py` before it is described as verified, packaged for release, or submitted. If the official engine is unavailable, report the benchmark as blocked and do not claim a performance improvement.
 
 > [!WARNING]
-> **The built-in opponents are not a performance benchmark.** Measured on the official
-> engine: `pass` finishes at $3,000, `random` at $0, `starter` at $3,514 — while real
-> ladder opponents finish at $84,682–$125,241. Our agent scores $136,548 against `starter`
-> and still loses 6 of 7 ladder games. Because the market is *shared* and these opponents
-> barely sell, the harness market never sees a second seller and prices do not behave as
-> they do on the ladder.
->
-> Treat `pass`/`random`/`starter` as a **liveness smoke test only**. For anything about
-> score, use **self-play** (reproduces the real 70k–102k band) and **head-to-head against
-> the previous approved artifact**. `kaggle_environments` accepts a **file path** as an
-> agent, so `--opponents path/to/previous_agent.py` works today.
->
-> Never quote a vs-`starter` bank, or `RECORD_MILESTONE = 154615`, as evidence that a
-> strategy change helped. See `implementation_plan.md` §D6 and work item W0.
+> **Use the replay-derived roster for competitive measurement.** Every full Kaggle replay
+> in `logs/` produces one exact action ghost on its original seed and seat. Run
+> `python_bot/build_replay_opponents.py` after adding logs, then run the default official
+> tournament. Self-play is a production tracker; previous-artifact head-to-head is the
+> regression guard. A bank figure without its opponent named is not a result.
 
 5. **Verify Against the Diagnosis, Not Just the Bank:** A change is accepted only when the
    specific metric it targets moves in the predicted direction (see the per-item acceptance
@@ -78,8 +69,8 @@ kaggriculture/
    is. Current standing: $70k–$102k self-play; best score by *any* agent across all analysed
    replays is $125,896.
 
-   A bank figure without its opponent named is not a result. **Never report the goal as
-   reached using a vs-`pass`/`random`/`starter` bank** — those conditions inflate by ~40%.
+   A bank figure without its opponent named is not a result. Never report the goal as
+   reached from a non-competitive fixture.
    When a cycle cannot distinguish two candidates, the next work item is a *benchmark*
    improvement, not a strategy change.
 

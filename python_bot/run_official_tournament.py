@@ -5,18 +5,16 @@ the command line, plays deterministic paired matches on the official engine,
 records what was actually traded, and fails the run when the candidate is not
 good enough — on score as well as on liveness.
 
-Three tiers, per `implementation_plan.md`:
+Four tiers, per `implementation_plan.md`:
 
-* **smoke**    — vs ``pass``/``random``/``starter``.  Liveness only; banks from
-  this tier are never a performance measure.
-* **self-play** — the primary measurement (goal G1/G3).  Two real sellers push
-  into one shared price curve, which is what the ladder does.
+* **roster** — paired matches against every replay-derived Kaggle opponent.
+  This is the default and primary release measurement.
+* **self-play** — an optional production tracker. Two real sellers push into
+  one shared price curve, but mirror-match wins are not a competitive gate.
 * **head-to-head** — candidate vs ``--baseline`` (the previous approved
   artifact), sides swapped on every seed (goal G2).
-* **adversary**  — candidate vs ``--adversary`` (the W10 dumper), sides swapped
-  on every seed.  **This is the acceptance gate** (G0/G3): the ladder ranks on
-  win/loss only, and this is the only local tier that reproduces a competent
-  opponent competing into the same price curve.
+* **adversary** — candidate vs an optional frozen stress agent, sides swapped
+  on every seed. This remains available for historical G0/G3 comparisons.
 
 Diagnostics are exact: ``_commit_unit`` in the official engine is wrapped for
 the duration of an episode, so every executed trade — not every *ordered*
@@ -29,6 +27,7 @@ import argparse
 import importlib.util
 import json
 import random
+import shutil
 import sys
 from collections import Counter, defaultdict
 from concurrent.futures import ProcessPoolExecutor
@@ -60,7 +59,9 @@ REPORT_MEDIAN_BANK = 160_000
 GOAL_HEAD_TO_HEAD_WIN_RATE = 0.60
 GOAL_HEAD_TO_HEAD_FLOOR = 0.50
 
-SMOKE_OPPONENTS = ("pass", "random", "starter")
+ROSTER_TOKEN = "replay-roster"
+ROSTER_WIN_RATE = 0.50
+ROSTER_OPPONENT_FLOOR = 0.25
 
 
 @dataclass
@@ -124,12 +125,40 @@ def load_agent(path: Path) -> Agent:
 
 
 def resolve_opponent(spec: str, candidate: Agent) -> Any:
-    """``self`` reuses the candidate; a path loads a file; anything else is a built-in."""
+    """Resolve self-play or an explicit local agent; weak built-ins are excluded."""
     if spec == "self":
         return candidate
     if spec.endswith(".py"):
         return load_agent(Path(spec))
-    return spec
+    raise ValueError(
+        f"Unsupported opponent {spec!r}; use 'self', '{ROSTER_TOKEN}', or an agent .py path"
+    )
+
+
+def replay_roster_entries() -> tuple[tuple[str, int, bool], ...]:
+    """Return ghost path, source seed, and candidate-side swap flag."""
+    directory = Path(__file__).resolve().parent / "opponents"
+    profiles = json.loads((directory / "profiles.json").read_text(encoding="utf-8"))
+    return tuple(
+        (
+            str(directory / f"replay_{episode_id}.py"),
+            int(profile["source_seed"]),
+            int(profile["source_seat"]) == 0,
+        )
+        for episode_id, profile in sorted(profiles.items())
+    )
+
+
+def clean_generated_replays() -> list[Path]:
+    """Remove bulky raw replay directories while preserving compact reports."""
+    root = Path(__file__).resolve().parents[1] / "replays"
+    root.mkdir(parents=True, exist_ok=True)
+    removed = []
+    for child in root.iterdir():
+        if child.is_dir():
+            shutil.rmtree(child)
+            removed.append(child)
+    return removed
 
 
 # --------------------------------------------------------------------------
@@ -510,12 +539,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--agent", type=Path, required=True, help="Python file exposing agent(obs, configuration=None).")
     parser.add_argument(
         "--opponents",
-        default="self",
-        help="Comma-separated opponents: 'self', a built-in name (pass/random/starter), "
-        "or a path to another agent .py file. Default: self-play (the G1 measurement).",
+        default=ROSTER_TOKEN,
+        help=f"Comma-separated opponents: '{ROSTER_TOKEN}', 'self', or agent .py paths. "
+        "File opponents are played from both seats. Default: the replay-derived roster.",
     )
     parser.add_argument("--baseline", type=Path, default=None, help="Previous approved artifact; run head-to-head, sides swapped (G2).")
-    parser.add_argument("--smoke", action="store_true", help="Also run the vs-built-in liveness tier.")
     parser.add_argument("--seeds", default=",".join(map(str, DEFAULT_SEEDS)))
     parser.add_argument("--seed-count", type=int, default=0, help="Generate this many reproducible seeds instead of --seeds.")
     parser.add_argument("--seed-source", type=int, default=20260804)
@@ -524,8 +552,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--worst-margin", type=float, default=GOAL_WORST_SEED_MARGIN, help="G3: no seed may lose to the adversary by more than this fraction.")
     parser.add_argument("--goal", type=float, default=REPORT_MEDIAN_BANK, help="G1 reference line for the self-play bank report. Never gated on.")
     parser.add_argument("--h2h-goal", type=float, default=GOAL_HEAD_TO_HEAD_WIN_RATE, help="G2: required win rate vs --baseline.")
+    parser.add_argument("--roster-goal", type=float, default=ROSTER_WIN_RATE, help="Required aggregate win rate across replay opponents.")
+    parser.add_argument("--opponent-floor", type=float, default=ROSTER_OPPONENT_FLOOR, help="Minimum win rate against every replay opponent.")
     parser.add_argument("--replay-dir", type=Path, default=None, help="Write full replay JSON here (large; off by default).")
     parser.add_argument("--report", type=Path, default=Path("replays/report.json"))
+    parser.add_argument("--keep-old-replays", action="store_true", help="Do not remove old raw replay directories before this run; JSON reports are always retained.")
     parser.add_argument("--turns", type=int, default=720)
     parser.add_argument("--jobs", type=int, default=0, help="Parallel worker processes (default: cpu_count - 1).")
     parser.add_argument("--no-gate", action="store_true", help="Report only; always exit 0.")
@@ -549,18 +580,26 @@ def _jobs(requested: int) -> int:
 
 def main() -> int:
     args = parse_args()
+    if not args.keep_old_replays:
+        removed = clean_generated_replays()
+        if removed:
+            print(f"Removed {len(removed)} superseded raw replay directories.")
     load_agent(args.agent)  # fail fast on a broken candidate
     seeds = _seeds_from_args(args)
-    opponents = tuple(o.strip() for o in args.opponents.split(",") if o.strip())
+    requested = tuple(o.strip() for o in args.opponents.split(",") if o.strip())
+    use_replay_roster = ROSTER_TOKEN in requested
+    opponents = tuple(opponent for opponent in requested if opponent != ROSTER_TOKEN)
     if not seeds:
         raise ValueError("At least one seed is required")
 
     jobs: list[tuple[str, str, int, int, bool, str | None]] = []
     tiers: list[tuple[str, str, bool]] = []  # (tier name, opponent spec, paired)
     for opponent in opponents:
-        tiers.append(("smoke" if opponent in SMOKE_OPPONENTS else "self-play", opponent, False))
-    if args.smoke:
-        tiers.extend(("smoke", name, False) for name in SMOKE_OPPONENTS)
+        tiers.append(
+            ("self-play", opponent, False)
+            if opponent == "self"
+            else ("roster", opponent, True)
+        )
     if args.baseline:
         tiers.append(("head-to-head", str(args.baseline), True))
     if args.adversary:
@@ -574,6 +613,15 @@ def main() -> int:
             for swapped in sides:
                 jobs.append((str(args.agent), opponent, seed, args.turns, swapped, replay_dir))
                 job_tiers.append(tier)
+    if use_replay_roster:
+        for opponent, source_seed, swapped in replay_roster_entries():
+            jobs.append(
+                (str(args.agent), opponent, source_seed, args.turns, swapped, replay_dir)
+            )
+            job_tiers.append("roster")
+
+    if not jobs:
+        raise ValueError("No tournament episodes selected")
 
     worker_count = min(_jobs(args.jobs), len(jobs))
     print(f"Running {len(jobs)} episodes on {worker_count} workers…")
@@ -586,13 +634,12 @@ def main() -> int:
 
     print("\nOfficial Kaggriculture tournament")
     summaries = []
-    for tier in ("smoke", "self-play", "head-to-head", "adversary"):
+    for tier in ("self-play", "head-to-head", "roster", "adversary"):
         if tier not in by_tier:
             continue
         summary = summarise_tier(tier, by_tier[tier])
         summaries.append(summary)
-        if tier != "smoke":
-            print_diagnostics(by_tier[tier])
+        print_diagnostics(by_tier[tier])
 
     failures: list[str] = []
     for result in results:
@@ -626,6 +673,35 @@ def main() -> int:
             failures.append(
                 f"G3 seed {worst.seed} lost by {-margin:.0%}, over {args.worst_margin:.0%}"
             )
+
+    roster = by_tier.get("roster", [])
+    if roster:
+        overall = sum(result.outcome == "win" for result in roster) / len(roster)
+        print(
+            f"\nRoster aggregate win rate {overall:.0%} / {args.roster_goal:.0%} — "
+            f"{'MET' if overall >= args.roster_goal else 'NOT MET'}"
+        )
+        if overall < args.roster_goal:
+            failures.append(
+                f"roster win rate {overall:.0%} below {args.roster_goal:.0%}"
+            )
+        grouped = defaultdict(list)
+        for result in roster:
+            grouped[Path(result.opponent).stem].append(result)
+        for name, subset in sorted(grouped.items()):
+            win_rate = sum(result.outcome == "win" for result in subset) / len(subset)
+            candidate_bank = median(result.candidate_bank for result in subset)
+            opponent_bank = median(result.opponent_bank for result in subset)
+            status = "MET" if win_rate >= args.opponent_floor else "NOT MET"
+            print(
+                f"  {name}: {win_rate:.0%} wins, median "
+                f"${candidate_bank:,.0f} vs ${opponent_bank:,.0f} — {status}"
+            )
+            if win_rate < args.opponent_floor:
+                failures.append(
+                    f"{name} win rate {win_rate:.0%} below the "
+                    f"{args.opponent_floor:.0%} floor"
+                )
 
     self_play = by_tier.get("self-play", [])
     if self_play:

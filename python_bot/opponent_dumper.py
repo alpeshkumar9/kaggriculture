@@ -44,6 +44,15 @@ LAND_PLAN = ((4, 1600), (8, 3200))
 MOVES = ((0, -1, "NORTH"), (0, 1, "SOUTH"), (1, 0, "EAST"), (-1, 0, "WEST"))
 PRODUCTS = {"WHEAT", "CARROT", "TOMATO", "STRAWBERRY", "MELON", "EGG", "MILK", "WOOL", "FERTILIZER"}
 COMPACT_COW_TARGET = 10
+# Hooks for replay-derived benchmark profiles. Defaults preserve this frozen
+# W10 fixture; generated opponents override them in isolated module copies.
+COW_TARGET = COMPACT_COW_TARGET
+LIVESTOCK_SLOT_TARGET = COMPACT_COW_TARGET
+COW_PURCHASE_LAST_DAY = 20
+SHEEP_PURCHASE_START_DAY = 16
+SHEEP_PURCHASE_END_DAY = 18
+PROFILE_CROP_PLAN = None
+SELL_BATCHES = {}
 COWS_PER_SERVICE_WORKER = 5
 FERTILIZER_BATCH_SIZE = 6
 MAX_SELL_ORDER_TYPES = 5
@@ -188,9 +197,9 @@ def _market_actions(
     # operational burden bounded while giving the crop engine time to fund
     # further expansion.
     unlocked_count = len(farm.get("unlocked_quadrants", ["NW"]))
-    compact_cow_target = len(_compact_cow_slots(tiles))
+    compact_cow_target = min(COW_TARGET, len(_compact_cow_slots(tiles)))
     cows_to_buy = min(2, max(0, compact_cow_target - livestock["owned_cows"]))
-    if day <= 20 and cows_to_buy and money >= 400 * cows_to_buy + 500:
+    if day <= COW_PURCHASE_LAST_DAY and cows_to_buy and money >= 400 * cows_to_buy + 500:
         market.append(["BUY_ANIMAL", "COW", cows_to_buy])
         money -= 400 * cows_to_buy
 
@@ -206,7 +215,7 @@ def _market_actions(
 
     sheep_to_buy = max(0, LATE_SHEEP_TARGET - livestock["owned_sheep"])
     sheep_budget = sheep_to_buy * 500 + sheep_to_buy * BASE_PRICES["WHEAT"] * 3
-    if 16 <= day <= 18 and sheep_to_buy and money >= sheep_budget + 500:
+    if SHEEP_PURCHASE_START_DAY <= day <= SHEEP_PURCHASE_END_DAY and sheep_to_buy and money >= sheep_budget + 500:
         market.append(["BUY_ANIMAL", "SHEEP", sheep_to_buy])
         money -= sheep_to_buy * 500
 
@@ -296,6 +305,8 @@ def _desired_hands(tiles):
 
 def _premium_crop_plan(town_state):
     """Use early staple demand only when it can finance a larger premium block."""
+    if PROFILE_CROP_PLAN is not None:
+        return tuple(PROFILE_CROP_PLAN)
     shops = town_state.get("unlocked_shops", []) if isinstance(town_state, dict) else []
     if shops and shops[0] == "PIZZA_SHOP":
         if len(shops) >= 2 and shops[1] == "ICE_CREAM_SHOP":
@@ -682,7 +693,10 @@ def _sell_orders(
         elif price_is_healthy:
             sell_quantity = min(
                 quantity,
-                PREMIUM_SELL_BATCH if item in PREMIUM_PRODUCTS else STAPLE_SELL_BATCH,
+                SELL_BATCHES.get(
+                    item,
+                    PREMIUM_SELL_BATCH if item in PREMIUM_PRODUCTS else STAPLE_SELL_BATCH,
+                ),
             )
         else:
             # Release only enough low-priced stock to prevent losing a future
@@ -941,7 +955,7 @@ def _compact_cow_slots(tiles):
         (x, y)
         for x, y in candidates
         if _in_bounds(x, y, tiles) and tiles[y][x] != "LOCKED"
-    )[:COMPACT_COW_TARGET]
+    )[:LIVESTOCK_SLOT_TARGET]
 
 
 def _is_shed_access(x, y, board_size):

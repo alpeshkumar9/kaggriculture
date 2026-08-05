@@ -29,7 +29,7 @@ It is the scale marker the goal should be judged against, not a law.
 Usage::
 
     python3 python_bot/measure_market_ceiling.py --agent python_bot/agent.py \\
-        --opponents self,pass --seed-count 10
+        --opponents self --seed-count 10
 """
 
 from __future__ import annotations
@@ -200,7 +200,7 @@ def report(opponent: str, results: list[CeilingResult]) -> dict[str, float]:
 
     banks = [result.banks for result in results]
     combined = [sum(pair) for pair in banks]
-    # Seat 0 is always the candidate; against `pass` the other seat never trades,
+    # Seat 0 is always the candidate; self-play measures two active sellers,
     # so a median across both seats would be meaningless there.
     candidate = [pair[0] for pair in banks]
     spend = sum(bought_spend.values())
@@ -230,10 +230,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--agent", required=True)
     parser.add_argument(
         "--opponents",
-        default="self,pass",
-        help="Comma-separated. 'self' is the G1 condition; 'pass' gives one farm "
-             "the whole market and so separates a market ceiling from a "
-             "production ceiling.",
+        default="self",
+        help="Comma-separated agent paths or 'self' for the live two-seller market.",
     )
     parser.add_argument("--seed-count", type=int, default=10)
     parser.add_argument("--seed-source", type=int, default=20240817)
@@ -280,15 +278,6 @@ def main() -> int:
             f"${summary['combined_bank']:,.0f} — {needed / summary['combined_bank']:.1f}x "
             f"short — while only {summary['realised'] / summary['ceiling']:.0%} of the "
             f"ceiling is being sold at all."
-        )
-    if "pass" in summaries:
-        solo = summaries["pass"]
-        print(
-            f"  With the whole market to itself and no competitor, one farm still "
-            f"captures only {solo['realised'] / solo['ceiling']:.0%} of the ceiling and "
-            f"banks ${solo['candidate_bank']:,.0f}\n  ({solo['candidate_bank'] / args.goal:.0%} "
-            f"of the ${args.goal:,.0f} bar). The binding constraint is production, not "
-            f"the opponent."
         )
     return 0
 
