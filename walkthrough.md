@@ -746,3 +746,37 @@ purchases rose to $108,575 per episode, strawberry revenue fell to $27,261, and 
 roster collapsed to **4/17 wins** (from 11/17). All 17 episodes remained live, but liveness
 does not compensate for the competitive regression. The artifact remains the eight-cow,
 no-sheep policy. Report: `replays/cycle10-seven-cow-six-sheep.json`.
+
+---
+
+## Cycle 11 — expanded replay roster and premium crop rebalance (2026-08-06)
+
+Commit `264e1a4` added eight complete ladder replays, expanding the exact ghost roster from
+17 to 25 opponents. Rebuilding `python_bot/opponents` preserved the source seed and seat for
+all eight. The Cycle-9 agent won **13/25 (52%)** overall but only **2/8** new matches, with a
+median bank of **$102,813**.
+
+The new opponents repeatedly paired 4–8 sheep with 5–10 cows, but the earlier wool diagnosis
+still held. A co-designed six-sheep plus reduced-watering experiment produced wool yet lost
+1.36 animals per episode, collapsed to **6/25 wins**, and reduced median bank to **$75,822**.
+It was rejected in full.
+
+The accepted change rebalances the named default premium targets from 30 strawberries / 40
+melons to **40 strawberries / 18 melons**. This follows the mechanics: strawberries receive
+recurring shop demand, whereas no shop consumes melon and its glut curve is especially harsh.
+
+| metric | expanded baseline | accepted |
+| --- | ---: | ---: |
+| Exact-roster wins | 13/25 (52%) | **15/25 (60%)** |
+| Candidate median bank | $102,813 | **$104,344** |
+| Peak strawberry tiles | 37.1 | **43.4** |
+| Peak melon tiles | 28.1 | **21.7** |
+| Strawberry revenue/episode | $44,590 | **$51,452** |
+| Animal loss/episode | 0.28 | **0.16** |
+
+The change flipped new opponents 90220515, 90221241, and 90223428 while regressing the close
+90115034 match, for a net gain of two wins. Guards passed: **36/60 head-to-head wins (60%)**
+against the committed agent, self-play median **$106,984** over 30 seeds, and **58/60 (97%)**
+against the frozen dumper with a worst margin of **−4.8%**. All 150 guard episodes were live.
+
+Rejected follow-ups were a 35/30 balanced portfolio (14/25), a visible-opponent melon-contest

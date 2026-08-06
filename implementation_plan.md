@@ -1236,3 +1236,17 @@ Release evidence is stored in `replays/final-selfplay-30-seed-report.json` and
   bot that scores 118–126k. Matching it is a large improvement on our 47–110k, but the
   strategy is evidently common on the ladder, so it is a floor to reach rather than a
   winning edge to defend.
+
+## Current checkpoint — Cycle 11 (2026-08-06)
+
+- **Roster expanded:** eight new complete replays from commit `264e1a4` produce exact ghosts;
+  the primary roster is now 25 opponents. The pre-change agent scored **13/25 (52%)**, but
+  only **2/8** on the new additions.
+- **Accepted:** default premium targets rebalance from 30 strawberry / 40 melon to **40 / 18**.
+  The exact roster improves to **15/25 (60%)** and median bank to **$104,344**.
+- **Target metric:** peak strawberry tiles **37.1 → 43.4**, strawberry revenue **$44,590 →
+  $51,452/episode**, and peak melon tiles **28.1 → 21.7**.
+- **Guards:** head-to-head against the committed agent **36/60 (60%)**; self-play median
+  **$106,984** over 30 seeds; frozen adversary **58/60 (97%)**, worst margin **−4.8%**;
+  all 150 guard episodes live.
+- **Rejected:** six sheep plus reduced watering (6/25), balanced 35/30 targets (14/25),

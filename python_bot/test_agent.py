@@ -90,13 +90,13 @@ class CropFirstAgentTests(unittest.TestCase):
         plan = _premium_crop_plan(
             {"unlocked_shops": ["FARMERS_MARKET", "PIZZA_SHOP"]}
         )
-        self.assertEqual(plan, (8, 30, 40, 6))
+        self.assertEqual(plan, (8, 40, 18, 6))
 
     def test_non_pizza_without_strawberry_demand_keeps_default_plan(self):
         plan = _premium_crop_plan(
             {"unlocked_shops": ["BAKERY", "YARN_STORE"]}
         )
-        self.assertEqual(plan, (10, 30, 40, 6))
+        self.assertEqual(plan, (10, 40, 18, 6))
 
     def test_plants_available_seed_on_empty_tile(self):
         action = agent(observation(None, {"CARROT": 1}))

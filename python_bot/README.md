@@ -61,8 +61,8 @@ are useful for fuzzing unfamiliar seeds, but the exact replay ghosts are the
 primary fidelity test. Add new full replay JSON files to `logs/` and rerun the
 builder to extend both sets.
 
-The current 17-opponent exact roster is deliberately difficult: `agent.py` wins
-6/17 source matches (35%). This is the new baseline, not a release pass. Opponent
+The current 25-opponent exact roster is deliberately difficult: `agent.py` wins
+15/25 source matches (60%). Opponent
 final banks remain in the real-log range, so failures are now visible instead of
 being hidden by non-competitive fixtures.
 
