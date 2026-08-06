@@ -9,7 +9,7 @@ def build_replay_agent(episode_id):
     directory = Path(__file__).resolve().parent
     profiles = json.loads((directory / "profiles.json").read_text(encoding="utf-8"))
     profile = profiles[str(episode_id)]
-    source = directory.parent / "opponent_dumper.py"
+    source = directory.parent / "opponent_base.py"
     spec = spec_from_file_location(f"_replay_{episode_id}_base", source)
     if spec is None or spec.loader is None:
         raise RuntimeError(f"Cannot load frozen opponent base: {source}")

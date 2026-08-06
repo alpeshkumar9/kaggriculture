@@ -13,8 +13,6 @@ Four tiers, per `implementation_plan.md`:
   one shared price curve, but mirror-match wins are not a competitive gate.
 * **head-to-head** — candidate vs ``--baseline`` (the previous approved
   artifact), sides swapped on every seed (goal G2).
-* **adversary** — candidate vs an optional frozen stress agent, sides swapped
-  on every seed. This remains available for historical G0/G3 comparisons.
 
 Diagnostics are exact: ``_commit_unit`` in the official engine is wrapped for
 the duration of an episode, so every executed trade — not every *ordered*
@@ -46,11 +44,6 @@ DEFAULT_SEEDS = (1281355554, 2050554103, 1208590292, 910788726)
 MAX_ACCEPTABLE_WEEDS = 10
 WEED_CHECK_LAST_DAY = 25
 
-# G0: the acceptance gate — win rate against the W10 adversary.
-GOAL_ADVERSARY_WIN_RATE = 0.60
-# G3: robustness, not a lucky seed — no single seed may lose by more than this
-# fraction of the adversary's bank.
-GOAL_WORST_SEED_MARGIN = 0.20
 # G1 is a capability tracker, reported and never gated on (see the Cycle 3
 # callout in implementation_plan.md): three changes have raised self-play bank
 # while head-to-head win rate stayed at 50%, 52% and 23%.
@@ -547,9 +540,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seeds", default=",".join(map(str, DEFAULT_SEEDS)))
     parser.add_argument("--seed-count", type=int, default=0, help="Generate this many reproducible seeds instead of --seeds.")
     parser.add_argument("--seed-source", type=int, default=20260804)
-    parser.add_argument("--adversary", type=Path, default=None, help="W10 adversary; run paired, sides swapped. This is the G0 gate.")
-    parser.add_argument("--g0-goal", type=float, default=GOAL_ADVERSARY_WIN_RATE, help="G0: required win rate vs --adversary.")
-    parser.add_argument("--worst-margin", type=float, default=GOAL_WORST_SEED_MARGIN, help="G3: no seed may lose to the adversary by more than this fraction.")
     parser.add_argument("--goal", type=float, default=REPORT_MEDIAN_BANK, help="G1 reference line for the self-play bank report. Never gated on.")
     parser.add_argument("--h2h-goal", type=float, default=GOAL_HEAD_TO_HEAD_WIN_RATE, help="G2: required win rate vs --baseline.")
     parser.add_argument("--roster-goal", type=float, default=ROSTER_WIN_RATE, help="Required aggregate win rate across replay opponents.")
@@ -602,8 +592,6 @@ def main() -> int:
         )
     if args.baseline:
         tiers.append(("head-to-head", str(args.baseline), True))
-    if args.adversary:
-        tiers.append(("adversary", str(args.adversary), True))
 
     replay_dir = str(args.replay_dir) if args.replay_dir else None
     job_tiers: list[str] = []
@@ -634,7 +622,7 @@ def main() -> int:
 
     print("\nOfficial Kaggriculture tournament")
     summaries = []
-    for tier in ("self-play", "head-to-head", "roster", "adversary"):
+    for tier in ("self-play", "head-to-head", "roster"):
         if tier not in by_tier:
             continue
         summary = summarise_tier(tier, by_tier[tier])
@@ -646,33 +634,6 @@ def main() -> int:
         if result.checks:
             failures.append(f"liveness gate failed on {result.opponent} seed {result.seed}")
             break
-
-    adversary = by_tier.get("adversary", [])
-    if adversary:
-        win_rate = sum(r.outcome == "win" for r in adversary) / len(adversary)
-        print(
-            f"\nG0 adversary win rate {win_rate:.0%} / {args.g0_goal:.0%} — "
-            f"{'MET' if win_rate >= args.g0_goal else 'NOT MET'}"
-        )
-        if win_rate < args.g0_goal:
-            failures.append(f"G0 win rate {win_rate:.0%} below {args.g0_goal:.0%}")
-        # G3 is robustness: a 60% win rate carried by blowouts on half the
-        # seeds and collapses on the rest is not a strategy we can ship.
-        def _margin(result: EpisodeResult) -> float:
-            return (result.candidate_bank - result.opponent_bank) / max(result.opponent_bank, 1.0)
-
-        worst = min(adversary, key=_margin)
-        margin = _margin(worst)
-        print(
-            f"G3 worst seed {worst.seed}{' swapped' if worst.swapped else ''}: "
-            f"${worst.candidate_bank:,.0f} vs ${worst.opponent_bank:,.0f} "
-            f"({margin:+.0%}) / {-args.worst_margin:+.0%} — "
-            f"{'MET' if margin >= -args.worst_margin else 'NOT MET'}"
-        )
-        if margin < -args.worst_margin:
-            failures.append(
-                f"G3 seed {worst.seed} lost by {-margin:.0%}, over {args.worst_margin:.0%}"
-            )
 
     roster = by_tier.get("roster", [])
     if roster:

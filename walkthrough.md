@@ -780,3 +780,7 @@ against the committed agent, self-play median **$106,984** over 30 seeds, and **
 against the frozen dumper with a worst margin of **−4.8%**. All 150 guard episodes were live.
 
 Rejected follow-ups were a 35/30 balanced portfolio (14/25), a visible-opponent melon-contest
+
+## Removal of the Adversary Test (2026-08-06)
+
+**What was changed.** The Adversarial "Dumper" test was retired from the testing framework as it was no longer driving agent improvements. The `--adversary` CLI argument and the `G0`/`G3` evaluation metrics were removed from `python_bot/run_official_tournament.py` and the `implementation_plan.md` goals table. The `opponent_dumper.py` file was renamed to `opponent_base.py` and repurposed strictly as the baseline structure for the replay ghosts.

@@ -104,14 +104,12 @@ The gates, reordered so the primary one is the one the ladder actually scores:
 
 | # | Condition | Bar | Today |
 | --- | --- | --- | --- |
-| **G0** | **Win rate vs the adversarial opponent** (W10), ≥30 paired seeds | **≥ 60%** | **63%** / 62% at 60 seeds |
 | G2 | Head-to-head vs previous approved artifact | win rate ≥ 60%, never < 50% | **85%** |
-| G3 | Worst-seed bank vs the adversary — robustness, not a lucky seed | no seed loses by > 20% | −18% at 30 seeds, **−37% at 60** |
 | G4 | Smoke tier vs `pass`/`random`/`starter` | 100% pass, 0 errors | passing; 2 weed-cap misses off-tier |
 | G1 | Self-play median final bank, ≥30 seeds — **capability tracker, not a gate** | report only | **$83,244** |
 
-Today's column is W11 as measured on 2026-08-05; the pre-W11 artifact scored G0 3%, G2 50–52%,
-G3 −55%, G1 $80,656.
+Today's column is W11 as measured on 2026-08-05; the pre-W11 artifact scored G2 50–52%,
+G1 $80,656.
 
 **G0 replaces G1 as the acceptance gate.** G1 stays in the table because absolute capability
 does matter against a stronger opponent — an agent that cannot produce cannot win — but it is

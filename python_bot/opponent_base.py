@@ -1,22 +1,8 @@
-"""W10 adversary: a competent farmer that dumps its stock the moment it exists.
+"""Frozen baseline agent used as a base for replay ghosts.
 
-**This is a fixed test fixture, never a submission candidate.**  It exists so
-that G0 — win rate against an opponent that can actually beat us — is
-measurable locally.  It is a byte-for-byte copy of ``agent.py`` as of commit
-93f333a with exactly two constants changed:
-
-* ``SELL_PRICE_MULTIPLIERS`` — every entry ``0.0``, so ``price_is_healthy`` is
-  always true and it never waits for a price to recover.
-* ``PREMIUM_SELL_BATCH`` / ``STAPLE_SELL_BATCH`` — raised to the shed capacity,
-  so it clears the shed instead of trickling 8/20 units a turn.
-
-The result farms as well as we do (so it has stock) and takes the scarcity
-premium first.  That is the mechanism already measured as costing us melon
-revenue $27.4k -> $18.2k in Cycle 1.
-
-Per ``implementation_plan.md`` W10 this file must **not** be tuned to win and
-must **not** be re-synced with ``agent.py``: G0 is only comparable across
-cycles if the adversary is frozen.  See ``implementation_plan.md`` W10.
+**This is a fixed test fixture, never a submission candidate.**
+It is a frozen copy of ``agent.py`` used to simulate opponent behaviors
+by overriding its constants with values extracted from Kaggle replay logs.
 """
 
 from collections import deque
@@ -45,7 +31,7 @@ MOVES = ((0, -1, "NORTH"), (0, 1, "SOUTH"), (1, 0, "EAST"), (-1, 0, "WEST"))
 PRODUCTS = {"WHEAT", "CARROT", "TOMATO", "STRAWBERRY", "MELON", "EGG", "MILK", "WOOL", "FERTILIZER"}
 COMPACT_COW_TARGET = 10
 # Hooks for replay-derived benchmark profiles. Defaults preserve this frozen
-# W10 fixture; generated opponents override them in isolated module copies.
+# base; generated opponents override them in isolated module copies.
 COW_TARGET = COMPACT_COW_TARGET
 LIVESTOCK_SLOT_TARGET = COMPACT_COW_TARGET
 COW_PURCHASE_LAST_DAY = 20
@@ -56,8 +42,8 @@ SELL_BATCHES = {}
 COWS_PER_SERVICE_WORKER = 5
 FERTILIZER_BATCH_SIZE = 6
 MAX_SELL_ORDER_TYPES = 5
-PREMIUM_SELL_BATCH = 100  # W10: shed capacity -- clear everything, every turn.
-STAPLE_SELL_BATCH = 100  # W10: shed capacity -- clear everything, every turn.
+PREMIUM_SELL_BATCH = 100
+STAPLE_SELL_BATCH = 100
 STRAWBERRY_PRIORITY_DAY = 10
 LAST_PLANTING_DAY = 28
 FINAL_GLOBAL_MELON_THRESHOLD = 8
@@ -83,11 +69,6 @@ BASE_PRICES = {
     "FERTILIZER": 100,
 }
 PREMIUM_PRODUCTS = {"STRAWBERRY", "MELON", "MILK", "WOOL"}
-# W10: zero reserve price -- ``price_is_healthy`` is always true, so this agent
-# never holds stock waiting for the curve to recover.
-# Every product is listed, not just the four ``agent.py`` names: the lookup
-# falls back to 1.0 for anything missing, which would leave MILK/WOOL/EGG
-# patient and make this only a partial dumper.
 SELL_PRICE_MULTIPLIERS = {item: 0.0 for item in PRODUCTS}
 
 
