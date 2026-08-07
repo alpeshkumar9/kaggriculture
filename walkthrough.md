@@ -935,3 +935,47 @@ list: **fertilizer sell-price tuning** — measured and closed in Cycle 15. The 
 at $55 is the correct reserve when the market is oversupplied by both players.
 
 **Unit tests after revert: 37/37 pass.**
+
+---
+
+## Cycle 16 — W7 late-season wheat expansion (2026-08-07) — REJECTED
+
+**Hypothesis.** Phi (`replay_90642136`, $186,020 — highest observed) has peak_tiles WHEAT=39
+against our WHEAT_TILE_CAP=6.  Expanding wheat tiles in the late season (after day 18 when
+premium windows close) should generate end-of-season wheat revenue.
+
+**Three sub-runs tested.**
+
+| Variant | Median vs C14 | Wheat rev | Strawberry rev | Unharvested | Wins |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| cap=18, day=18 | +$182 | +$1,337 | −$1,182 | $69 | 15/35 |
+| cap=18, day=21 | −$80 | +$1,201 | −$514 | $95 | 15/35 |
+| cap=12, day=18 | −$106 | +$660 | −$883 | $35 | 15/35 |
+
+All three variants produced the identical 15/35 win roster as Cycle 14.
+
+**Why late-season wheat fails.**  Workers planting wheat in days 18–25 compete with the
+live strawberry harvest wave (day 7–19 plants → harvest days 17–29).  Even though
+planting is lower priority than harvesting in `_choose_worker_action`, the routing
+still costs harvests: unharvested value rose from $21 (C14) to $35–95 across variants.
+
+Per-tile marginal economics (cap=12 vs cap=18, 6 additional tiles):
+- Additional wheat revenue: +$677 (6 extra tiles × ~$113/tile)
+- Additional strawberry displacement cost: −$299 (6 tiles × ~$50/tile)
+- Marginal net: +$378 for tiles 7–12
+
+But the **first 6 tiles** (cap=0→12) cost $883 in strawberry and generate only $660 wheat
+(-$37/tile net negative).  The overall sum was always flat or negative because the first
+block of late tiles is in the highest-competition zone of the harvest window.
+
+**Corrected interpretation of Phi's 39 wheat tiles.**  Phi's peak_tiles WHEAT=39 is almost
+certainly **early-season front-loaded wheat** (days 1–6, before animals are purchased),
+harvested around days 5–9 and sold while `owned_animals = 0` (which unlocks
+`price_is_healthy = True` in `_sell_orders`).  Those tiles are then cleared and replaced
+with strawberry from day 7.  This generates early cash flow without competing with any
+premium crop harvest.  That is a fundamentally different mechanism from late fill-in.
+
+**Verdict: rejected. Late-season wheat expansion closed.**  The correct W7 to try is
+early-season front-loaded wheat (days 1–6), not late-fill wheat (days 18–25).
+
+**Unit tests throughout: 37/37 pass.**

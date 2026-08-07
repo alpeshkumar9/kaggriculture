@@ -131,6 +131,15 @@ when a re-try scores differently due to seed variance.
      expected: W11 adaptive capitulation sets the effective floor at $55 (base × 0.55) when
      both players oversupply fertilizer. Phi ($186k, highest observed agent) uses
      `FERTILIZER: 0.0`. Bank fell $2,490 with a 1.0 multiplier, win rate unchanged.
+   - **Late-season wheat expansion (`WHEAT_LATE_DAY` / `WHEAT_LATE_CAP`)** — closed in
+     Cycle 16. Three sub-runs (cap=18 day=18, cap=18 day=21, cap=12 day=18) all produced
+     identical 15/35 wins. Workers planting wheat in days 18–25 compete with the live
+     strawberry harvest wave (day 7–19 → harvest days 17–29), costing strawberry revenue
+     that cancels the wheat gain. Phi's WHEAT peak=39 is almost certainly early-season
+     front-loaded wheat (days 1–6, sold while `owned_animals=0`), not late fill-in.
+     The correct W7 to implement is early-season wheat → strawberry conversion, not
+     late-season fill. Re-proposing late-season wheat without a new harvest-displacement
+     mitigation is not a new hypothesis.
 
 10. **Never delete or compress `walkthrough.md` cycles.** They are the evidence base for
     Rules 8–9. A session without them will re-propose the same experiments. If the document
