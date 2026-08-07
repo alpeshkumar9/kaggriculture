@@ -979,3 +979,51 @@ premium crop harvest.  That is a fundamentally different mechanism from late fil
 early-season front-loaded wheat (days 1–6), not late-fill wheat (days 18–25).
 
 **Unit tests throughout: 37/37 pass.**
+
+---
+
+## Cycle 17 — W7 early-season wheat front-load (2026-08-07) — **ACCEPTED**
+
+**Hypothesis (corrected from Cycle 16).** Phi's peak WHEAT=39 is early-season wheat
+planted before STRAWBERRY_PRIORITY_DAY=7, not late fill-in.  Raising `WHEAT_EARLY_CAP = 20`
+(vs `WHEAT_TILE_CAP = 6`) fills available tiles on days 1–6, those tiles harvest day 5–9,
+and from day 7 the emptied tiles get immediately replanted with strawberry.
+
+**What changed.**
+- Added `WHEAT_EARLY_CAP = 20` constant.
+- `_next_crop`: `wheat_cap = WHEAT_EARLY_CAP if day < strawberry_priority_day else WHEAT_TILE_CAP`.
+- `_available_crop`: same day-aware cap.
+- `_market_actions`: seed purchase target uses `WHEAT_EARLY_CAP` before day 7.
+- Sell path unchanged — no `price_is_healthy` modification needed.
+
+**Measured results (vs Cycle 14 baseline).**
+
+| metric | Cycle 14 | Cycle 17 | |
+| --- | ---: | ---: | --- |
+| Win rate | 42% (15/35) | **58% (21/35)** | +6 wins |
+| Median bank | $106,684 | **$111,756** | +$5,072 |
+| Min bank | $31,341 | $66,667 | floor up |
+| Strawberry revenue | $50,569 | $51,144 | +$575 ✓ |
+| Milk revenue | $41,821 | $43,202 | +$1,381 ✓ |
+| Melon units/ep | 61.8 | 78.9 | +17.1 |
+| Wheat purchases | $10,831 | $9,287 | −$1,544 |
+| **Herd complete day** | 16 | **13** | **−3 days** |
+| Peak wheat tiles | 6.0 | 20.0 | cap hit |
+| Unharvested | $21 | $27 | clean |
+| Peak weeds | 5 | 5 | clean |
+
+**New wins (6):** 90531348, 90538071, 90542761, 90546640, 90595197, 90595865.
+**Lost wins (0):** none — all 15 C14 wins retained.
+
+**Why this worked.**  Early wheat self-production saves $1,544/ep on wheat market
+purchases, freeing cash earlier.  With more cash available by day 7, cows complete on
+day 13 instead of 16 — 3 extra days of milk + wool = +$1,826 in premium animal products.
+Strawberry is UP (harvested wheat tiles get immediately replanted from day 7); melon is UP
+too (the same early cash enables earlier melon seed purchases).
+
+**Remaining closest losses (targets for next cycle):**
+- replay_90616307: gap $636 ← most flippable
+- replay_90548189: gap $941
+- replay_90541180: gap $3,080
+
+**Unit tests: 37/37 pass.**

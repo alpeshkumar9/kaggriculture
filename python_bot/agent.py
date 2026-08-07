@@ -30,6 +30,12 @@ MAX_SEED_PURCHASE = 12
 # Keeping this well below the workload ceiling (60 crop tiles at 14 hands) is what
 # prevents the weed-cap liveness failure seen in Cycle 13.
 WHEAT_TILE_CAP = 6
+# W7 (correct interpretation): before STRAWBERRY_PRIORITY_DAY, front-load wheat
+# to fill the field, generating early cash and seeding the strawberry transition.
+# Phi ($186k) shows peak WHEAT=39 — almost certainly early tiles, not late fill-in.
+# Workers plant wheat → tiles harvest day 5-9 → strawberry planted on empty tiles
+# from day 7.  No competition with live premium-crop harvests.
+WHEAT_EARLY_CAP = 20
 # The fourth quadrant costs $4k with too little remaining season to recover
 # its labour and weed-management cost.  The proven high-output replay uses
 # three quadrants, so expansion stops after NE and SW.
@@ -449,7 +455,8 @@ def _market_actions(
             "STRAWBERRY": strawberry_target,
             "TOMATO": TOMATO_TARGET,
             "MELON": melon_target,
-            "WHEAT": WHEAT_TILE_CAP,
+            # W7: buy seeds for the early-cap before strawberry priority day.
+            "WHEAT": WHEAT_EARLY_CAP if day < STRAWBERRY_PRIORITY_DAY else WHEAT_TILE_CAP,
         }.get(crop, SEED_BUFFER)
         target_seed_count = max(0, base_target - current_crop_counts.get(crop, 0))
     crop_seed_count = int(private.get("seeds", {}).get(crop, 0))
@@ -530,7 +537,9 @@ def _next_crop(
         isinstance(tile, dict) and tile.get("kind") == "PLANT" and tile.get("crop") == "WHEAT"
         for row in tiles for tile in row
     )
-    if wheat < WHEAT_TILE_CAP:
+    # W7: use larger early cap before premium season; feed-only cap from day 7 onward.
+    wheat_cap = WHEAT_EARLY_CAP if day < strawberry_priority_day else WHEAT_TILE_CAP
+    if wheat < wheat_cap:
         return "WHEAT"
 
     return None
@@ -717,13 +726,15 @@ def _available_crop(
     if 4 <= day <= 21 and seed_budget.get("TOMATO", 0) > 0:
         return "TOMATO"
     # Wheat only up to the feed-sized tile cap — no uncapped fallback.
+    # W7: use the early cap before strawberry priority day.
     # Carrot is removed: it realises below base, opponents plant none (D3), and
     # every tile it occupies is a tile that cannot clear weeds or grow strawberry.
     current_wheat = sum(
         isinstance(t, dict) and t.get("kind") == "PLANT" and t.get("crop") == "WHEAT"
         for row in tiles for t in row
     )
-    if current_wheat < WHEAT_TILE_CAP and seed_budget.get("WHEAT", 0) > 0:
+    wheat_cap = WHEAT_EARLY_CAP if day < STRAWBERRY_PRIORITY_DAY else WHEAT_TILE_CAP
+    if current_wheat < wheat_cap and seed_budget.get("WHEAT", 0) > 0:
         return "WHEAT"
     return None
 
