@@ -18,9 +18,13 @@ from run_official_tournament import replay_roster_entries, resolve_opponent  # n
 class ReplayOpponentTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+
+        from build_replay_opponents import ensure_opponents_synced
+        ensure_opponents_synced()
         cls.profiles = json.loads(
             (OPPONENT_DIR / "profiles.json").read_text(encoding="utf-8")
         )
+
 
     def test_every_full_log_has_one_replay_opponent(self):
         full_logs = {
@@ -49,6 +53,17 @@ class ReplayOpponentTests(unittest.TestCase):
     def test_weak_builtin_name_is_not_resolved(self):
         with self.assertRaises(ValueError):
             resolve_opponent("unsupported-builtin", lambda observation, configuration=None: {})
+
+    def test_dynamic_opponent_resolution(self):
+        # Resolve a dummy/virtual path that doesn't exist on disk
+        ghost_path = str(OPPONENT_DIR / "replay_89978502.py")
+        # Ensure we delete the generated file if it existed
+        if Path(ghost_path).exists():
+            Path(ghost_path).unlink()
+        
+        agent_fn = resolve_opponent(ghost_path, lambda observation, configuration=None: {})
+        self.assertTrue(callable(agent_fn))
+
 
 
 if __name__ == "__main__":

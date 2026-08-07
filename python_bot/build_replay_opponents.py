@@ -174,17 +174,56 @@ def profile_replay(path):
     }
 
 
-def main():
+def ensure_opponents_synced(force=False) -> bool:
+    """Check if profiles.json and ghost_actions.json are up-to-date with logs/, and rebuild if not.
+    
+    Returns:
+        bool: True if rebuild occurred, False otherwise.
+    """
     root = Path(__file__).resolve().parents[1]
     log_dir = root / "logs"
     output_dir = Path(__file__).resolve().parent / "opponents"
+    
+    profiles_path = output_dir / "profiles.json"
+    ghost_actions_path = output_dir / "ghost_actions.json"
+    
+    log_files = sorted(log_dir.glob("*.json"))
+    log_stems = {path.stem for path in log_files if "-" not in path.stem}
+    
+    # Check if we need to sync
+    needs_sync = force or not profiles_path.exists() or not ghost_actions_path.exists()
+    
+    if not needs_sync:
+        try:
+            profiles = json.loads(profiles_path.read_text(encoding="utf-8"))
+            # Check if any new logs are missing, or deleted logs are present in profiles
+            if set(profiles.keys()) != log_stems:
+                needs_sync = True
+            else:
+                # Also check modification times
+                profiles_mtime = profiles_path.stat().st_mtime
+                for path in log_files:
+                    if "-" in path.stem:
+                        continue
+                    if path.stat().st_mtime > profiles_mtime:
+                        needs_sync = True
+                        break
+        except Exception:
+            needs_sync = True
+            
+    if not needs_sync:
+        return False
+        
     output_dir.mkdir(parents=True, exist_ok=True)
     profiles = {}
     ghost_actions = {}
-    for path in sorted(log_dir.glob("*.json")):
+    for path in log_files:
         if "-" in path.stem:
             continue
-        replay = json.loads(path.read_text(encoding="utf-8"))
+        try:
+            replay = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
         if not isinstance(replay, dict) or not replay.get("steps"):
             continue
         profile = profile_replay(path)
@@ -195,31 +234,21 @@ def main():
             (step[seat].get("action") or {"farmer": ["PASS"], "hands": [], "market": []})
             for step in replay["steps"]
         ]
-        ghost_wrapper = (
-            f'"""Exact action ghost from Kaggle replay {episode_id}."""\n\n'
-            f"from _ghost import build_ghost_agent\n\n\n"
-            f'agent = build_ghost_agent("{episode_id}")\n'
-        )
-        profile_wrapper = (
-            f'"""Cross-seed approximation learned from Kaggle replay {episode_id}."""\n\n'
-            f"from _profile import build_replay_agent\n\n\n"
-            f'agent = build_replay_agent("{episode_id}")\n'
-        )
-        (output_dir / f"replay_{episode_id}.py").write_text(ghost_wrapper, encoding="utf-8")
-        (output_dir / f"profile_{episode_id}.py").write_text(profile_wrapper, encoding="utf-8")
-    (output_dir / "profiles.json").write_text(
+        
+    profiles_path.write_text(
         json.dumps(profiles, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
-    (output_dir / "ghost_actions.json").write_text(
+    ghost_actions_path.write_text(
         json.dumps(ghost_actions, separators=(",", ":")) + "\n", encoding="utf-8"
     )
-    expected = set(profiles)
-    for pattern in ("replay_*.py", "profile_*.py"):
-        for generated in output_dir.glob(pattern):
-            if generated.stem.split("_", 1)[1] not in expected:
-                generated.unlink()
-    print(f"Built {len(profiles)} replay opponents in {output_dir}")
+    print(f"Synced {len(profiles)} replay opponents in {output_dir}")
+    return True
+
+
+def main():
+    ensure_opponents_synced(force=True)
 
 
 if __name__ == "__main__":
     main()
+

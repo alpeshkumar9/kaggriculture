@@ -122,10 +122,22 @@ def resolve_opponent(spec: str, candidate: Agent) -> Any:
     if spec == "self":
         return candidate
     if spec.endswith(".py"):
-        return load_agent(Path(spec))
+        path = Path(spec)
+        if not path.is_file():
+            name = path.stem
+            if name.startswith("replay_") or name.startswith("profile_"):
+                episode_id = name.split("_", 1)[1]
+                if name.startswith("replay_"):
+                    from opponents._ghost import build_ghost_agent
+                    return build_ghost_agent(episode_id)
+                elif name.startswith("profile_"):
+                    from opponents._profile import build_replay_agent
+                    return build_replay_agent(episode_id)
+        return load_agent(path)
     raise ValueError(
         f"Unsupported opponent {spec!r}; use 'self', '{ROSTER_TOKEN}', or an agent .py path"
     )
+
 
 
 def replay_roster_entries() -> tuple[tuple[str, int, bool], ...]:
@@ -574,7 +586,13 @@ def main() -> int:
         removed = clean_generated_replays()
         if removed:
             print(f"Removed {len(removed)} superseded raw replay directories.")
+    
+    # Auto-sync opponent profiles/ghost actions
+    from build_replay_opponents import ensure_opponents_synced
+    ensure_opponents_synced()
+
     load_agent(args.agent)  # fail fast on a broken candidate
+
     seeds = _seeds_from_args(args)
     requested = tuple(o.strip() for o in args.opponents.split(",") if o.strip())
     use_replay_roster = ROSTER_TOKEN in requested
