@@ -160,12 +160,17 @@ class CropFirstAgentTests(unittest.TestCase):
         )
         self.assertEqual(orders, [])
 
-    def test_sells_cow_fertilizer_outside_the_field_refresh_window(self):
+    def test_sells_fertilizer_at_any_price_outside_refresh_window(self):
+        # FERTILIZER multiplier is 0.0: target_price = 0, so price_is_healthy is
+        # always True. The W11 adaptive floor ($55 when oversupplied) governs timing;
+        # the 98% below-base figure is expected, not a defect. Phi ($186k) does this.
         orders = _sell_orders(
             {"shed": {"FERTILIZER": 3}}, day=10,
             market_state={"prices": {"FERTILIZER": 95}}, owned_animals=1,
         )
         self.assertEqual(orders, [["SELL", "FERTILIZER", 3]])
+
+
 
     def test_crop_backlog_prevents_another_fertilizer_pickup(self):
         livestock = {

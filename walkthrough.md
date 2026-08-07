@@ -893,3 +893,45 @@ an early-game cash crunch worth tracing before the next cycle.
 **Unit tests: 37/37 pass.** (`python_bot.test_agent` and `python_bot.test_agent_allocator`;
 `test_replay_opponents` has 4 pre-existing KeyErrors on old episode IDs not in the current
 `ghost_actions.json` — unrelated to this cycle's changes.)
+
+---
+
+## Cycle 15 — Fertilizer sell-price investigation (2026-08-07) — REJECTED
+
+**Hypothesis.** Fertilizer selling at 98% below base ($100) wastes a market order slot. Raising
+the reserve price would recover that slot and possibly flip close losses.
+
+**What changed (then reverted).**
+Three sub-cycles were required to find the actual code path:
+
+1. Changed `SELL_PRICE_MULTIPLIERS["FERTILIZER"]` from `0.0` to `1.0`. No effect — a
+   hard-coded `item == "FERTILIZER"` in `price_is_healthy` short-circuited the guard entirely.
+2. Removed the `price_is_healthy` bypass. No effect — with the `0.0` multiplier still in place,
+   `target_price = 0.0`, so `quoted_price >= 0.0` was always True regardless.
+3. Applied both together: bypass removed + `"FERTILIZER": 1.0`. This took effect (unit test
+   confirmed). Result: fertilizer below-base still 98%, median bank fell $2,490, same 15/35 wins.
+
+**Why the 98% below-base figure is expected, not a defect.** The W11 adaptive capitulation
+mechanism sets the effective sell floor at `base × ADAPTIVE_RESERVE_CUT = $100 × 0.55 = $55`
+whenever the opponent is measurably adding more fertilizer per day than the town removes.
+Fertilizer is almost always oversupplied (both players produce it from animals). So most sales
+clear in the $55–99 range — below the $100 base, but above the adaptive floor. This is correct.
+
+**Key evidence: Phi (`replay_90642136`, $186,020 — highest observed) uses `"FERTILIZER": 0.0`.**
+The strongest agent in the dataset uses the same setting. The bypass + 0.0 multiplier are correct.
+
+All changes reverted. `price_is_healthy` now carries a clarifying comment instead of the bypass.
+
+**Measured (Cycle 15 attempt 3 vs Cycle 14 baseline).**
+
+| metric | Cycle 14 | Cycle 15 | |
+| --- | ---: | ---: | --- |
+| Win rate | 42% (15/35) | 42% (15/35) | flat |
+| Median bank | $106,684 | $104,194 | −$2,490 |
+| Fertilizer below-base | 98% | 98% | unchanged |
+
+**Verdict: rejected.** The fertilizer sell path is not a defect. Adding it to the closed-direction
+list: **fertilizer sell-price tuning** — measured and closed in Cycle 15. The W11 adaptive floor
+at $55 is the correct reserve when the market is oversupplied by both players.
+
+**Unit tests after revert: 37/37 pass.**

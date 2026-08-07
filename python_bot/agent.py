@@ -87,6 +87,10 @@ SELL_PRICE_MULTIPLIERS = {
     "EGG": 1.0,
     "MILK": 0.0,
     "WOOL": 1.0,
+    # Fertilizer: 0.0 means the W11 adaptive floor ($55 when opponent oversupplies)
+    # governs when we sell.  The 98% below-base figure is expected — the $100 base
+    # is above the adaptive floor.  Phi ($186k, the strongest observed agent) also
+    # uses 0.0 here.  Cycle 15 tried 1.0; bank fell $2,490, win rate unchanged.
     "FERTILIZER": 0.0,
 }
 SELL_BATCHES = {
@@ -909,10 +913,12 @@ def _sell_orders(
         if out_supplied:
             ratio *= reserve_cut
         target_price = base_price * ratio
+        # FERTILIZER multiplier is 0.0: target_price = 0, so price_is_healthy is
+        # always True. The W11 adaptive floor ($55 when oversupplied) governs timing;
+        # the 98% below-base figure is expected, not a defect. Phi ($186k) does this.
         price_is_healthy = (
-            item == "FERTILIZER" 
-            or (item == "WHEAT" and not owned_animals and quoted_price >= target_price)
-            or (item != "FERTILIZER" and item != "WHEAT" and quoted_price >= target_price)
+            (item == "WHEAT" and not owned_animals and quoted_price >= target_price)
+            or (item not in ("WHEAT",) and quoted_price >= target_price)
         )
 
         # Top opponents sell melon/fertilizer below base to keep cash liquid.

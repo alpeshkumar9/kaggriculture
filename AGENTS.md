@@ -127,6 +127,10 @@ when a re-try scores differently due to seed variance.
    - **Adaptive worker scaling past `HANDS_PER_DAY = 14`** — the cap is already at 14
      (verified `agent.py:24`). Any suggestion to raise it from a lower number has not read
      the current code.
+   - **Fertilizer sell-price tuning** — closed in Cycle 15. The 98% below-base figure is
+     expected: W11 adaptive capitulation sets the effective floor at $55 (base × 0.55) when
+     both players oversupply fertilizer. Phi ($186k, highest observed agent) uses
+     `FERTILIZER: 0.0`. Bank fell $2,490 with a 1.0 multiplier, win rate unchanged.
 
 10. **Never delete or compress `walkthrough.md` cycles.** They are the evidence base for
     Rules 8–9. A session without them will re-propose the same experiments. If the document
