@@ -114,6 +114,12 @@ when a re-try scores differently due to seed variance.
      fell from 11/17 to 4/17. Note: `LATE_SHEEP_TARGET = 6` exists in the code but has
      **never shipped** — its presence is not evidence it works. Re-opening requires a
      demonstrated feed-loop and placement fix, not just a new target value.
+     **UPDATE (2026-08-07, Cycle 17):** The early-wheat change (`WHEAT_EARLY_CAP = 20`)
+     reduced wheat market purchases from $10,831 → $9,323/ep, which is the mechanistic
+     feed-loop improvement the closure required. KucingGanteng (`replay_90585757`, C19
+     gap $1,656) runs SHEEP=6 and beats our SHEEP=4 baseline in the current meta.
+     A controlled `LATE_SHEEP_TARGET = 6` test under the C19 baseline is a **valid new
+     hypothesis** — it has never been run under the current feed-efficient setup.
    - **Goose / egg expansion (`EARLY_GOOSE_TARGET > 0`)** — rejected in Cycle 1. Measured
      net-negative: ~$6k egg revenue against ~$9k wheat feed cost plus ~30 hand-turns/day.
    - **Fourth land quadrant** — rejected in Cycle 1. Net-negative: more travel overhead and
@@ -140,6 +146,17 @@ when a re-try scores differently due to seed variance.
      The correct W7 to implement is early-season wheat → strawberry conversion, not
      late-season fill. Re-proposing late-season wheat without a new harvest-displacement
      mitigation is not a new hypothesis.
+   - **WHEAT_EARLY_CAP above 20** — closed in Cycle 18. The initial field parcel
+     saturates at ~21 available tiles. Raising to 25 produced only one extra tile (peak
+     21.0 vs 20.0) but caused animal loss (0.06/ep) and milk revenue collapse (below-base
+     15% → 31%). Win rate fell 58% → 47%. `WHEAT_EARLY_CAP = 20` is the field saturation
+     point under the two-parcel `LAND_PLAN`. Changing `LAND_PLAN` would be a prerequisite
+     before raising this cap.
+   - **MELON_TARGET above 15** — closed in Cycle 20. Target=18 achieved 13.7 peak tiles
+     (vs 12.7 at target=15) but cost one win (`replay_90548189`, gap $348). Median bank
+     improved $2,417 but win rate fell 64% → 61%. `MELON_TARGET = 15` (12.7 peak tiles)
+     is the accepted optimum under the current land plan. Re-opening requires demonstrating
+     the extra tile does not displace the Sida Zuo (`90548189`) matchup.
 
 10. **Never delete or compress `walkthrough.md` cycles.** They are the evidence base for
     Rules 8–9. A session without them will re-propose the same experiments. If the document
@@ -150,3 +167,10 @@ when a re-try scores differently due to seed variance.
     lines of `agent.py` with `view_file` before stating what a constant currently is. The
     2026-08-07 session received a proposal to change `HANDS_PER_DAY` from 13 → 14; the file
     already had 14. A one-line check would have caught this before the benchmark was discussed.
+
+12. **Auto-proceed through the benchmark cycle without asking permission.** Once a
+    benchmark fails and the next step is deterministic (revert → record → propose next
+    variant → benchmark), execute it immediately. Do not pause to confirm obvious
+    continuations. Ask the user only when there is genuine ambiguity in direction — e.g.,
+    choosing between two equally plausible new hypotheses, or when a result is surprising
+    enough to warrant human review before proceeding.

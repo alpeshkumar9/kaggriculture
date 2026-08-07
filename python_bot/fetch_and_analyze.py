@@ -373,15 +373,19 @@ def main():
                 if success:
                     print(f"Downloaded episode {ep_id} to logs/{sub_id}/")
                     downloaded_episodes.append(dest)
-                    # Run diagnostic analysis
-                    analysis = analyze_replay(dest)
-                    if analysis:
-                        analyses.append(analysis)
         else:
             print("No new episodes to download.")
 
-    if analyses:
-        print_diagnostic_report(analyses)
+    print("\nAnalyzing all logs in logs/...")
+    all_analyses = []
+    log_files = sorted(logs_dir.glob("**/*.json"), key=os.path.getmtime, reverse=True)
+    for file in log_files:
+        analysis = analyze_replay(file)
+        if analysis:
+            all_analyses.append(analysis)
+
+    if all_analyses:
+        print_diagnostic_report(all_analyses)
         
         # Trigger rebuild of replay opponents
         print("\nRebuilding replay opponents roster...")
@@ -396,7 +400,7 @@ def main():
         else:
             print("Warning: build_replay_opponents.py not found.")
     else:
-        print("No new analysis produced.")
+        print("No logs found to analyze.")
 
 if __name__ == "__main__":
     main()
