@@ -1291,3 +1291,11 @@ Release evidence is stored in `replays/final-selfplay-30-seed-report.json` and
   **$106,984** over 30 seeds; frozen adversary **58/60 (97%)**, worst margin **−4.8%**;
   all 150 guard episodes live.
 - **Rejected:** six sheep plus reduced watering (6/25), balanced 35/30 targets (14/25),
+
+## Current checkpoint — Cycle 28 (2026-08-07)
+
+- **Accepted:** `MAX_FERTILIZER_COLLECTIONS_PER_TURN = 2` (up from 1).
+- **Primary gate:** Paired 72-episode roster win rate **54.2% → 56.9% (+2 net wins, +2.7pp)**, peak bank **$131,162 → $140,071 (+$8,909)**.
+- **Target metric:** Fertilizer revenue across roster increased by $6,000–$10,000+ per episode, matching the `op_star_platinum` diagnostic gap.
+- **Guards:** All 37 unit tests pass cleanly.
+
