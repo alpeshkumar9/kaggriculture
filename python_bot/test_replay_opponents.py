@@ -28,7 +28,7 @@ class ReplayOpponentTests(unittest.TestCase):
 
     def test_every_full_log_has_one_replay_opponent(self):
         full_logs = {
-            path.stem for path in (BOT_DIR.parent / "logs").glob("*.json")
+            path.stem for path in (BOT_DIR.parent / "logs").glob("**/*.json")
             if "-" not in path.stem
         }
         self.assertEqual(set(self.profiles), full_logs)

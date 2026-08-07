@@ -187,7 +187,7 @@ def ensure_opponents_synced(force=False) -> bool:
     profiles_path = output_dir / "profiles.json"
     ghost_actions_path = output_dir / "ghost_actions.json"
     
-    log_files = sorted(log_dir.glob("*.json"))
+    log_files = sorted(log_dir.glob("**/*.json"))
     log_stems = {path.stem for path in log_files if "-" not in path.stem}
     
     # Check if we need to sync

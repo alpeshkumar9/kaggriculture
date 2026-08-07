@@ -37,3 +37,4 @@ yarn-error.log*
 
 # Submission bundle (regenerate with package_submission.py)
 python_bot/submission.tar.gz
+.env
