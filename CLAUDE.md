@@ -55,11 +55,24 @@ Last recorded checkpoint (Cycle 11, `implementation_plan.md`, 2026-08-06): roste
 15/25 (60%), median bank $104,344; head-to-head vs the previous artifact 36/60 (60%);
 self-play median $106,984; frozen-adversary guard 58/60 (97%). The roster was since
 regenerated (commit `c0b5a0b`) and grew to 79 opponents; the 31/79 (39%) figure recorded
-right after that regeneration is now itself stale. **Current verified baseline (2026-08-07,
+right after that regeneration is now itself stale. **Current verified baseline (2026-08-08,
 `agent.py` at this commit, deterministic — the roster replays real recorded actions, so
-reruns reproduce it exactly): 27/79 (34%).** Re-measure with
-`run_official_tournament.py` before trusting any older number in this file, and update this
-line when it moves.
+reruns reproduce it exactly): roster 27/79 (34%); paired head-to-head vs the pre-fix
+artifact 62/120 (52%, n=120 — a smaller n=60 run initially read as a 45% regression, which
+was noise, not signal; always re-run at n≥60 before trusting a G2 read near the boundary).**
+Re-measure with `run_official_tournament.py` before trusting any older number in this file,
+and update this line when it moves.
+
+Landed fix (2026-08-08): `_market_actions`' payroll-reserve calculation was reserving cash
+for the *entire* day's hiring cost from index 0 (`HIRE_COSTS[:desired_hands]`) even though
+hands already hired that day (via `hires_today` and the current turn's HIRE loop) were
+already paid for out of `money` — double-reserving and starving `BUY_SEED` orders. Fixed to
+reserve only the unhired remainder (`HIRE_COSTS[hired_through:desired_hands]`). Found via
+turn-by-turn tracing of a real lost roster game (`replay_90462373`): candidate money was
+stuck near $0–90 for days 5–11 while workers spent 30–46% of their turns on `PASS` because
+no seeds were affordable, while the opponent front-loaded a seed purchase on day 0 and paced
+hiring more conservatively. Verify with `--seed-count 60` or higher before trusting any G2
+read on future changes to this function — it is noisy at n=60 (30 seed-pairs).
 
 **Self-play bank (G1) is a capability tracker, not a gate.** Currently ~$80k. Do not accept
 or reject a change on G1 alone. Self-play is a *mirror match* — the opponent is a copy of the

@@ -293,12 +293,14 @@ def _market_actions(
     if day >= final_day:
         desired_hands = min(HANDS_PER_DAY, desired_hands + 1)
     hires_today = int(farm.get("hires_today", 0))
+    hired_through = hires_today
     for hire_index in range(hires_today, desired_hands):
         hire_cost = HIRE_COSTS[hire_index] * episode["farm_hand_cost_mult"]
         if money < hire_cost:
             break
         market.append(["HIRE"])
         money -= hire_cost
+        hired_through = hire_index + 1
 
     # Premium markets punish a large glut.  Sell only when the visible price
     # has recovered to at least base, except when capacity or season-end makes
@@ -411,7 +413,7 @@ def _market_actions(
     }.get(crop, SEED_BUFFER)
     crop_seed_count = int(private.get("seeds", {}).get(crop, 0))
     payroll_reserve = 0 if day >= final_day else (
-        sum(HIRE_COSTS[:desired_hands]) * episode["farm_hand_cost_mult"]
+        sum(HIRE_COSTS[hired_through:desired_hands]) * episode["farm_hand_cost_mult"]
     )
     spendable = max(0, money - payroll_reserve)
     if day < last_planting_day and crop_seed_count < min(open_tiles, target_seed_count) and spendable >= CROPS[crop]["cost"]:
