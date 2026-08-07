@@ -57,6 +57,11 @@ SHEEP_PURCHASE_END_DAY = 14
 STRAWBERRY_TARGET = 40
 TOMATO_TARGET = 0
 MELON_TARGET = 18
+# Melons become plantable four days before strawberries. Left uncapped, an
+# early cash-rich stretch fills tiles with melon before the strawberry
+# window opens, leaving too little open land once it does. Reserve part of
+# the melon target until strawberries are eligible.
+EARLY_MELON_TARGET = 8
 SHED_CAPACITY = 100
 WHEAT_RESERVE_DAYS = 3
 CROP_WORKLOAD_PER_WORKER = 6
@@ -483,7 +488,8 @@ def _next_crop(
     # flooding its extremely glut-sensitive market.
     if strawberry_priority_day <= day <= 16 and strawberries < strawberry_target:
         return "STRAWBERRY"
-    if 4 <= day <= 16 and melons < melon_target:
+    melon_cap = melon_target if day >= strawberry_priority_day else min(melon_target, EARLY_MELON_TARGET)
+    if 4 <= day <= 16 and melons < melon_cap:
         return "MELON"
     tomatoes = sum(
         isinstance(tile, dict) and tile.get("kind") == "PLANT" and tile.get("crop") == "TOMATO"
