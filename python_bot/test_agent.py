@@ -84,19 +84,19 @@ class CropFirstAgentTests(unittest.TestCase):
         plan = _premium_crop_plan(
             {"unlocked_shops": ["PIZZA_SHOP", "ICE_CREAM_SHOP"]}
         )
-        self.assertEqual(plan, (7, 42, 12, 6))
+        self.assertEqual(plan, (7, 42, 15, 6))
 
     def test_non_pizza_strawberry_demand_advances_priority(self):
         plan = _premium_crop_plan(
             {"unlocked_shops": ["FARMERS_MARKET", "PIZZA_SHOP"]}
         )
-        self.assertEqual(plan, (7, 42, 12, 6))
+        self.assertEqual(plan, (7, 42, 15, 6))
 
     def test_non_pizza_without_strawberry_demand_keeps_default_plan(self):
         plan = _premium_crop_plan(
             {"unlocked_shops": ["BAKERY", "YARN_STORE"]}
         )
-        self.assertEqual(plan, (7, 42, 12, 6))
+        self.assertEqual(plan, (7, 42, 15, 6))
 
     def test_plants_available_seed_on_empty_tile(self):
         # Carrot was removed from the rotation (realises below base; see D3).

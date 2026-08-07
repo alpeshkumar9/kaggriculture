@@ -35,7 +35,7 @@ WHEAT_TILE_CAP = 6
 # Phi ($186k) shows peak WHEAT=39 — almost certainly early tiles, not late fill-in.
 # Workers plant wheat → tiles harvest day 5-9 → strawberry planted on empty tiles
 # from day 7.  No competition with live premium-crop harvests.
-WHEAT_EARLY_CAP = 20
+WHEAT_EARLY_CAP = 20  # field max ~21 tiles; cap=25 (C18) caused animal loss, rejected
 # The fourth quadrant costs $4k with too little remaining season to recover
 # its labour and weed-management cost.  The proven high-output replay uses
 # three quadrants, so expansion stops after NE and SW.
@@ -67,7 +67,7 @@ SHEEP_PURCHASE_START_DAY = 0
 SHEEP_PURCHASE_END_DAY = 20
 STRAWBERRY_TARGET = 42
 TOMATO_TARGET = 0
-MELON_TARGET = 12
+MELON_TARGET = 15  # C19 accepted: 12.7 peak tiles; target=18 (C20) cost a win, rejected
 SHED_CAPACITY = 100
 WHEAT_RESERVE_DAYS = 2
 CROP_WORKLOAD_PER_WORKER = 6

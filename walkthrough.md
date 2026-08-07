@@ -1027,3 +1027,49 @@ too (the same early cash enables earlier melon seed purchases).
 - replay_90541180: gap $3,080
 
 **Unit tests: 37/37 pass.**
+
+---
+
+## Cycle 18 — WHEAT_EARLY_CAP=25 (2026-08-07) — REJECTED
+
+**Hypothesis.** Cap was binding at exactly 20.0 tiles — more tiles available. Raise to 25.
+
+**Result.** Field max is ~21 tiles (cap=25 yielded peak 21.0). The single extra tile caused
+animal loss (0.06/ep) and milk revenue collapsed ($43,202→$37,717, below-base 15%→31%).
+Win rate fell from 58% (21/35) to 47% (17/35), median bank dropped $10,964.
+
+**Verdict:** rejected. WHEAT_EARLY_CAP=20 is the field saturation point. Direction closed.
+
+---
+
+## Cycle 19 — MELON_TARGET=15 (2026-08-07) — **ACCEPTED**
+
+**Hypothesis.** C17 early wheat freed cash → herd complete day 13 → more melon seeds
+affordable. shoaib khan (90616307, C17 gap $636) runs 19 melon tiles. Each extra melon
+tile ≈ $1,840/ep (2 cycles × 4 units × $230 realised). Raised from 12 → 15.
+
+**What changed.**
+- `MELON_TARGET = 15` (from 12). Tests updated to `(7, 42, 15, 6)`.
+
+**Results (vs Cycle 17 baseline).**
+
+| metric | C17 | C19 | |
+| --- | ---: | ---: | --- |
+| Win rate | 58% (21/35) | **64% (23/35)** | +2 wins |
+| Median bank | $111,756 | $111,546 | −$210 (flat) |
+| Peak melon tiles | 11.0 | **12.7** | +1.7 tiles |
+| Melon revenue | $18,154 | **$19,637** | +$1,483 |
+| replay_90616307 | loss ($636 gap) | **WIN** $109,714 vs $102,188 | flipped ✓ |
+| replay_90548189 | loss ($941 gap) | **WIN** $123,033 vs $120,631 | flipped ✓ |
+| Lost wins | 0 | 0 | clean |
+| Peak weeds | 5 | **4** | improved |
+
+Peak melon tiles 12.7 at target 15 — field or seed timing constrains us below target.
+Raising to 18 is the next step to see if actual tiles can reach 13-14.
+
+**Remaining closest losses:**
+- replay_90535815: gap $166 (seed noise — George Byne STRW=35 vs our 42)
+- replay_90585757: gap $1,656 (KucingGanteng — structural twin with SHEEP=6 vs our 4)
+- replay_90541180: gap $3,190 (victor souza — STRW=50)
+
+**Unit tests: 37/37 pass.**
