@@ -56,10 +56,34 @@ python3 build_replay_opponents.py
 python3 run_official_tournament.py --agent agent.py --report ../replays/replay-ghost-roster-report.json
 ```
 
-The builder also creates `profile_<episode>.py` cross-seed approximations. These
+The builder also derives `profile_<episode>` cross-seed approximations (resolved
+on demand from `opponents/profiles.json`, no per-episode file needed). These
 are useful for fuzzing unfamiliar seeds, but the exact replay ghosts are the
 primary fidelity test. Add new full replay JSON files to `logs/` and rerun the
-builder to extend both sets.
+builder to extend both sets. `run_official_tournament.py` also rebuilds the
+roster automatically whenever `logs/` is newer than `opponents/profiles.json`.
+
+#### Fetching new replays from Kaggle
+
+`fetch_and_analyze.py` downloads new episodes for a submission ID via the
+Kaggle API, writes a diagnostic markdown report (`../match_diagnostic_report.md`)
+comparing our play to each opponent, and rebuilds the roster above:
+
+```bash
+python3 fetch_and_analyze.py --submission-id <id>       # one submission
+python3 fetch_and_analyze.py                             # uses config_submissions.json, or the latest submission if that's absent
+python3 fetch_and_analyze.py --dry-run                   # re-analyze logs/ without hitting the network
+```
+
+Track recurring submission IDs (e.g. as new ones appear on the leaderboard) in
+`config_submissions.json`:
+
+```json
+{"submission_ids": [55291696]}
+```
+
+Requires Kaggle API credentials in `~/.kaggle/kaggle.json` or the
+`KAGGLE_USERNAME`/`KAGGLE_KEY` environment variables.
 
 The current 25-opponent exact roster is deliberately difficult: `agent.py` wins
 15/25 source matches (60%). Opponent

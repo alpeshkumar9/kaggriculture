@@ -174,16 +174,39 @@ def profile_replay(path):
     }
 
 
-def main():
+def ensure_opponents_synced(force=False) -> bool:
+    """Rebuild the replay-derived opponent roster from ``logs/`` if it is stale.
+
+    Compares ``logs/*.json`` (excluding sub-episode files with a ``-`` in the
+    stem) against ``opponents/profiles.json`` by key set and mtime so repeat
+    calls -- e.g. once per tournament run -- are cheap when nothing changed.
+
+    Returns:
+        bool: True if a rebuild happened, False if the roster was already current.
+    """
     root = Path(__file__).resolve().parents[1]
     log_dir = root / "logs"
     output_dir = Path(__file__).resolve().parent / "opponents"
+    profiles_path = output_dir / "profiles.json"
+    ghost_actions_path = output_dir / "ghost_actions.json"
+
+    log_files = sorted(path for path in log_dir.glob("*.json") if "-" not in path.stem)
+    log_stems = {path.stem for path in log_files}
+
+    if not force and profiles_path.exists() and ghost_actions_path.exists():
+        try:
+            existing_profiles = json.loads(profiles_path.read_text(encoding="utf-8"))
+        except Exception:
+            existing_profiles = None
+        if existing_profiles is not None and set(existing_profiles) == log_stems:
+            profiles_mtime = profiles_path.stat().st_mtime
+            if all(path.stat().st_mtime <= profiles_mtime for path in log_files):
+                return False
+
     output_dir.mkdir(parents=True, exist_ok=True)
     profiles = {}
     ghost_actions = {}
-    for path in sorted(log_dir.glob("*.json")):
-        if "-" in path.stem:
-            continue
+    for path in log_files:
         replay = json.loads(path.read_text(encoding="utf-8"))
         if not isinstance(replay, dict) or not replay.get("steps"):
             continue
@@ -195,30 +218,21 @@ def main():
             (step[seat].get("action") or {"farmer": ["PASS"], "hands": [], "market": []})
             for step in replay["steps"]
         ]
-        ghost_wrapper = (
-            f'"""Exact action ghost from Kaggle replay {episode_id}."""\n\n'
-            f"from _ghost import build_ghost_agent\n\n\n"
-            f'agent = build_ghost_agent("{episode_id}")\n'
-        )
-        profile_wrapper = (
-            f'"""Cross-seed approximation learned from Kaggle replay {episode_id}."""\n\n'
-            f"from _profile import build_replay_agent\n\n\n"
-            f'agent = build_replay_agent("{episode_id}")\n'
-        )
-        (output_dir / f"replay_{episode_id}.py").write_text(ghost_wrapper, encoding="utf-8")
-        (output_dir / f"profile_{episode_id}.py").write_text(profile_wrapper, encoding="utf-8")
-    (output_dir / "profiles.json").write_text(
+    # Opponents are resolved by episode ID against profiles.json/ghost_actions.json
+    # (see run_official_tournament.resolve_opponent and opponents/_profile.py,
+    # opponents/_ghost.py) -- no per-episode wrapper .py file needs to exist.
+    profiles_path.write_text(
         json.dumps(profiles, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
-    (output_dir / "ghost_actions.json").write_text(
+    ghost_actions_path.write_text(
         json.dumps(ghost_actions, separators=(",", ":")) + "\n", encoding="utf-8"
     )
-    expected = set(profiles)
-    for pattern in ("replay_*.py", "profile_*.py"):
-        for generated in output_dir.glob(pattern):
-            if generated.stem.split("_", 1)[1] not in expected:
-                generated.unlink()
     print(f"Built {len(profiles)} replay opponents in {output_dir}")
+    return True
+
+
+def main():
+    ensure_opponents_synced(force=True)
 
 
 if __name__ == "__main__":

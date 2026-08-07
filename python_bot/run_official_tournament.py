@@ -118,11 +118,23 @@ def load_agent(path: Path) -> Agent:
 
 
 def resolve_opponent(spec: str, candidate: Agent) -> Any:
-    """Resolve self-play or an explicit local agent; weak built-ins are excluded."""
+    """Resolve self-play, a replay-roster entry, or an explicit local agent."""
     if spec == "self":
         return candidate
     if spec.endswith(".py"):
-        return load_agent(Path(spec))
+        path = Path(spec)
+        if not path.is_file():
+            # Roster entries name a profiles.json episode ID rather than a real
+            # file on disk (see replay_roster_entries()); dispatch straight to
+            # the ghost/profile builders instead of requiring a wrapper file.
+            name = path.stem
+            if name.startswith("replay_"):
+                from opponents._ghost import build_ghost_agent
+                return build_ghost_agent(name.split("_", 1)[1])
+            if name.startswith("profile_"):
+                from opponents._profile import build_replay_agent
+                return build_replay_agent(name.split("_", 1)[1])
+        return load_agent(path)
     raise ValueError(
         f"Unsupported opponent {spec!r}; use 'self', '{ROSTER_TOKEN}', or an agent .py path"
     )
@@ -602,6 +614,10 @@ def main() -> int:
                 jobs.append((str(args.agent), opponent, seed, args.turns, swapped, replay_dir))
                 job_tiers.append(tier)
     if use_replay_roster:
+        from build_replay_opponents import ensure_opponents_synced
+
+        if ensure_opponents_synced():
+            print("Replay opponent roster was stale; rebuilt from logs/.")
         for opponent, source_seed, swapped in replay_roster_entries():
             jobs.append(
                 (str(args.agent), opponent, source_seed, args.turns, swapped, replay_dir)
