@@ -784,3 +784,14 @@ Rejected follow-ups were a 35/30 balanced portfolio (14/25), a visible-opponent 
 ## Removal of the Adversary Test (2026-08-06)
 
 **What was changed.** The Adversarial "Dumper" test was retired from the testing framework as it was no longer driving agent improvements. The `--adversary` CLI argument and the `G0`/`G3` evaluation metrics were removed from `python_bot/run_official_tournament.py` and the `implementation_plan.md` goals table. The `opponent_dumper.py` file was renamed to `opponent_base.py` and repurposed strictly as the baseline structure for the replay ghosts.
+
+## Cycle 13 — Roster Update and Benchmark (2026-08-06)
+
+**What was changed.** 10 new Kaggle replay logs were parsed to expand the opponent roster to 35 total profiles.
+
+**Measured, all against the expanded 35-opponent roster.**
+* **Win rate:** 29% (10 wins, 25 losses)
+* **Median Bank:** $94,679 (min $49,911, max $126,682)
+* **Liveness:** Failed on seed `663784208` against `replay_90386123` with 12 weed tiles (limit is 10)
+
+The agent lost every single match against the 10 newly introduced replay opponents, pulling the overall win rate down to 29%.

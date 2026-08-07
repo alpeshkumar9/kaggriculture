@@ -74,7 +74,7 @@ class CropFirstAgentTests(unittest.TestCase):
 
     def test_configured_shed_capacity_controls_overflow_sale(self):
         orders = _sell_orders(
-            {"shed": {"CARROT": 40}, "inventories": [{"MELON": 10}]},
+            {"shed": {"CARROT": 50}, "inventories": []},
             day=18, market_state={"prices": {"CARROT": 1}},
             shed_capacity=45,
         )
@@ -84,19 +84,19 @@ class CropFirstAgentTests(unittest.TestCase):
         plan = _premium_crop_plan(
             {"unlocked_shops": ["PIZZA_SHOP", "ICE_CREAM_SHOP"]}
         )
-        self.assertEqual(plan, (10, 40, 19, 5))
+        self.assertEqual(plan, (7, 42, 12, 6))
 
     def test_non_pizza_strawberry_demand_advances_priority(self):
         plan = _premium_crop_plan(
             {"unlocked_shops": ["FARMERS_MARKET", "PIZZA_SHOP"]}
         )
-        self.assertEqual(plan, (8, 40, 18, 6))
+        self.assertEqual(plan, (7, 42, 12, 6))
 
     def test_non_pizza_without_strawberry_demand_keeps_default_plan(self):
         plan = _premium_crop_plan(
             {"unlocked_shops": ["BAKERY", "YARN_STORE"]}
         )
-        self.assertEqual(plan, (10, 40, 18, 6))
+        self.assertEqual(plan, (7, 42, 12, 6))
 
     def test_plants_available_seed_on_empty_tile(self):
         action = agent(observation(None, {"CARROT": 1}))
@@ -133,23 +133,14 @@ class CropFirstAgentTests(unittest.TestCase):
         )
         self.assertEqual(orders, [["SELL", "STRAWBERRY", 8]])
 
-    def test_retains_three_feed_days_of_wheat_for_each_cow(self):
+    def test_retains_wheat_reserve_for_animals(self):
         orders = _sell_orders(
             {"shed": {"WHEAT": 12}}, day=12,
-            market_state={"prices": {"WHEAT": 40}}, owned_cows=4,
+            market_state={"prices": {"WHEAT": 40}}, owned_animals=4,
         )
         self.assertEqual(orders, [])
 
-    def test_sells_shed_stock_to_make_room_for_incoming_worker_cargo(self):
-        orders = _sell_orders(
-            {
-                "shed": {"CARROT": 70, "FERTILIZER": 10},
-                "inventories": [{"MELON": 30}],
-            },
-            day=18,
-            market_state={"prices": {"CARROT": 1}},
-        )
-        self.assertEqual(orders, [["SELL", "CARROT", 10]])
+
 
     def test_sells_shed_stock_before_a_projected_same_turn_harvest(self):
         orders = _sell_orders(
@@ -170,7 +161,7 @@ class CropFirstAgentTests(unittest.TestCase):
     def test_sells_cow_fertilizer_outside_the_field_refresh_window(self):
         orders = _sell_orders(
             {"shed": {"FERTILIZER": 3}}, day=10,
-            market_state={"prices": {"FERTILIZER": 95}}, owned_cows=1,
+            market_state={"prices": {"FERTILIZER": 95}}, owned_animals=1,
         )
         self.assertEqual(orders, [["SELL", "FERTILIZER", 3]])
 

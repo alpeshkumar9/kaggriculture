@@ -1,3 +1,46 @@
+# Liveness Failure Fix & Cycle 14 Strategy Improvements
+
+This cycle addresses two critical issues observed in the tournament benchmark against the new 35-opponent roster:
+1. **Liveness Gate Failure**: The agent fails the weed cap limit (e.g. 12 weeds on/before day 25) against opponents like `replay_90386123`.
+2. **Win Rate Collapse**: The agent win rate dropped to 29% because of extreme overplanting, starving the weed/care loops, and missing the high-value wool market early in the game.
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Key Finding**: The farm is being massively over-subscribed. The agent currently plants ~92 crops with only 14 workers (who also care for 9 animals). The `_next_crop` function defaults to endlessly planting WHEAT/CARROT in every open tile until the worker workload is entirely overwhelmed. This causes workers to constantly perform priority 1 (water) and 0 (harvest) tasks in their assigned regions, never having spare time to clear priority -1 (weeds) in other regions or handle weed blooms.
+>
+> We will implement **W1 (Front-load sheep/cow mix)**, **W2 (Fix distressed sale bypass)**, and **W3/W4 (Eliminate CARROT and cap WHEAT to feed requirements)** from the legacy plan to fix this.
+
+## Open Questions
+
+- We plan to limit WHEAT tiles to exactly what is needed to feed the target herd (e.g., `(cows + sheep) * feed_rate`) to avoid over-planting. Since wheat yields ~4.6 units per tile over 4 days (slightly more than 1 unit/day), we will cap WHEAT seeds based on this ratio. Does this match your expectations for W4?
+
+## Proposed Changes
+
+### `python_bot/agent.py`
+
+#### [MODIFY] [agent.py](file:///Volumes/Important/Office/White%20Way%20Web/Github/kaggriculture/python_bot/agent.py)
+- **Implement W3/W4 (Crop Workload Cap & Wheat Fix)**: 
+  - Update `_next_crop` to return `None` (leave tile empty) rather than falling back to WHEAT/CARROT endlessly. 
+  - Completely remove CARROT from the fallback logic. 
+  - Size WHEAT purchases dynamically based on total animals to sustain feed demand without flooding the board.
+- **Implement W1 (Early Sheep & Herd Mix)**:
+  - Remove the `day <= 20` and `cows_ordered` blockers from the animal purchase logic.
+  - Set both Cow and Sheep targets to buy starting from Day 0 up to their respective limits (8 cows, 6 sheep).
+  - Ensure `WHEAT_RESERVE_DAYS` counts all owned animals (cows and sheep).
+- **Implement W2 (Fix distressed sale bypass)**:
+  - In `_sell_orders`, remove `incoming_stock` from the `overflow` calculation so that the shed properly acts as a price buffer for Melons rather than constantly triggering panic sales. 
+  - Add a hard price floor to prevent selling Melons/Wool significantly below base before the final liquidation day.
+
+## Verification Plan
+
+### Automated Tests
+- Run `python3 -m unittest python_bot/test_agent.py` to ensure logic is structurally sound.
+- Run `python3 python_bot/run_official_tournament.py --agent python_bot/agent.py --opponents python_bot/opponents/replay_90386123.py --seeds 663784208` to verify that the agent passes the weed liveness gate.
+- Run the full 35-opponent tournament `python3 python_bot/run_official_tournament.py --agent python_bot/agent.py` to verify the aggregate win rate rises back above 50% and median bank improves.
+
+---
+
 # Kaggriculture — Strategy Improvement Plan (replay-driven)
 
 **Status:** Phase 1 (schema/API compliance) complete. Phase 2 as originally written was
