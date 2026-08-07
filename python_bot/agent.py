@@ -21,8 +21,8 @@ CROPS = {
     "STRAWBERRY": {"cost": 100, "ongoing": True, "first_yield_day": 10},
     "MELON": {"cost": 80, "harvest_day": 12, "bonus_start": 6, "first_yield_day": 10},
 }
-HANDS_PER_DAY = 13
-HIRE_COSTS = (1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377)
+HANDS_PER_DAY = 14
+HIRE_COSTS = (1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610)
 SEED_BUFFER = 25
 MAX_SEED_PURCHASE = 12
 # The fourth quadrant costs $4k with too little remaining season to recover
