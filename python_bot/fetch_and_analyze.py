@@ -20,6 +20,84 @@ except ImportError:
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from build_replay_opponents import BASE_PRICES, KNOWN_PLAYER_NAMES, _opponent_seat, ensure_opponents_synced
 
+SEED_COSTS = {"WHEAT": 10, "CARROT": 20, "TOMATO": 50, "STRAWBERRY": 100, "MELON": 80}
+ANIMAL_COSTS = {"GOOSE": 300, "COW": 400, "SHEEP": 500}
+HIRE_COSTS = (1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377)
+LAND_COSTS = (1000, 2000, 4000)
+
+
+def _reconstruct_sales(steps, seat):
+    """Reconstruct real executed sell revenue per product from public money deltas.
+
+    Raw SELL order face value (qty * quoted price) overstates revenue whenever an
+    order exceeds available shed stock -- the engine silently drops the excess, but
+    the order still shows up in the log as issued. Money is public each turn
+    (farms[seat]['money']) and obeys an exact identity: money_after == money_before
+    - buy_cost + sell_revenue. Every buy type has a deterministic cost (fixed seed/
+    animal prices, the HIRE fibonacci schedule, the BUY_LAND tier sequence) except
+    BUY_PRODUCT, which is estimated at the pre-turn quoted price. Solving for
+    sell_revenue per turn and splitting it across products by that turn's SELL
+    order share gives an exact total, only approximating the per-product split
+    when multiple products were sold in the same turn.
+    """
+    per_product = Counter()
+    total_revenue = 0.0
+    total_buy_cost = 0.0
+
+    for i in range(1, len(steps)):
+        prev_step, step = steps[i - 1], steps[i]
+        if seat >= len(step) or seat >= len(prev_step):
+            continue
+        action = step[seat].get("action") or {}
+
+        prev_obs = prev_step[seat].get("observation") or {}
+        prev_farms = prev_obs.get("farms") or []
+        farms = (step[seat].get("observation") or {}).get("farms") or []
+        if seat >= len(prev_farms) or seat >= len(farms):
+            continue
+        prev_farm, farm = prev_farms[seat], farms[seat]
+
+        money_before = prev_farm.get("money", 0)
+        hire_idx = prev_farm.get("hires_today", 0)
+        land_count = len(prev_farm.get("unlocked_quadrants", ["NW"]))
+        prices = (prev_obs.get("market") or {}).get("prices", {})
+
+        buy_cost = 0.0
+        sell_notional = Counter()
+        for order in action.get("market", []):
+            if not order:
+                continue
+            op = order[0]
+            if op == "BUY_SEED" and len(order) >= 3:
+                buy_cost += int(order[2]) * SEED_COSTS.get(order[1], 0)
+            elif op == "BUY_ANIMAL" and len(order) >= 3:
+                buy_cost += int(order[2]) * ANIMAL_COSTS.get(order[1], 0)
+            elif op == "BUY_PRODUCT" and len(order) >= 3:
+                buy_cost += int(order[2]) * prices.get(order[1], 0)
+            elif op == "HIRE":
+                buy_cost += HIRE_COSTS[min(hire_idx, len(HIRE_COSTS) - 1)]
+                hire_idx += 1
+            elif op == "BUY_LAND":
+                buy_cost += LAND_COSTS[max(0, min(land_count - 1, len(LAND_COSTS) - 1))]
+                land_count += 1
+            elif op == "SELL" and len(order) >= 3:
+                item, qty = order[1], int(order[2])
+                sell_notional[item] += qty * prices.get(item, 0)
+
+        turn_revenue = (farm.get("money", 0) - money_before) + buy_cost
+        total_buy_cost += buy_cost
+        total_revenue += turn_revenue
+
+        if not sell_notional or turn_revenue <= 0:
+            continue
+        notional_sum = sum(sell_notional.values())
+        if notional_sum <= 0:
+            continue
+        for item, notional in sell_notional.items():
+            per_product[item] += turn_revenue * (notional / notional_sum)
+
+    return per_product, total_revenue, total_buy_cost
+
 
 def load_kaggle_credentials():
     """Load username and key from ~/.kaggle/kaggle.json or environment variables."""
@@ -134,7 +212,9 @@ def analyze_replay(log_path):
                         weeds_count += 1
             metrics[seat_key]["max_weeds"] = max(metrics[seat_key]["max_weeds"], weeds_count)
 
-        # Track purchases & sales
+        # Track purchases (sales are reconstructed separately from money deltas --
+        # see _reconstruct_sales; raw SELL order face value overstates revenue
+        # whenever an order exceeds available shed stock).
         for order in action.get("market", []):
             if not order:
                 continue
@@ -147,10 +227,6 @@ def analyze_replay(log_path):
                     metrics[seat_key]["cows"] += int(order[2]) if len(order) >= 3 else 1
                 elif animal == "SHEEP":
                     metrics[seat_key]["sheep"] += int(order[2]) if len(order) >= 3 else 1
-            elif op == "SELL" and len(order) >= 3:
-                item, qty = order[1], int(order[2])
-                price = prices.get(item, BASE_PRICES.get(item, 0))
-                metrics[seat_key]["sales"][item] += qty * price
             elif op.startswith("BUY_") and len(order) >= 3:
                 item, qty = order[1], int(order[2])
                 # Estimate purchase cost
@@ -162,6 +238,13 @@ def analyze_replay(log_path):
             process_step(step[our_seat], "our", our_seat)
         if opponent_seat < len(step):
             process_step(step[opponent_seat], "opp", opponent_seat)
+
+    our_sales, our_total_revenue, our_total_buy_cost = _reconstruct_sales(steps, our_seat)
+    opp_sales, opp_total_revenue, opp_total_buy_cost = _reconstruct_sales(steps, opponent_seat)
+    metrics["our"]["sales"] = our_sales
+    metrics["opp"]["sales"] = opp_sales
+    metrics["our"]["total_revenue"] = our_total_revenue
+    metrics["opp"]["total_revenue"] = opp_total_revenue
 
     return {
         "episode_id": log_path.stem,
@@ -181,6 +264,14 @@ def print_diagnostic_report(analyses):
 
     report = []
     report.append("# Kaggle Match Diagnostic Report\n")
+    report.append(
+        "*Per-product sales are reconstructed from each turn's public money delta "
+        "(exact accounting identity: money_after = money_before - buy_cost + sell_revenue), "
+        "not from raw SELL order face value. Raw order quantities overstate revenue whenever "
+        "an order exceeds available shed stock and silently fails. The per-turn total is exact; "
+        "only the split across products sold in the same turn is approximated (weighted by that "
+        "turn's SELL order notional).*\n"
+    )
 
     # Calculate overall leaderboard and stats
     opp_stats = defaultdict(lambda: {"max_score": 0.0, "scores": [], "opp_wins": 0, "our_wins": 0, "draws": 0})

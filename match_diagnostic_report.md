@@ -1,5 +1,7 @@
 # Kaggle Match Diagnostic Report
 
+*Per-product sales are reconstructed from each turn's public money delta (exact accounting identity: money_after = money_before - buy_cost + sell_revenue), not from raw SELL order face value. Raw order quantities overstate revenue whenever an order exceeds available shed stock and silently fails. The per-turn total is exact; only the split across products sold in the same turn is approximated (weighted by that turn's SELL order notional).*
+
 ## Overall Dataset Summary
 - **Total Analyzed Matches**: 79
 - **Record**: 31 Wins / 48 Losses / 0 Draws (39.2% Win Rate)
@@ -93,12 +95,12 @@
 | Cows Purchased | 9 | 9 | 0 |
 | Sheep Purchased | 0 | 0 | 0 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,490.00 | $1,490.00 | $0.00 |
-| Sales: FERTILIZER | $16,097.00 | $10,642.00 | $5,455.00 |
-| Sales: MELON | $19,704.00 | $20,196.00 | $-492.00 |
-| Sales: MILK | $47,801.00 | $48,023.00 | $-222.00 |
-| Sales: STRAWBERRY | $44,239.00 | $46,567.00 | $-2,328.00 |
-| Sales: WHEAT | $8,244.00 | $7,121.00 | $1,123.00 |
+| Sales: CARROT | $1,714.39 | $1,715.70 | $-1.31 |
+| Sales: FERTILIZER | $15,842.67 | $10,541.33 | $5,301.34 |
+| Sales: MELON | $24,868.75 | $25,593.10 | $-724.35 |
+| Sales: MILK | $48,368.68 | $48,732.84 | $-364.16 |
+| Sales: STRAWBERRY | $47,084.54 | $49,750.53 | $-2,665.99 |
+| Sales: WHEAT | $7,972.96 | $6,923.50 | $1,049.46 |
 
 **Key Loss Factors Identified:**
 - Difference in general pacing or price optimization (selling at better market peaks).
@@ -117,19 +119,19 @@
 | Cows Purchased | 9 | 13 | -4 |
 | Sheep Purchased | 0 | 7 | -7 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,966.00 | $0.00 | $1,966.00 |
-| Sales: FERTILIZER | $11,886.00 | $10,744.00 | $1,142.00 |
-| Sales: MELON | $29,650.00 | $13,694.00 | $15,956.00 |
-| Sales: MILK | $45,436.00 | $31,173.00 | $14,263.00 |
-| Sales: STRAWBERRY | $66,953.00 | $7,755.00 | $59,198.00 |
-| Sales: WHEAT | $11,065.00 | $52,414.00 | $-41,349.00 |
-| Sales: WOOL | $0.00 | $16,365.00 | $-16,365.00 |
+| Sales: CARROT | $2,167.18 | $0.00 | $2,167.18 |
+| Sales: FERTILIZER | $11,996.04 | $11,016.21 | $979.84 |
+| Sales: MELON | $30,117.55 | $14,308.15 | $15,809.40 |
+| Sales: MILK | $46,884.20 | $32,090.05 | $14,794.14 |
+| Sales: STRAWBERRY | $67,243.19 | $7,849.64 | $59,393.56 |
+| Sales: WHEAT | $11,027.83 | $51,348.24 | $-40,320.41 |
+| Sales: WOOL | $0.00 | $16,356.71 | $-16,356.71 |
 
 **Key Win Factors Identified:**
 - We hired more workers (13 vs 12), giving us labor superiority.
-- We outperformed on MELON sales by $15,956.00.
-- We outperformed on STRAWBERRY sales by $59,198.00.
-- We outperformed on MILK sales by $14,263.00.
+- We outperformed on MELON sales by $15,809.40.
+- We outperformed on STRAWBERRY sales by $59,393.56.
+- We outperformed on MILK sales by $14,794.14.
 
 ---
 
@@ -145,19 +147,19 @@
 | Cows Purchased | 9 | 3 | 6 |
 | Sheep Purchased | 0 | 0 | 0 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,842.00 | $1,026.00 | $816.00 |
-| Sales: FERTILIZER | $15,421.00 | $4,078.00 | $11,343.00 |
-| Sales: MELON | $26,686.00 | $14,514.00 | $12,172.00 |
-| Sales: MILK | $43,371.00 | $21,126.00 | $22,245.00 |
-| Sales: STRAWBERRY | $73,449.00 | $20,604.00 | $52,845.00 |
-| Sales: WHEAT | $6,828.00 | $788.00 | $6,040.00 |
+| Sales: CARROT | $2,015.63 | $1,097.78 | $917.85 |
+| Sales: FERTILIZER | $15,325.16 | $4,150.15 | $11,175.01 |
+| Sales: MELON | $27,061.02 | $15,467.20 | $11,593.82 |
+| Sales: MILK | $44,398.72 | $21,069.54 | $23,329.18 |
+| Sales: STRAWBERRY | $73,587.07 | $20,674.28 | $52,912.79 |
+| Sales: WHEAT | $6,799.40 | $781.06 | $6,018.35 |
 
 **Key Win Factors Identified:**
 - We hired more workers (13 vs 7), giving us labor superiority.
 - We invested more in Cows (9 vs 3), yielding higher Milk revenues.
-- We outperformed on MELON sales by $12,172.00.
-- We outperformed on STRAWBERRY sales by $52,845.00.
-- We outperformed on MILK sales by $22,245.00.
+- We outperformed on MELON sales by $11,593.82.
+- We outperformed on STRAWBERRY sales by $52,912.79.
+- We outperformed on MILK sales by $23,329.18.
 
 ---
 
@@ -173,20 +175,20 @@
 | Cows Purchased | 8 | 5 | 3 |
 | Sheep Purchased | 0 | 83 | -83 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,842.00 | $0.00 | $1,842.00 |
-| Sales: EGG | $0.00 | $6,910.00 | $-6,910.00 |
-| Sales: FERTILIZER | $8,479.00 | $16,305.00 | $-7,826.00 |
-| Sales: MELON | $26,246.00 | $23,280.00 | $2,966.00 |
-| Sales: MILK | $26,028.00 | $17,094.00 | $8,934.00 |
-| Sales: STRAWBERRY | $48,108.00 | $14,372.00 | $33,736.00 |
-| Sales: WHEAT | $10,418.00 | $3,521.00 | $6,897.00 |
-| Sales: WOOL | $0.00 | $24,799.00 | $-24,799.00 |
+| Sales: CARROT | $1,981.29 | $0.00 | $1,981.29 |
+| Sales: EGG | $0.00 | $7,760.14 | $-7,760.14 |
+| Sales: FERTILIZER | $8,429.08 | $27,644.00 | $-19,214.92 |
+| Sales: MELON | $27,731.87 | $23,563.52 | $4,168.36 |
+| Sales: MILK | $28,499.76 | $17,627.94 | $10,871.82 |
+| Sales: STRAWBERRY | $48,072.23 | $14,314.48 | $33,757.75 |
+| Sales: WHEAT | $10,385.76 | $3,521.00 | $6,864.76 |
+| Sales: WOOL | $0.00 | $24,765.92 | $-24,765.92 |
 
 **Key Win Factors Identified:**
 - We hired more workers (13 vs 11), giving us labor superiority.
 - We invested more in Cows (8 vs 5), yielding higher Milk revenues.
-- We outperformed on STRAWBERRY sales by $33,736.00.
-- We outperformed on MILK sales by $8,934.00.
+- We outperformed on STRAWBERRY sales by $33,757.75.
+- We outperformed on MILK sales by $10,871.82.
 
 ---
 
@@ -202,17 +204,17 @@
 | Cows Purchased | 9 | 10 | -1 |
 | Sheep Purchased | 0 | 3 | -3 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $2,226.00 | $1,869.00 | $357.00 |
-| Sales: FERTILIZER | $9,400.00 | $17,237.00 | $-7,837.00 |
-| Sales: MELON | $21,568.00 | $22,860.00 | $-1,292.00 |
-| Sales: MILK | $26,929.00 | $39,522.00 | $-12,593.00 |
-| Sales: STRAWBERRY | $63,858.00 | $0.00 | $63,858.00 |
-| Sales: WHEAT | $9,146.00 | $28,818.00 | $-19,672.00 |
-| Sales: WOOL | $0.00 | $22,934.00 | $-22,934.00 |
+| Sales: CARROT | $2,271.34 | $1,863.17 | $408.17 |
+| Sales: FERTILIZER | $9,475.62 | $17,259.41 | $-7,783.78 |
+| Sales: MELON | $23,270.97 | $24,126.31 | $-855.33 |
+| Sales: MILK | $29,805.31 | $40,693.53 | $-10,888.21 |
+| Sales: STRAWBERRY | $63,702.74 | $0.00 | $63,702.74 |
+| Sales: WHEAT | $9,049.01 | $28,421.25 | $-19,372.24 |
+| Sales: WOOL | $0.00 | $23,099.34 | $-23,099.34 |
 
 **Key Win Factors Identified:**
 - We hired more workers (13 vs 10), giving us labor superiority.
-- We outperformed on STRAWBERRY sales by $63,858.00.
+- We outperformed on STRAWBERRY sales by $63,702.74.
 
 ---
 
@@ -228,19 +230,19 @@
 | Cows Purchased | 8 | 3 | 5 |
 | Sheep Purchased | 0 | 1 | -1 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $2,270.00 | $360.00 | $1,910.00 |
-| Sales: FERTILIZER | $16,237.00 | $8,146.00 | $8,091.00 |
-| Sales: MELON | $11,179.00 | $30,590.00 | $-19,411.00 |
-| Sales: MILK | $53,354.00 | $22,797.00 | $30,557.00 |
-| Sales: STRAWBERRY | $52,189.00 | $36,081.00 | $16,108.00 |
-| Sales: WHEAT | $10,765.00 | $7,056.00 | $3,709.00 |
-| Sales: WOOL | $0.00 | $7,661.00 | $-7,661.00 |
+| Sales: CARROT | $2,309.70 | $363.48 | $1,946.21 |
+| Sales: FERTILIZER | $16,170.77 | $8,166.64 | $8,004.13 |
+| Sales: MELON | $11,974.15 | $32,683.10 | $-20,708.95 |
+| Sales: MILK | $53,994.23 | $22,801.74 | $31,192.49 |
+| Sales: STRAWBERRY | $52,743.71 | $36,429.97 | $16,313.75 |
+| Sales: WHEAT | $10,733.43 | $7,018.70 | $3,714.73 |
+| Sales: WOOL | $0.00 | $7,619.36 | $-7,619.36 |
 
 **Key Win Factors Identified:**
 - We hired more workers (13 vs 12), giving us labor superiority.
 - We invested more in Cows (8 vs 3), yielding higher Milk revenues.
-- We outperformed on STRAWBERRY sales by $16,108.00.
-- We outperformed on MILK sales by $30,557.00.
+- We outperformed on STRAWBERRY sales by $16,313.75.
+- We outperformed on MILK sales by $31,192.49.
 
 ---
 
@@ -256,19 +258,19 @@
 | Cows Purchased | 9 | 9 | 0 |
 | Sheep Purchased | 0 | 8 | -8 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,890.00 | $0.00 | $1,890.00 |
-| Sales: FERTILIZER | $8,935.00 | $14,123.00 | $-5,188.00 |
-| Sales: MELON | $19,074.00 | $26,490.00 | $-7,416.00 |
-| Sales: MILK | $36,900.00 | $32,612.00 | $4,288.00 |
-| Sales: STRAWBERRY | $52,309.00 | $63,849.00 | $-11,540.00 |
-| Sales: WHEAT | $10,414.00 | $2,310.00 | $8,104.00 |
-| Sales: WOOL | $0.00 | $34,143.00 | $-34,143.00 |
+| Sales: CARROT | $2,088.13 | $0.00 | $2,088.13 |
+| Sales: FERTILIZER | $8,868.65 | $14,281.61 | $-5,412.96 |
+| Sales: MELON | $20,597.24 | $27,964.04 | $-7,366.80 |
+| Sales: MILK | $38,988.89 | $33,425.88 | $5,563.02 |
+| Sales: STRAWBERRY | $52,309.31 | $64,109.53 | $-11,800.22 |
+| Sales: WHEAT | $10,394.78 | $2,300.62 | $8,094.16 |
+| Sales: WOOL | $0.00 | $33,623.32 | $-33,623.32 |
 
 **Key Loss Factors Identified:**
 - Opponent bought more Sheep (8 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on MELON sales by $7,416.00.
-- Opponent outperformed on STRAWBERRY sales by $11,540.00.
-- Opponent outperformed on WOOL sales by $34,143.00.
+- Opponent outperformed on MELON sales by $7,366.80.
+- Opponent outperformed on STRAWBERRY sales by $11,800.22.
+- Opponent outperformed on WOOL sales by $33,623.32.
 
 ---
 
@@ -284,17 +286,17 @@
 | Cows Purchased | 9 | 8 | 1 |
 | Sheep Purchased | 0 | 6 | -6 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $2,526.00 | $144.00 | $2,382.00 |
-| Sales: FERTILIZER | $9,692.00 | $14,788.00 | $-5,096.00 |
-| Sales: MELON | $26,683.00 | $21,853.00 | $4,830.00 |
-| Sales: MILK | $35,922.00 | $36,183.00 | $-261.00 |
-| Sales: STRAWBERRY | $44,802.00 | $41,944.00 | $2,858.00 |
-| Sales: WHEAT | $9,540.00 | $23,746.00 | $-14,206.00 |
-| Sales: WOOL | $0.00 | $30,419.00 | $-30,419.00 |
+| Sales: CARROT | $2,623.61 | $151.44 | $2,472.17 |
+| Sales: FERTILIZER | $9,710.82 | $15,157.58 | $-5,446.76 |
+| Sales: MELON | $27,288.00 | $22,280.24 | $5,007.76 |
+| Sales: MILK | $38,382.60 | $36,840.08 | $1,542.52 |
+| Sales: STRAWBERRY | $44,853.03 | $41,809.50 | $3,043.53 |
+| Sales: WHEAT | $9,495.94 | $23,768.69 | $-14,272.75 |
+| Sales: WOOL | $0.00 | $30,329.47 | $-30,329.47 |
 
 **Key Loss Factors Identified:**
 - Opponent bought more Sheep (6 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on WOOL sales by $30,419.00.
+- Opponent outperformed on WOOL sales by $30,329.47.
 
 ---
 
@@ -310,19 +312,19 @@
 | Cows Purchased | 9 | 6 | 3 |
 | Sheep Purchased | 0 | 11 | -11 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,890.00 | $0.00 | $1,890.00 |
-| Sales: FERTILIZER | $16,576.00 | $14,653.00 | $1,923.00 |
-| Sales: MELON | $16,970.00 | $24,138.00 | $-7,168.00 |
-| Sales: MILK | $41,548.00 | $34,254.00 | $7,294.00 |
-| Sales: STRAWBERRY | $50,186.00 | $51,121.00 | $-935.00 |
-| Sales: WHEAT | $9,532.00 | $40,457.00 | $-30,925.00 |
-| Sales: WOOL | $0.00 | $51,079.00 | $-51,079.00 |
+| Sales: CARROT | $2,088.26 | $0.00 | $2,088.26 |
+| Sales: FERTILIZER | $16,584.76 | $14,821.24 | $1,763.53 |
+| Sales: MELON | $19,290.49 | $25,676.50 | $-6,386.02 |
+| Sales: MILK | $43,495.07 | $34,978.55 | $8,516.52 |
+| Sales: STRAWBERRY | $51,086.16 | $51,360.16 | $-274.00 |
+| Sales: WHEAT | $9,457.26 | $40,484.04 | $-31,026.78 |
+| Sales: WOOL | $0.00 | $50,988.51 | $-50,988.51 |
 
 **Key Loss Factors Identified:**
 - Opponent hired more workers, indicating we might be under-hiring or expanding too slowly.
 - Opponent bought more Sheep (11 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on MELON sales by $7,168.00.
-- Opponent outperformed on WOOL sales by $51,079.00.
+- Opponent outperformed on MELON sales by $6,386.02.
+- Opponent outperformed on WOOL sales by $50,988.51.
 
 ---
 
@@ -338,18 +340,18 @@
 | Cows Purchased | 9 | 9 | 0 |
 | Sheep Purchased | 0 | 4 | -4 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,846.00 | $0.00 | $1,846.00 |
-| Sales: EGG | $0.00 | $3,428.00 | $-3,428.00 |
-| Sales: FERTILIZER | $13,374.00 | $14,289.00 | $-915.00 |
-| Sales: MELON | $20,167.00 | $26,502.00 | $-6,335.00 |
-| Sales: MILK | $42,676.00 | $33,427.00 | $9,249.00 |
-| Sales: STRAWBERRY | $58,389.00 | $49,594.00 | $8,795.00 |
-| Sales: WHEAT | $6,827.00 | $2,248.00 | $4,579.00 |
-| Sales: WOOL | $0.00 | $19,256.00 | $-19,256.00 |
+| Sales: CARROT | $1,990.11 | $0.00 | $1,990.11 |
+| Sales: EGG | $0.00 | $3,381.30 | $-3,381.30 |
+| Sales: FERTILIZER | $13,516.94 | $14,415.22 | $-898.28 |
+| Sales: MELON | $22,428.17 | $28,260.39 | $-5,832.22 |
+| Sales: MILK | $43,386.79 | $33,495.38 | $9,891.41 |
+| Sales: STRAWBERRY | $58,443.29 | $42,713.86 | $15,729.44 |
+| Sales: WHEAT | $6,624.69 | $1,342.41 | $5,282.28 |
+| Sales: WOOL | $0.00 | $19,372.44 | $-19,372.44 |
 
 **Key Win Factors Identified:**
-- We outperformed on STRAWBERRY sales by $8,795.00.
-- We outperformed on MILK sales by $9,249.00.
+- We outperformed on STRAWBERRY sales by $15,729.44.
+- We outperformed on MILK sales by $9,891.41.
 
 ---
 
@@ -365,18 +367,18 @@
 | Cows Purchased | 8 | 10 | -2 |
 | Sheep Purchased | 0 | 8 | -8 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,890.00 | $0.00 | $1,890.00 |
-| Sales: FERTILIZER | $16,817.00 | $15,678.00 | $1,139.00 |
-| Sales: MELON | $25,487.00 | $19,689.00 | $5,798.00 |
-| Sales: MILK | $28,331.00 | $31,857.00 | $-3,526.00 |
-| Sales: STRAWBERRY | $54,277.00 | $42,785.00 | $11,492.00 |
-| Sales: WHEAT | $10,232.00 | $26,867.00 | $-16,635.00 |
-| Sales: WOOL | $0.00 | $38,022.00 | $-38,022.00 |
+| Sales: CARROT | $2,085.74 | $0.00 | $2,085.74 |
+| Sales: FERTILIZER | $16,955.95 | $15,738.85 | $1,217.09 |
+| Sales: MELON | $26,287.53 | $20,347.43 | $5,940.10 |
+| Sales: MILK | $31,965.29 | $34,218.01 | $-2,252.73 |
+| Sales: STRAWBERRY | $54,705.40 | $42,648.80 | $12,056.59 |
+| Sales: WHEAT | $9,751.10 | $26,291.70 | $-16,540.60 |
+| Sales: WOOL | $0.00 | $37,597.20 | $-37,597.20 |
 
 **Key Loss Factors Identified:**
 - Opponent invested more in Cows (10 vs 8), yielding higher Milk revenues.
 - Opponent bought more Sheep (8 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on WOOL sales by $38,022.00.
+- Opponent outperformed on WOOL sales by $37,597.20.
 
 ---
 
@@ -392,18 +394,18 @@
 | Cows Purchased | 9 | 51 | -42 |
 | Sheep Purchased | 0 | 231 | -231 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,716.00 | $0.00 | $1,716.00 |
-| Sales: FERTILIZER | $10,523.00 | $15,666.00 | $-5,143.00 |
-| Sales: MELON | $19,726.00 | $25,728.00 | $-6,002.00 |
-| Sales: MILK | $39,382.00 | $34,017.00 | $5,365.00 |
-| Sales: STRAWBERRY | $62,744.00 | $0.00 | $62,744.00 |
-| Sales: WHEAT | $5,662.00 | $1,344.00 | $4,318.00 |
-| Sales: WOOL | $0.00 | $29,244.00 | $-29,244.00 |
+| Sales: CARROT | $1,850.53 | $0.00 | $1,850.53 |
+| Sales: FERTILIZER | $10,589.63 | $15,777.66 | $-5,188.03 |
+| Sales: MELON | $23,272.21 | $29,432.76 | $-6,160.55 |
+| Sales: MILK | $41,309.01 | $34,268.55 | $7,040.47 |
+| Sales: STRAWBERRY | $62,161.66 | $0.00 | $62,161.66 |
+| Sales: WHEAT | $5,410.97 | $1,344.00 | $4,066.97 |
+| Sales: WOOL | $0.00 | $28,518.03 | $-28,518.03 |
 
 **Key Win Factors Identified:**
 - We hired more workers (13 vs 9), giving us labor superiority.
-- We outperformed on STRAWBERRY sales by $62,744.00.
-- We outperformed on MILK sales by $5,365.00.
+- We outperformed on STRAWBERRY sales by $62,161.66.
+- We outperformed on MILK sales by $7,040.47.
 
 ---
 
@@ -419,19 +421,19 @@
 | Cows Purchased | 9 | 7 | 2 |
 | Sheep Purchased | 0 | 8 | -8 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $2,076.00 | $0.00 | $2,076.00 |
-| Sales: FERTILIZER | $10,515.00 | $13,610.00 | $-3,095.00 |
-| Sales: MELON | $28,785.00 | $20,208.00 | $8,577.00 |
-| Sales: MILK | $23,972.00 | $24,530.00 | $-558.00 |
-| Sales: STRAWBERRY | $54,619.00 | $13,887.00 | $40,732.00 |
-| Sales: WHEAT | $8,315.00 | $1,881.00 | $6,434.00 |
-| Sales: WOOL | $0.00 | $32,424.00 | $-32,424.00 |
+| Sales: CARROT | $2,124.80 | $0.00 | $2,124.80 |
+| Sales: FERTILIZER | $10,615.36 | $13,628.90 | $-3,013.54 |
+| Sales: MELON | $29,415.51 | $20,718.79 | $8,696.72 |
+| Sales: MILK | $27,562.67 | $26,590.54 | $972.13 |
+| Sales: STRAWBERRY | $54,423.62 | $13,845.95 | $40,577.67 |
+| Sales: WHEAT | $8,228.05 | $1,899.00 | $6,329.05 |
+| Sales: WOOL | $0.00 | $36,385.82 | $-36,385.82 |
 
 **Key Win Factors Identified:**
 - We hired more workers (13 vs 10), giving us labor superiority.
 - We invested more in Cows (9 vs 7), yielding higher Milk revenues.
-- We outperformed on MELON sales by $8,577.00.
-- We outperformed on STRAWBERRY sales by $40,732.00.
+- We outperformed on MELON sales by $8,696.72.
+- We outperformed on STRAWBERRY sales by $40,577.67.
 
 ---
 
@@ -447,18 +449,17 @@
 | Cows Purchased | 8 | 10 | -2 |
 | Sheep Purchased | 0 | 10 | -10 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $2,048.00 | $6,014.00 | $-3,966.00 |
-| Sales: FERTILIZER | $12,365.00 | $17,174.00 | $-4,809.00 |
-| Sales: MELON | $24,656.00 | $19,071.00 | $5,585.00 |
-| Sales: MILK | $23,489.00 | $23,727.00 | $-238.00 |
-| Sales: STRAWBERRY | $57,153.00 | $18,088.00 | $39,065.00 |
-| Sales: WHEAT | $9,444.00 | $20,216.00 | $-10,772.00 |
-| Sales: WOOL | $0.00 | $40,447.00 | $-40,447.00 |
+| Sales: CARROT | $2,161.05 | $5,705.73 | $-3,544.68 |
+| Sales: FERTILIZER | $12,569.92 | $16,959.19 | $-4,389.28 |
+| Sales: MELON | $25,761.97 | $21,422.35 | $4,339.62 |
+| Sales: MILK | $27,193.30 | $25,053.31 | $2,139.99 |
+| Sales: STRAWBERRY | $56,761.52 | $17,514.09 | $39,247.42 |
+| Sales: WHEAT | $9,206.25 | $18,826.58 | $-9,620.34 |
+| Sales: WOOL | $0.00 | $38,762.74 | $-38,762.74 |
 
 **Key Win Factors Identified:**
 - We hired more workers (13 vs 12), giving us labor superiority.
-- We outperformed on MELON sales by $5,585.00.
-- We outperformed on STRAWBERRY sales by $39,065.00.
+- We outperformed on STRAWBERRY sales by $39,247.42.
 
 ---
 
@@ -474,16 +475,16 @@
 | Cows Purchased | 8 | 14 | -6 |
 | Sheep Purchased | 0 | 14 | -14 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,846.00 | $0.00 | $1,846.00 |
-| Sales: FERTILIZER | $11,360.00 | $14,207.00 | $-2,847.00 |
-| Sales: MELON | $21,374.00 | $21,114.00 | $260.00 |
-| Sales: MILK | $18,795.00 | $19,163.00 | $-368.00 |
-| Sales: STRAWBERRY | $46,037.00 | $20,417.00 | $25,620.00 |
-| Sales: WHEAT | $11,028.00 | $22,534.00 | $-11,506.00 |
-| Sales: WOOL | $0.00 | $43,827.00 | $-43,827.00 |
+| Sales: CARROT | $1,985.08 | $0.00 | $1,985.08 |
+| Sales: FERTILIZER | $11,346.24 | $14,332.35 | $-2,986.12 |
+| Sales: MELON | $22,196.88 | $22,226.78 | $-29.91 |
+| Sales: MILK | $20,901.32 | $20,157.02 | $744.30 |
+| Sales: STRAWBERRY | $46,509.57 | $20,502.61 | $26,006.96 |
+| Sales: WHEAT | $10,832.92 | $22,501.59 | $-11,668.67 |
+| Sales: WOOL | $0.00 | $43,789.65 | $-43,789.65 |
 
 **Key Win Factors Identified:**
-- We outperformed on STRAWBERRY sales by $25,620.00.
+- We outperformed on STRAWBERRY sales by $26,006.96.
 
 ---
 
@@ -499,16 +500,16 @@
 | Cows Purchased | 9 | 12 | -3 |
 | Sheep Purchased | 0 | 0 | 0 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,842.00 | $0.00 | $1,842.00 |
-| Sales: FERTILIZER | $12,842.00 | $11,997.00 | $845.00 |
-| Sales: MELON | $18,626.00 | $21,016.00 | $-2,390.00 |
-| Sales: MILK | $38,062.00 | $53,119.00 | $-15,057.00 |
-| Sales: STRAWBERRY | $67,251.00 | $28,293.00 | $38,958.00 |
-| Sales: WHEAT | $8,918.00 | $7,274.00 | $1,644.00 |
+| Sales: CARROT | $2,010.67 | $0.00 | $2,010.67 |
+| Sales: FERTILIZER | $12,688.27 | $11,818.38 | $869.90 |
+| Sales: MELON | $21,701.75 | $26,651.30 | $-4,949.55 |
+| Sales: MILK | $41,191.46 | $58,518.76 | $-17,327.30 |
+| Sales: STRAWBERRY | $66,451.18 | $27,274.81 | $39,176.37 |
+| Sales: WHEAT | $8,871.67 | $6,985.76 | $1,885.92 |
 
 **Key Win Factors Identified:**
 - We hired more workers (13 vs 10), giving us labor superiority.
-- We outperformed on STRAWBERRY sales by $38,958.00.
+- We outperformed on STRAWBERRY sales by $39,176.37.
 
 ---
 
@@ -524,20 +525,20 @@
 | Cows Purchased | 8 | 11 | -3 |
 | Sheep Purchased | 0 | 7 | -7 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,846.00 | $0.00 | $1,846.00 |
-| Sales: EGG | $0.00 | $4,426.00 | $-4,426.00 |
-| Sales: FERTILIZER | $10,438.00 | $18,020.00 | $-7,582.00 |
-| Sales: MELON | $28,439.00 | $22,018.00 | $6,421.00 |
-| Sales: MILK | $21,431.00 | $23,434.00 | $-2,003.00 |
-| Sales: STRAWBERRY | $57,381.00 | $25,392.00 | $31,989.00 |
-| Sales: TOMATO | $0.00 | $2,536.00 | $-2,536.00 |
-| Sales: WHEAT | $7,082.00 | $19,348.00 | $-12,266.00 |
-| Sales: WOOL | $0.00 | $39,446.00 | $-39,446.00 |
+| Sales: CARROT | $1,983.50 | $0.00 | $1,983.50 |
+| Sales: EGG | $0.00 | $4,124.38 | $-4,124.38 |
+| Sales: FERTILIZER | $10,464.19 | $17,137.47 | $-6,673.28 |
+| Sales: MELON | $28,961.48 | $22,112.41 | $6,849.08 |
+| Sales: MILK | $25,610.65 | $24,476.79 | $1,133.86 |
+| Sales: STRAWBERRY | $57,143.02 | $25,038.86 | $32,104.16 |
+| Sales: TOMATO | $0.00 | $2,439.49 | $-2,439.49 |
+| Sales: WHEAT | $6,882.16 | $18,830.29 | $-11,948.13 |
+| Sales: WOOL | $0.00 | $39,528.32 | $-39,528.32 |
 
 **Key Loss Factors Identified:**
 - Opponent invested more in Cows (11 vs 8), yielding higher Milk revenues.
 - Opponent bought more Sheep (7 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on WOOL sales by $39,446.00.
+- Opponent outperformed on WOOL sales by $39,528.32.
 
 ---
 
@@ -553,18 +554,18 @@
 | Cows Purchased | 8 | 6 | 2 |
 | Sheep Purchased | 0 | 10 | -10 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,810.00 | $0.00 | $1,810.00 |
-| Sales: FERTILIZER | $8,871.00 | $14,421.00 | $-5,550.00 |
-| Sales: MELON | $19,331.00 | $22,716.00 | $-3,385.00 |
-| Sales: MILK | $13,714.00 | $15,819.00 | $-2,105.00 |
-| Sales: STRAWBERRY | $45,938.00 | $57,103.00 | $-11,165.00 |
-| Sales: WHEAT | $8,427.00 | $9,970.00 | $-1,543.00 |
-| Sales: WOOL | $0.00 | $39,064.00 | $-39,064.00 |
+| Sales: CARROT | $1,946.95 | $0.00 | $1,946.95 |
+| Sales: FERTILIZER | $8,834.43 | $14,478.55 | $-5,644.13 |
+| Sales: MELON | $19,776.00 | $24,098.69 | $-4,322.69 |
+| Sales: MILK | $16,587.89 | $17,073.58 | $-485.69 |
+| Sales: STRAWBERRY | $46,215.79 | $57,385.12 | $-11,169.34 |
+| Sales: WHEAT | $7,917.94 | $10,003.76 | $-2,085.82 |
+| Sales: WOOL | $0.00 | $38,857.29 | $-38,857.29 |
 
 **Key Loss Factors Identified:**
 - Opponent bought more Sheep (10 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on STRAWBERRY sales by $11,165.00.
-- Opponent outperformed on WOOL sales by $39,064.00.
+- Opponent outperformed on STRAWBERRY sales by $11,169.34.
+- Opponent outperformed on WOOL sales by $38,857.29.
 
 ---
 
@@ -580,18 +581,18 @@
 | Cows Purchased | 9 | 3 | 6 |
 | Sheep Purchased | 0 | 12 | -12 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,470.00 | $568.00 | $902.00 |
-| Sales: FERTILIZER | $10,348.00 | $15,457.00 | $-5,109.00 |
-| Sales: MELON | $20,745.00 | $21,231.00 | $-486.00 |
-| Sales: MILK | $43,180.00 | $20,098.00 | $23,082.00 |
-| Sales: STRAWBERRY | $46,623.00 | $58,697.00 | $-12,074.00 |
-| Sales: WHEAT | $7,311.00 | $59,570.00 | $-52,259.00 |
-| Sales: WOOL | $0.00 | $37,429.00 | $-37,429.00 |
+| Sales: CARROT | $1,568.63 | $573.41 | $995.22 |
+| Sales: FERTILIZER | $10,316.09 | $15,708.51 | $-5,392.42 |
+| Sales: MELON | $23,052.61 | $21,910.91 | $1,141.70 |
+| Sales: MILK | $44,432.52 | $20,461.62 | $23,970.90 |
+| Sales: STRAWBERRY | $47,168.33 | $58,692.91 | $-11,524.58 |
+| Sales: WHEAT | $7,278.82 | $59,522.37 | $-52,243.55 |
+| Sales: WOOL | $0.00 | $38,722.27 | $-38,722.27 |
 
 **Key Loss Factors Identified:**
 - Opponent bought more Sheep (12 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on STRAWBERRY sales by $12,074.00.
-- Opponent outperformed on WOOL sales by $37,429.00.
+- Opponent outperformed on STRAWBERRY sales by $11,524.58.
+- Opponent outperformed on WOOL sales by $38,722.27.
 
 ---
 
@@ -607,20 +608,20 @@
 | Cows Purchased | 9 | 6 | 3 |
 | Sheep Purchased | 0 | 9 | -9 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,688.00 | $2,034.00 | $-346.00 |
-| Sales: FERTILIZER | $12,971.00 | $12,567.00 | $404.00 |
-| Sales: MELON | $26,029.00 | $19,543.00 | $6,486.00 |
-| Sales: MILK | $54,862.00 | $36,069.00 | $18,793.00 |
-| Sales: STRAWBERRY | $71,767.00 | $44,025.00 | $27,742.00 |
-| Sales: WHEAT | $9,056.00 | $3,474.00 | $5,582.00 |
-| Sales: WOOL | $0.00 | $44,699.00 | $-44,699.00 |
+| Sales: CARROT | $1,812.24 | $2,070.11 | $-257.87 |
+| Sales: FERTILIZER | $13,071.94 | $12,810.62 | $261.32 |
+| Sales: MELON | $26,770.64 | $20,885.39 | $5,885.25 |
+| Sales: MILK | $55,085.04 | $35,857.49 | $19,227.55 |
+| Sales: STRAWBERRY | $72,276.15 | $44,066.19 | $28,209.96 |
+| Sales: WHEAT | $9,057.99 | $3,427.18 | $5,630.81 |
+| Sales: WOOL | $0.00 | $43,596.02 | $-43,596.02 |
 
 **Key Win Factors Identified:**
 - We hired more workers (13 vs 10), giving us labor superiority.
 - We invested more in Cows (9 vs 6), yielding higher Milk revenues.
-- We outperformed on MELON sales by $6,486.00.
-- We outperformed on STRAWBERRY sales by $27,742.00.
-- We outperformed on MILK sales by $18,793.00.
+- We outperformed on MELON sales by $5,885.25.
+- We outperformed on STRAWBERRY sales by $28,209.96.
+- We outperformed on MILK sales by $19,227.55.
 
 ---
 
@@ -636,17 +637,17 @@
 | Cows Purchased | 9 | 8 | 1 |
 | Sheep Purchased | 0 | 6 | -6 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,606.00 | $1,263.00 | $343.00 |
-| Sales: FERTILIZER | $15,088.00 | $18,595.00 | $-3,507.00 |
-| Sales: MELON | $19,750.00 | $24,328.00 | $-4,578.00 |
-| Sales: MILK | $9,719.00 | $16,091.00 | $-6,372.00 |
-| Sales: STRAWBERRY | $49,991.00 | $30,403.00 | $19,588.00 |
-| Sales: WHEAT | $11,326.00 | $4,888.00 | $6,438.00 |
-| Sales: WOOL | $0.00 | $55,257.00 | $-55,257.00 |
+| Sales: CARROT | $1,697.20 | $1,363.39 | $333.81 |
+| Sales: FERTILIZER | $15,119.10 | $13,324.59 | $1,794.50 |
+| Sales: MELON | $20,447.78 | $24,900.37 | $-4,452.59 |
+| Sales: MILK | $11,947.12 | $15,592.74 | $-3,645.61 |
+| Sales: STRAWBERRY | $50,309.14 | $30,710.04 | $19,599.10 |
+| Sales: WHEAT | $10,386.67 | $2,393.32 | $7,993.36 |
+| Sales: WOOL | $0.00 | $26,718.56 | $-26,718.56 |
 
 **Key Win Factors Identified:**
 - We invested more in Cows (9 vs 8), yielding higher Milk revenues.
-- We outperformed on STRAWBERRY sales by $19,588.00.
+- We outperformed on STRAWBERRY sales by $19,599.10.
 
 ---
 
@@ -662,18 +663,20 @@
 | Cows Purchased | 8 | 8 | 0 |
 | Sheep Purchased | 0 | 6 | -6 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,656.00 | $494.00 | $1,162.00 |
-| Sales: EGG | $0.00 | $544.00 | $-544.00 |
-| Sales: FERTILIZER | $10,468.00 | $25,936.00 | $-15,468.00 |
-| Sales: MELON | $31,466.00 | $43,450.00 | $-11,984.00 |
-| Sales: MILK | $54,746.00 | $124,308.00 | $-69,562.00 |
-| Sales: STRAWBERRY | $52,589.00 | $97,842.00 | $-45,253.00 |
-| Sales: TOMATO | $0.00 | $284.00 | $-284.00 |
-| Sales: WHEAT | $7,748.00 | $42,471.00 | $-34,723.00 |
-| Sales: WOOL | $0.00 | $59,020.00 | $-59,020.00 |
+| Sales: CARROT | $1,806.54 | $0.00 | $1,806.54 |
+| Sales: FERTILIZER | $10,548.15 | $12,970.98 | $-2,422.83 |
+| Sales: MELON | $32,330.63 | $15,435.01 | $16,895.63 |
+| Sales: MILK | $55,327.84 | $40,604.89 | $14,722.96 |
+| Sales: STRAWBERRY | $52,845.61 | $21,817.03 | $31,028.58 |
+| Sales: TOMATO | $0.00 | $26.01 | $-26.01 |
+| Sales: WHEAT | $7,716.22 | $29,610.70 | $-21,894.48 |
+| Sales: WOOL | $0.00 | $31,577.39 | $-31,577.39 |
 
 **Key Win Factors Identified:**
 - We hired more workers (13 vs 12), giving us labor superiority.
+- We outperformed on MELON sales by $16,895.63.
+- We outperformed on STRAWBERRY sales by $31,028.58.
+- We outperformed on MILK sales by $14,722.96.
 
 ---
 
@@ -689,18 +692,18 @@
 | Cows Purchased | 9 | 5 | 4 |
 | Sheep Purchased | 0 | 3 | -3 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $2,228.00 | $0.00 | $2,228.00 |
-| Sales: EGG | $0.00 | $2,010.00 | $-2,010.00 |
-| Sales: FERTILIZER | $8,954.00 | $9,314.00 | $-360.00 |
-| Sales: MELON | $24,290.00 | $20,018.00 | $4,272.00 |
-| Sales: MILK | $20,154.00 | $14,416.00 | $5,738.00 |
-| Sales: STRAWBERRY | $53,874.00 | $46,281.00 | $7,593.00 |
-| Sales: WHEAT | $7,277.00 | $77,596.00 | $-70,319.00 |
-| Sales: WOOL | $0.00 | $18,324.00 | $-18,324.00 |
+| Sales: CARROT | $2,370.52 | $0.00 | $2,370.52 |
+| Sales: EGG | $0.00 | $2,177.02 | $-2,177.02 |
+| Sales: FERTILIZER | $8,974.47 | $9,809.71 | $-835.24 |
+| Sales: MELON | $26,668.19 | $20,405.60 | $6,262.58 |
+| Sales: MILK | $23,050.39 | $17,555.65 | $5,494.74 |
+| Sales: STRAWBERRY | $53,669.67 | $46,101.07 | $7,568.60 |
+| Sales: WHEAT | $7,115.76 | $77,922.21 | $-70,806.45 |
+| Sales: WOOL | $0.00 | $19,021.74 | $-19,021.74 |
 
 **Key Loss Factors Identified:**
 - Opponent bought more Sheep (3 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on WOOL sales by $18,324.00.
+- Opponent outperformed on WOOL sales by $19,021.74.
 
 ---
 
@@ -716,21 +719,18 @@
 | Cows Purchased | 9 | 11 | -2 |
 | Sheep Purchased | 0 | 2 | -2 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,974.00 | $0.00 | $1,974.00 |
-| Sales: FERTILIZER | $8,777.00 | $14,651.00 | $-5,874.00 |
-| Sales: MELON | $23,790.00 | $42,751.00 | $-18,961.00 |
-| Sales: MILK | $9,724.00 | $17,238.00 | $-7,514.00 |
-| Sales: STRAWBERRY | $48,474.00 | $112,701.00 | $-64,227.00 |
-| Sales: WHEAT | $6,177.00 | $7,770.00 | $-1,593.00 |
-| Sales: WOOL | $0.00 | $15,542.00 | $-15,542.00 |
+| Sales: CARROT | $2,124.90 | $0.00 | $2,124.90 |
+| Sales: FERTILIZER | $8,703.31 | $9,824.39 | $-1,121.08 |
+| Sales: MELON | $25,987.88 | $21,712.01 | $4,275.87 |
+| Sales: MILK | $13,664.62 | $13,180.67 | $483.95 |
+| Sales: STRAWBERRY | $47,993.58 | $44,164.29 | $3,829.29 |
+| Sales: WHEAT | $5,825.71 | $6,874.23 | $-1,048.52 |
+| Sales: WOOL | $0.00 | $14,362.41 | $-14,362.41 |
 
 **Key Loss Factors Identified:**
 - Opponent invested more in Cows (11 vs 9), yielding higher Milk revenues.
 - Opponent bought more Sheep (2 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on MELON sales by $18,961.00.
-- Opponent outperformed on STRAWBERRY sales by $64,227.00.
-- Opponent outperformed on MILK sales by $7,514.00.
-- Opponent outperformed on WOOL sales by $15,542.00.
+- Opponent outperformed on WOOL sales by $14,362.41.
 
 ---
 
@@ -746,19 +746,19 @@
 | Cows Purchased | 10 | 6 | 4 |
 | Sheep Purchased | 0 | 5 | -5 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,842.00 | $492.00 | $1,350.00 |
-| Sales: FERTILIZER | $14,516.00 | $10,236.00 | $4,280.00 |
-| Sales: MELON | $28,986.00 | $15,847.00 | $13,139.00 |
-| Sales: MILK | $48,037.00 | $35,483.00 | $12,554.00 |
-| Sales: STRAWBERRY | $41,414.00 | $44,427.00 | $-3,013.00 |
-| Sales: WHEAT | $8,281.00 | $4,345.00 | $3,936.00 |
-| Sales: WOOL | $0.00 | $21,343.00 | $-21,343.00 |
+| Sales: CARROT | $2,027.99 | $505.75 | $1,522.24 |
+| Sales: FERTILIZER | $14,562.47 | $10,260.02 | $4,302.45 |
+| Sales: MELON | $30,270.62 | $18,330.33 | $11,940.30 |
+| Sales: MILK | $47,869.76 | $35,426.06 | $12,443.71 |
+| Sales: STRAWBERRY | $41,588.12 | $44,269.07 | $-2,680.95 |
+| Sales: WHEAT | $8,006.04 | $3,311.23 | $4,694.81 |
+| Sales: WOOL | $0.00 | $21,013.55 | $-21,013.55 |
 
 **Key Win Factors Identified:**
 - We hired more workers (13 vs 11), giving us labor superiority.
 - We invested more in Cows (10 vs 6), yielding higher Milk revenues.
-- We outperformed on MELON sales by $13,139.00.
-- We outperformed on MILK sales by $12,554.00.
+- We outperformed on MELON sales by $11,940.30.
+- We outperformed on MILK sales by $12,443.71.
 
 ---
 
@@ -774,21 +774,20 @@
 | Cows Purchased | 8 | 8 | 0 |
 | Sheep Purchased | 0 | 6 | -6 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $2,108.00 | $0.00 | $2,108.00 |
-| Sales: FERTILIZER | $16,169.00 | $11,743.00 | $4,426.00 |
-| Sales: MELON | $20,844.00 | $32,370.00 | $-11,526.00 |
-| Sales: MILK | $51,759.00 | $77,243.00 | $-25,484.00 |
-| Sales: STRAWBERRY | $30,156.00 | $50,465.00 | $-20,309.00 |
-| Sales: WHEAT | $3,269.00 | $34,658.00 | $-31,389.00 |
-| Sales: WOOL | $0.00 | $63,534.00 | $-63,534.00 |
+| Sales: CARROT | $2,324.69 | $0.00 | $2,324.69 |
+| Sales: FERTILIZER | $16,024.62 | $11,074.66 | $4,949.96 |
+| Sales: MELON | $21,639.28 | $25,365.09 | $-3,725.81 |
+| Sales: MILK | $51,259.79 | $57,188.70 | $-5,928.90 |
+| Sales: STRAWBERRY | $34,893.90 | $49,780.56 | $-14,886.66 |
+| Sales: WHEAT | $3,213.72 | $32,839.54 | $-29,625.83 |
+| Sales: WOOL | $0.00 | $40,554.45 | $-40,554.45 |
 
 **Key Loss Factors Identified:**
 - Opponent hired more workers, indicating we might be under-hiring or expanding too slowly.
 - Opponent bought more Sheep (6 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on MELON sales by $11,526.00.
-- Opponent outperformed on STRAWBERRY sales by $20,309.00.
-- Opponent outperformed on MILK sales by $25,484.00.
-- Opponent outperformed on WOOL sales by $63,534.00.
+- Opponent outperformed on STRAWBERRY sales by $14,886.66.
+- Opponent outperformed on MILK sales by $5,928.90.
+- Opponent outperformed on WOOL sales by $40,554.45.
 
 ---
 
@@ -804,18 +803,17 @@
 | Cows Purchased | 9 | 8 | 1 |
 | Sheep Purchased | 0 | 7 | -7 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $2,228.00 | $0.00 | $2,228.00 |
-| Sales: FERTILIZER | $8,316.00 | $11,053.00 | $-2,737.00 |
-| Sales: MELON | $24,486.00 | $18,293.00 | $6,193.00 |
-| Sales: MILK | $36,294.00 | $37,231.00 | $-937.00 |
-| Sales: STRAWBERRY | $60,991.00 | $48,242.00 | $12,749.00 |
-| Sales: WHEAT | $9,327.00 | $4,307.00 | $5,020.00 |
-| Sales: WOOL | $0.00 | $23,728.00 | $-23,728.00 |
+| Sales: CARROT | $2,386.84 | $0.00 | $2,386.84 |
+| Sales: FERTILIZER | $8,371.93 | $11,161.05 | $-2,789.13 |
+| Sales: MELON | $25,740.59 | $20,887.89 | $4,852.70 |
+| Sales: MILK | $38,701.52 | $38,251.72 | $449.79 |
+| Sales: STRAWBERRY | $60,821.28 | $47,232.19 | $13,589.10 |
+| Sales: WHEAT | $9,372.84 | $4,233.20 | $5,139.64 |
+| Sales: WOOL | $0.00 | $23,177.95 | $-23,177.95 |
 
 **Key Win Factors Identified:**
 - We invested more in Cows (9 vs 8), yielding higher Milk revenues.
-- We outperformed on MELON sales by $6,193.00.
-- We outperformed on STRAWBERRY sales by $12,749.00.
+- We outperformed on STRAWBERRY sales by $13,589.10.
 
 ---
 
@@ -831,17 +829,17 @@
 | Cows Purchased | 9 | 6 | 3 |
 | Sheep Purchased | 0 | 10 | -10 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,626.00 | $206.00 | $1,420.00 |
-| Sales: FERTILIZER | $8,642.00 | $16,330.00 | $-7,688.00 |
-| Sales: MELON | $32,281.00 | $8,028.00 | $24,253.00 |
-| Sales: MILK | $21,122.00 | $16,440.00 | $4,682.00 |
-| Sales: STRAWBERRY | $52,590.00 | $52,773.00 | $-183.00 |
-| Sales: WHEAT | $4,970.00 | $1,263.00 | $3,707.00 |
-| Sales: WOOL | $0.00 | $59,650.00 | $-59,650.00 |
+| Sales: CARROT | $1,793.56 | $207.00 | $1,586.56 |
+| Sales: FERTILIZER | $8,726.32 | $16,505.44 | $-7,779.13 |
+| Sales: MELON | $32,526.62 | $8,137.03 | $24,389.59 |
+| Sales: MILK | $24,000.40 | $18,866.79 | $5,133.60 |
+| Sales: STRAWBERRY | $52,743.23 | $53,206.87 | $-463.64 |
+| Sales: WHEAT | $4,846.87 | $1,227.06 | $3,619.81 |
+| Sales: WOOL | $0.00 | $58,203.80 | $-58,203.80 |
 
 **Key Loss Factors Identified:**
 - Opponent bought more Sheep (10 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on WOOL sales by $59,650.00.
+- Opponent outperformed on WOOL sales by $58,203.80.
 
 ---
 
@@ -857,19 +855,19 @@
 | Cows Purchased | 9 | 5 | 4 |
 | Sheep Purchased | 0 | 4 | -4 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $2,032.00 | $0.00 | $2,032.00 |
-| Sales: FERTILIZER | $11,363.00 | $27,070.00 | $-15,707.00 |
-| Sales: MELON | $22,118.00 | $20,844.00 | $1,274.00 |
-| Sales: MILK | $51,236.00 | $37,197.00 | $14,039.00 |
-| Sales: STRAWBERRY | $61,504.00 | $43,957.00 | $17,547.00 |
-| Sales: WHEAT | $3,034.00 | $16,543.00 | $-13,509.00 |
-| Sales: WOOL | $0.00 | $21,692.00 | $-21,692.00 |
+| Sales: CARROT | $2,186.64 | $0.00 | $2,186.64 |
+| Sales: FERTILIZER | $11,364.53 | $15,281.92 | $-3,917.40 |
+| Sales: MELON | $26,402.03 | $23,779.49 | $2,622.54 |
+| Sales: MILK | $51,175.15 | $34,846.10 | $16,329.05 |
+| Sales: STRAWBERRY | $61,566.16 | $41,123.37 | $20,442.79 |
+| Sales: WHEAT | $3,033.48 | $14,546.11 | $-11,512.63 |
+| Sales: WOOL | $0.00 | $20,030.99 | $-20,030.99 |
 
 **Key Win Factors Identified:**
 - We hired more workers (13 vs 10), giving us labor superiority.
 - We invested more in Cows (9 vs 5), yielding higher Milk revenues.
-- We outperformed on STRAWBERRY sales by $17,547.00.
-- We outperformed on MILK sales by $14,039.00.
+- We outperformed on STRAWBERRY sales by $20,442.79.
+- We outperformed on MILK sales by $16,329.05.
 
 ---
 
@@ -885,19 +883,19 @@
 | Cows Purchased | 9 | 9 | 0 |
 | Sheep Purchased | 0 | 3 | -3 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,948.00 | $1,739.00 | $209.00 |
-| Sales: EGG | $0.00 | $5,514.00 | $-5,514.00 |
-| Sales: FERTILIZER | $10,967.00 | $11,523.00 | $-556.00 |
-| Sales: MELON | $23,959.00 | $17,682.00 | $6,277.00 |
-| Sales: MILK | $15,945.00 | $17,323.00 | $-1,378.00 |
-| Sales: STRAWBERRY | $46,442.00 | $0.00 | $46,442.00 |
-| Sales: WHEAT | $6,686.00 | $16,362.00 | $-9,676.00 |
-| Sales: WOOL | $0.00 | $5,354.00 | $-5,354.00 |
+| Sales: CARROT | $2,099.31 | $1,847.41 | $251.90 |
+| Sales: EGG | $0.00 | $5,469.84 | $-5,469.84 |
+| Sales: FERTILIZER | $10,994.92 | $11,530.36 | $-535.44 |
+| Sales: MELON | $24,884.55 | $18,916.45 | $5,968.10 |
+| Sales: MILK | $18,517.00 | $18,886.85 | $-369.85 |
+| Sales: STRAWBERRY | $46,129.62 | $0.00 | $46,129.62 |
+| Sales: WHEAT | $6,563.59 | $16,180.74 | $-9,617.15 |
+| Sales: WOOL | $0.00 | $5,351.34 | $-5,351.34 |
 
 **Key Win Factors Identified:**
 - We hired more workers (13 vs 9), giving us labor superiority.
-- We outperformed on MELON sales by $6,277.00.
-- We outperformed on STRAWBERRY sales by $46,442.00.
+- We outperformed on MELON sales by $5,968.10.
+- We outperformed on STRAWBERRY sales by $46,129.62.
 
 ---
 
@@ -913,18 +911,18 @@
 | Cows Purchased | 8 | 5 | 3 |
 | Sheep Purchased | 0 | 6 | -6 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,941.00 | $0.00 | $1,941.00 |
-| Sales: FERTILIZER | $13,059.00 | $10,106.00 | $2,953.00 |
-| Sales: MELON | $25,383.00 | $21,303.00 | $4,080.00 |
-| Sales: MILK | $50,159.00 | $34,879.00 | $15,280.00 |
-| Sales: STRAWBERRY | $69,922.00 | $39,463.00 | $30,459.00 |
-| Sales: WHEAT | $4,238.00 | $6,451.00 | $-2,213.00 |
-| Sales: WOOL | $0.00 | $30,748.00 | $-30,748.00 |
+| Sales: CARROT | $2,114.54 | $0.00 | $2,114.54 |
+| Sales: FERTILIZER | $13,195.96 | $10,210.85 | $2,985.11 |
+| Sales: MELON | $26,695.08 | $23,345.41 | $3,349.67 |
+| Sales: MILK | $50,661.49 | $34,936.07 | $15,725.42 |
+| Sales: STRAWBERRY | $69,978.98 | $39,518.18 | $30,460.80 |
+| Sales: WHEAT | $4,176.95 | $6,285.07 | $-2,108.13 |
+| Sales: WOOL | $0.00 | $30,232.42 | $-30,232.42 |
 
 **Key Win Factors Identified:**
 - We invested more in Cows (8 vs 5), yielding higher Milk revenues.
-- We outperformed on STRAWBERRY sales by $30,459.00.
-- We outperformed on MILK sales by $15,280.00.
+- We outperformed on STRAWBERRY sales by $30,460.80.
+- We outperformed on MILK sales by $15,725.42.
 
 ---
 
@@ -940,17 +938,17 @@
 | Cows Purchased | 9 | 8 | 1 |
 | Sheep Purchased | 0 | 6 | -6 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $2,036.00 | $0.00 | $2,036.00 |
-| Sales: FERTILIZER | $8,497.00 | $13,655.00 | $-5,158.00 |
-| Sales: MELON | $23,627.00 | $16,338.00 | $7,289.00 |
-| Sales: MILK | $14,871.00 | $12,227.00 | $2,644.00 |
-| Sales: STRAWBERRY | $48,615.00 | $33,528.00 | $15,087.00 |
-| Sales: WHEAT | $4,502.00 | $5,900.00 | $-1,398.00 |
-| Sales: WOOL | $0.00 | $35,719.00 | $-35,719.00 |
+| Sales: CARROT | $2,188.01 | $0.00 | $2,188.01 |
+| Sales: FERTILIZER | $8,365.08 | $13,999.43 | $-5,634.35 |
+| Sales: MELON | $24,075.20 | $17,312.00 | $6,763.19 |
+| Sales: MILK | $19,214.79 | $14,190.02 | $5,024.77 |
+| Sales: STRAWBERRY | $47,957.89 | $32,879.62 | $15,078.26 |
+| Sales: WHEAT | $4,220.04 | $6,131.23 | $-1,911.19 |
+| Sales: WOOL | $0.00 | $35,313.70 | $-35,313.70 |
 
 **Key Loss Factors Identified:**
 - Opponent bought more Sheep (6 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on WOOL sales by $35,719.00.
+- Opponent outperformed on WOOL sales by $35,313.70.
 
 ---
 
@@ -966,19 +964,19 @@
 | Cows Purchased | 9 | 8 | 1 |
 | Sheep Purchased | 0 | 6 | -6 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,978.00 | $0.00 | $1,978.00 |
-| Sales: FERTILIZER | $8,675.00 | $16,444.00 | $-7,769.00 |
-| Sales: MELON | $22,765.00 | $19,348.00 | $3,417.00 |
-| Sales: MILK | $47,035.00 | $41,303.00 | $5,732.00 |
-| Sales: STRAWBERRY | $56,794.00 | $22,809.00 | $33,985.00 |
-| Sales: WHEAT | $3,952.00 | $2,150.00 | $1,802.00 |
-| Sales: WOOL | $0.00 | $32,999.00 | $-32,999.00 |
+| Sales: CARROT | $2,137.40 | $0.00 | $2,137.40 |
+| Sales: FERTILIZER | $8,714.67 | $16,887.75 | $-8,173.08 |
+| Sales: MELON | $23,509.96 | $20,988.27 | $2,521.69 |
+| Sales: MILK | $47,334.44 | $41,254.01 | $6,080.43 |
+| Sales: STRAWBERRY | $56,967.75 | $22,626.79 | $34,340.96 |
+| Sales: WHEAT | $3,934.77 | $2,118.12 | $1,816.66 |
+| Sales: WOOL | $0.00 | $33,981.07 | $-33,981.07 |
 
 **Key Win Factors Identified:**
 - We hired more workers (13 vs 9), giving us labor superiority.
 - We invested more in Cows (9 vs 8), yielding higher Milk revenues.
-- We outperformed on STRAWBERRY sales by $33,985.00.
-- We outperformed on MILK sales by $5,732.00.
+- We outperformed on STRAWBERRY sales by $34,340.96.
+- We outperformed on MILK sales by $6,080.43.
 
 ---
 
@@ -994,17 +992,17 @@
 | Cows Purchased | 9 | 11 | -2 |
 | Sheep Purchased | 0 | 0 | 0 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,926.00 | $889.00 | $1,037.00 |
-| Sales: EGG | $0.00 | $3,884.00 | $-3,884.00 |
-| Sales: FERTILIZER | $11,712.00 | $13,563.00 | $-1,851.00 |
-| Sales: MELON | $22,904.00 | $19,374.00 | $3,530.00 |
-| Sales: MILK | $48,115.00 | $57,549.00 | $-9,434.00 |
-| Sales: STRAWBERRY | $72,171.00 | $0.00 | $72,171.00 |
-| Sales: WHEAT | $6,949.00 | $12,275.00 | $-5,326.00 |
+| Sales: CARROT | $2,086.91 | $961.53 | $1,125.38 |
+| Sales: EGG | $0.00 | $3,818.40 | $-3,818.40 |
+| Sales: FERTILIZER | $11,770.32 | $13,586.90 | $-1,816.57 |
+| Sales: MELON | $24,595.34 | $21,047.01 | $3,548.33 |
+| Sales: MILK | $48,937.49 | $57,827.46 | $-8,889.97 |
+| Sales: STRAWBERRY | $72,063.35 | $0.00 | $72,063.35 |
+| Sales: WHEAT | $7,043.59 | $12,971.70 | $-5,928.11 |
 
 **Key Win Factors Identified:**
 - We hired more workers (13 vs 9), giving us labor superiority.
-- We outperformed on STRAWBERRY sales by $72,171.00.
+- We outperformed on STRAWBERRY sales by $72,063.35.
 
 ---
 
@@ -1020,19 +1018,19 @@
 | Cows Purchased | 9 | 5 | 4 |
 | Sheep Purchased | 0 | 3 | -3 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $2,084.00 | $0.00 | $2,084.00 |
-| Sales: FERTILIZER | $10,447.00 | $7,226.00 | $3,221.00 |
-| Sales: MELON | $25,718.00 | $20,202.00 | $5,516.00 |
-| Sales: MILK | $54,002.00 | $38,919.00 | $15,083.00 |
-| Sales: STRAWBERRY | $49,488.00 | $37,664.00 | $11,824.00 |
-| Sales: WHEAT | $4,789.00 | $25,284.00 | $-20,495.00 |
-| Sales: WOOL | $0.00 | $21,456.00 | $-21,456.00 |
+| Sales: CARROT | $2,248.17 | $0.00 | $2,248.17 |
+| Sales: FERTILIZER | $10,501.14 | $7,133.82 | $3,367.32 |
+| Sales: MELON | $29,522.53 | $22,661.37 | $6,861.16 |
+| Sales: MILK | $54,010.38 | $38,415.78 | $15,594.60 |
+| Sales: STRAWBERRY | $49,781.32 | $37,185.17 | $12,596.15 |
+| Sales: WHEAT | $4,776.45 | $24,432.37 | $-19,655.92 |
+| Sales: WOOL | $0.00 | $21,312.49 | $-21,312.49 |
 
 **Key Win Factors Identified:**
 - We invested more in Cows (9 vs 5), yielding higher Milk revenues.
-- We outperformed on MELON sales by $5,516.00.
-- We outperformed on STRAWBERRY sales by $11,824.00.
-- We outperformed on MILK sales by $15,083.00.
+- We outperformed on MELON sales by $6,861.16.
+- We outperformed on STRAWBERRY sales by $12,596.15.
+- We outperformed on MILK sales by $15,594.60.
 
 ---
 
@@ -1048,19 +1046,19 @@
 | Cows Purchased | 9 | 9 | 0 |
 | Sheep Purchased | 0 | 7 | -7 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,780.00 | $726.00 | $1,054.00 |
-| Sales: FERTILIZER | $9,218.00 | $12,938.00 | $-3,720.00 |
-| Sales: MELON | $22,115.00 | $27,810.00 | $-5,695.00 |
-| Sales: MILK | $31,497.00 | $31,695.00 | $-198.00 |
-| Sales: STRAWBERRY | $44,227.00 | $30,632.00 | $13,595.00 |
-| Sales: TOMATO | $0.00 | $910.00 | $-910.00 |
-| Sales: WHEAT | $6,426.00 | $3,846.00 | $2,580.00 |
-| Sales: WOOL | $0.00 | $31,219.00 | $-31,219.00 |
+| Sales: CARROT | $1,947.95 | $727.40 | $1,220.55 |
+| Sales: FERTILIZER | $9,243.73 | $13,189.36 | $-3,945.63 |
+| Sales: MELON | $23,130.24 | $28,683.69 | $-5,553.45 |
+| Sales: MILK | $34,173.67 | $35,708.74 | $-1,535.06 |
+| Sales: STRAWBERRY | $43,938.93 | $30,685.10 | $13,253.82 |
+| Sales: TOMATO | $0.00 | $898.76 | $-898.76 |
+| Sales: WHEAT | $6,293.48 | $3,959.96 | $2,333.52 |
+| Sales: WOOL | $0.00 | $31,570.00 | $-31,570.00 |
 
 **Key Loss Factors Identified:**
 - Opponent bought more Sheep (7 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on MELON sales by $5,695.00.
-- Opponent outperformed on WOOL sales by $31,219.00.
+- Opponent outperformed on MELON sales by $5,553.45.
+- Opponent outperformed on WOOL sales by $31,570.00.
 
 ---
 
@@ -1076,19 +1074,19 @@
 | Cows Purchased | 9 | 10 | -1 |
 | Sheep Purchased | 0 | 6 | -6 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,726.00 | $1,681.00 | $45.00 |
-| Sales: FERTILIZER | $8,214.00 | $16,580.00 | $-8,366.00 |
-| Sales: MELON | $20,405.00 | $19,164.00 | $1,241.00 |
-| Sales: MILK | $46,827.00 | $54,463.00 | $-7,636.00 |
-| Sales: STRAWBERRY | $64,781.00 | $39,969.00 | $24,812.00 |
-| Sales: WHEAT | $7,328.00 | $54.00 | $7,274.00 |
-| Sales: WOOL | $0.00 | $25,803.00 | $-25,803.00 |
+| Sales: CARROT | $1,824.70 | $2,925.52 | $-1,100.82 |
+| Sales: FERTILIZER | $8,271.85 | $17,550.07 | $-9,278.22 |
+| Sales: MELON | $24,400.65 | $19,457.65 | $4,943.00 |
+| Sales: MILK | $47,202.25 | $55,132.20 | $-7,929.95 |
+| Sales: STRAWBERRY | $64,883.04 | $40,252.51 | $24,630.53 |
+| Sales: WHEAT | $7,295.51 | $52.96 | $7,242.55 |
+| Sales: WOOL | $0.00 | $25,607.09 | $-25,607.09 |
 
 **Key Loss Factors Identified:**
 - Opponent invested more in Cows (10 vs 9), yielding higher Milk revenues.
 - Opponent bought more Sheep (6 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on MILK sales by $7,636.00.
-- Opponent outperformed on WOOL sales by $25,803.00.
+- Opponent outperformed on MILK sales by $7,929.95.
+- Opponent outperformed on WOOL sales by $25,607.09.
 
 ---
 
@@ -1104,17 +1102,17 @@
 | Cows Purchased | 9 | 11 | -2 |
 | Sheep Purchased | 0 | 3 | -3 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,790.00 | $0.00 | $1,790.00 |
-| Sales: FERTILIZER | $8,749.00 | $15,139.00 | $-6,390.00 |
-| Sales: MELON | $22,608.00 | $22,518.00 | $90.00 |
-| Sales: MILK | $36,133.00 | $42,142.00 | $-6,009.00 |
-| Sales: STRAWBERRY | $60,790.00 | $0.00 | $60,790.00 |
-| Sales: WHEAT | $4,885.00 | $10,383.00 | $-5,498.00 |
-| Sales: WOOL | $0.00 | $21,575.00 | $-21,575.00 |
+| Sales: CARROT | $1,940.04 | $0.00 | $1,940.04 |
+| Sales: FERTILIZER | $8,780.34 | $15,118.11 | $-6,337.78 |
+| Sales: MELON | $24,044.43 | $24,130.31 | $-85.88 |
+| Sales: MILK | $38,619.01 | $42,857.19 | $-4,238.19 |
+| Sales: STRAWBERRY | $60,849.36 | $0.00 | $60,849.36 |
+| Sales: WHEAT | $4,876.83 | $10,178.35 | $-5,301.51 |
+| Sales: WOOL | $0.00 | $21,689.04 | $-21,689.04 |
 
 **Key Win Factors Identified:**
 - We hired more workers (13 vs 11), giving us labor superiority.
-- We outperformed on STRAWBERRY sales by $60,790.00.
+- We outperformed on STRAWBERRY sales by $60,849.36.
 
 ---
 
@@ -1130,17 +1128,17 @@
 | Cows Purchased | 9 | 8 | 1 |
 | Sheep Purchased | 0 | 5 | -5 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $2,032.00 | $336.00 | $1,696.00 |
-| Sales: FERTILIZER | $7,710.00 | $16,125.00 | $-8,415.00 |
-| Sales: MELON | $23,263.00 | $21,002.00 | $2,261.00 |
-| Sales: MILK | $18,189.00 | $12,964.00 | $5,225.00 |
-| Sales: STRAWBERRY | $54,273.00 | $38,035.00 | $16,238.00 |
-| Sales: WHEAT | $5,065.00 | $16,547.00 | $-11,482.00 |
-| Sales: WOOL | $0.00 | $35,649.00 | $-35,649.00 |
+| Sales: CARROT | $2,197.65 | $336.00 | $1,861.65 |
+| Sales: FERTILIZER | $7,736.38 | $16,280.06 | $-8,543.68 |
+| Sales: MELON | $23,688.24 | $22,929.95 | $758.28 |
+| Sales: MILK | $20,432.45 | $15,465.25 | $4,967.20 |
+| Sales: STRAWBERRY | $54,302.62 | $37,731.73 | $16,570.89 |
+| Sales: WHEAT | $4,598.67 | $14,320.40 | $-9,721.73 |
+| Sales: WOOL | $0.00 | $34,883.60 | $-34,883.60 |
 
 **Key Loss Factors Identified:**
 - Opponent bought more Sheep (5 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on WOOL sales by $35,649.00.
+- Opponent outperformed on WOOL sales by $34,883.60.
 
 ---
 
@@ -1156,19 +1154,19 @@
 | Cows Purchased | 8 | 8 | 0 |
 | Sheep Purchased | 0 | 6 | -6 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,788.00 | $0.00 | $1,788.00 |
-| Sales: FERTILIZER | $8,969.00 | $15,032.00 | $-6,063.00 |
-| Sales: MELON | $23,891.00 | $25,146.00 | $-1,255.00 |
-| Sales: MILK | $38,875.00 | $41,908.00 | $-3,033.00 |
-| Sales: STRAWBERRY | $26,082.00 | $41,116.00 | $-15,034.00 |
-| Sales: WHEAT | $5,913.00 | $9,421.00 | $-3,508.00 |
-| Sales: WOOL | $0.00 | $34,542.00 | $-34,542.00 |
+| Sales: CARROT | $1,915.26 | $0.00 | $1,915.26 |
+| Sales: FERTILIZER | $8,969.55 | $15,119.56 | $-6,150.00 |
+| Sales: MELON | $24,870.11 | $26,193.96 | $-1,323.85 |
+| Sales: MILK | $40,735.20 | $43,800.57 | $-3,065.37 |
+| Sales: STRAWBERRY | $29,414.66 | $42,846.22 | $-13,431.55 |
+| Sales: WHEAT | $5,012.22 | $9,400.43 | $-4,388.21 |
+| Sales: WOOL | $0.00 | $35,186.27 | $-35,186.27 |
 
 **Key Loss Factors Identified:**
 - Opponent hired more workers, indicating we might be under-hiring or expanding too slowly.
 - Opponent bought more Sheep (6 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on STRAWBERRY sales by $15,034.00.
-- Opponent outperformed on WOOL sales by $34,542.00.
+- Opponent outperformed on STRAWBERRY sales by $13,431.55.
+- Opponent outperformed on WOOL sales by $35,186.27.
 
 ---
 
@@ -1184,15 +1182,15 @@
 | Cows Purchased | 8 | 5 | 3 |
 | Sheep Purchased | 6 | 5 | 1 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: FERTILIZER | $10,835.00 | $13,382.00 | $-2,547.00 |
-| Sales: MELON | $21,966.00 | $33,391.00 | $-11,425.00 |
-| Sales: MILK | $52,758.00 | $43,492.00 | $9,266.00 |
-| Sales: STRAWBERRY | $51,171.00 | $49,494.00 | $1,677.00 |
-| Sales: WHEAT | $3,463.00 | $2,072.00 | $1,391.00 |
-| Sales: WOOL | $22,684.00 | $26,791.00 | $-4,107.00 |
+| Sales: FERTILIZER | $10,875.58 | $13,592.34 | $-2,716.76 |
+| Sales: MELON | $22,322.06 | $34,135.68 | $-11,813.62 |
+| Sales: MILK | $52,879.66 | $44,081.52 | $8,798.14 |
+| Sales: STRAWBERRY | $51,595.09 | $49,845.68 | $1,749.42 |
+| Sales: WHEAT | $3,454.29 | $2,082.15 | $1,372.14 |
+| Sales: WOOL | $22,924.32 | $26,862.63 | $-3,938.32 |
 
 **Key Loss Factors Identified:**
-- Opponent outperformed on MELON sales by $11,425.00.
+- Opponent outperformed on MELON sales by $11,813.62.
 
 ---
 
@@ -1208,18 +1206,18 @@
 | Cows Purchased | 8 | 0 | 8 |
 | Sheep Purchased | 6 | 8 | -2 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: FERTILIZER | $14,149.00 | $10,766.00 | $3,383.00 |
-| Sales: MELON | $15,466.00 | $27,786.00 | $-12,320.00 |
-| Sales: MILK | $46,464.00 | $0.00 | $46,464.00 |
-| Sales: STRAWBERRY | $53,739.00 | $28,486.00 | $25,253.00 |
-| Sales: WHEAT | $2,346.00 | $12,314.00 | $-9,968.00 |
-| Sales: WOOL | $22,084.00 | $32,182.00 | $-10,098.00 |
+| Sales: FERTILIZER | $14,231.18 | $10,523.96 | $3,707.21 |
+| Sales: MELON | $15,856.24 | $32,820.65 | $-16,964.41 |
+| Sales: MILK | $46,462.32 | $0.00 | $46,462.32 |
+| Sales: STRAWBERRY | $53,743.92 | $28,990.65 | $24,753.27 |
+| Sales: WHEAT | $2,349.34 | $12,048.59 | $-9,699.25 |
+| Sales: WOOL | $22,364.01 | $35,909.15 | $-13,545.14 |
 
 **Key Win Factors Identified:**
 - We hired more workers (13 vs 10), giving us labor superiority.
 - We invested more in Cows (8 vs 0), yielding higher Milk revenues.
-- We outperformed on STRAWBERRY sales by $25,253.00.
-- We outperformed on MILK sales by $46,464.00.
+- We outperformed on STRAWBERRY sales by $24,753.27.
+- We outperformed on MILK sales by $46,462.32.
 
 ---
 
@@ -1235,17 +1233,17 @@
 | Cows Purchased | 8 | 6 | 2 |
 | Sheep Purchased | 4 | 26 | -22 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: FERTILIZER | $9,091.00 | $20,488.00 | $-11,397.00 |
-| Sales: MELON | $19,844.00 | $28,950.00 | $-9,106.00 |
-| Sales: MILK | $13,992.00 | $14,688.00 | $-696.00 |
-| Sales: STRAWBERRY | $48,776.00 | $7,833.00 | $40,943.00 |
-| Sales: WHEAT | $2,240.00 | $9,898.00 | $-7,658.00 |
-| Sales: WOOL | $19,484.00 | $63,410.00 | $-43,926.00 |
+| Sales: FERTILIZER | $9,132.13 | $20,191.79 | $-11,059.66 |
+| Sales: MELON | $20,068.37 | $29,333.27 | $-9,264.90 |
+| Sales: MILK | $15,681.82 | $16,655.06 | $-973.24 |
+| Sales: STRAWBERRY | $48,943.44 | $7,648.19 | $41,295.25 |
+| Sales: WHEAT | $2,242.18 | $9,788.73 | $-7,546.55 |
+| Sales: WOOL | $19,411.05 | $62,701.96 | $-43,290.90 |
 
 **Key Loss Factors Identified:**
 - Opponent bought more Sheep (26 vs 4), yielding higher Wool revenues.
-- Opponent outperformed on MELON sales by $9,106.00.
-- Opponent outperformed on WOOL sales by $43,926.00.
+- Opponent outperformed on MELON sales by $9,264.90.
+- Opponent outperformed on WOOL sales by $43,290.90.
 
 ---
 
@@ -1261,18 +1259,18 @@
 | Cows Purchased | 8 | 8 | 0 |
 | Sheep Purchased | 6 | 6 | 0 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: FERTILIZER | $16,180.00 | $13,865.00 | $2,315.00 |
-| Sales: MELON | $20,870.00 | $26,844.00 | $-5,974.00 |
-| Sales: MILK | $7,098.00 | $13,211.00 | $-6,113.00 |
-| Sales: STRAWBERRY | $46,487.00 | $34,248.00 | $12,239.00 |
-| Sales: WHEAT | $1,568.00 | $4,529.00 | $-2,961.00 |
-| Sales: WOOL | $24,756.00 | $36,168.00 | $-11,412.00 |
+| Sales: FERTILIZER | $16,261.84 | $13,408.06 | $2,853.78 |
+| Sales: MELON | $20,929.50 | $27,157.08 | $-6,227.58 |
+| Sales: MILK | $9,209.18 | $15,354.74 | $-6,145.56 |
+| Sales: STRAWBERRY | $46,342.75 | $33,470.11 | $12,872.64 |
+| Sales: WHEAT | $1,548.51 | $4,528.14 | $-2,979.63 |
+| Sales: WOOL | $24,678.23 | $35,530.87 | $-10,852.64 |
 
 **Key Loss Factors Identified:**
 - Opponent hired more workers, indicating we might be under-hiring or expanding too slowly.
-- Opponent outperformed on MELON sales by $5,974.00.
-- Opponent outperformed on MILK sales by $6,113.00.
-- Opponent outperformed on WOOL sales by $11,412.00.
+- Opponent outperformed on MELON sales by $6,227.58.
+- Opponent outperformed on MILK sales by $6,145.56.
+- Opponent outperformed on WOOL sales by $10,852.64.
 
 ---
 
@@ -1288,19 +1286,19 @@
 | Cows Purchased | 9 | 8 | 1 |
 | Sheep Purchased | 0 | 6 | -6 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $2,832.00 | $0.00 | $2,832.00 |
-| Sales: FERTILIZER | $9,156.00 | $12,054.00 | $-2,898.00 |
-| Sales: MELON | $21,410.00 | $21,156.00 | $254.00 |
-| Sales: MILK | $16,094.00 | $21,036.00 | $-4,942.00 |
-| Sales: STRAWBERRY | $43,883.00 | $72,067.00 | $-28,184.00 |
-| Sales: WHEAT | $10,628.00 | $32,087.00 | $-21,459.00 |
-| Sales: WOOL | $0.00 | $36,276.00 | $-36,276.00 |
+| Sales: CARROT | $2,865.38 | $0.00 | $2,865.38 |
+| Sales: FERTILIZER | $9,014.58 | $12,128.63 | $-3,114.06 |
+| Sales: MELON | $22,000.00 | $23,988.82 | $-1,988.82 |
+| Sales: MILK | $20,189.41 | $22,727.19 | $-2,537.78 |
+| Sales: STRAWBERRY | $43,356.93 | $71,846.14 | $-28,489.21 |
+| Sales: WHEAT | $10,415.70 | $32,606.28 | $-22,190.58 |
+| Sales: WOOL | $0.00 | $35,927.94 | $-35,927.94 |
 
 **Key Loss Factors Identified:**
 - Opponent hired more workers, indicating we might be under-hiring or expanding too slowly.
 - Opponent bought more Sheep (6 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on STRAWBERRY sales by $28,184.00.
-- Opponent outperformed on WOOL sales by $36,276.00.
+- Opponent outperformed on STRAWBERRY sales by $28,489.21.
+- Opponent outperformed on WOOL sales by $35,927.94.
 
 ---
 
@@ -1316,20 +1314,20 @@
 | Cows Purchased | 9 | 8 | 1 |
 | Sheep Purchased | 0 | 6 | -6 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,890.00 | $0.00 | $1,890.00 |
-| Sales: FERTILIZER | $8,361.00 | $15,009.00 | $-6,648.00 |
-| Sales: MELON | $21,222.00 | $26,808.00 | $-5,586.00 |
-| Sales: MILK | $23,442.00 | $27,598.00 | $-4,156.00 |
-| Sales: STRAWBERRY | $46,905.00 | $63,250.00 | $-16,345.00 |
-| Sales: WHEAT | $11,697.00 | $9,135.00 | $2,562.00 |
-| Sales: WOOL | $0.00 | $36,154.00 | $-36,154.00 |
+| Sales: CARROT | $2,086.88 | $0.00 | $2,086.88 |
+| Sales: FERTILIZER | $8,324.12 | $15,079.49 | $-6,755.37 |
+| Sales: MELON | $21,640.98 | $27,733.48 | $-6,092.50 |
+| Sales: MILK | $27,067.78 | $29,958.63 | $-2,890.85 |
+| Sales: STRAWBERRY | $47,285.63 | $63,454.06 | $-16,168.43 |
+| Sales: WHEAT | $11,374.60 | $9,186.19 | $2,188.41 |
+| Sales: WOOL | $0.00 | $36,452.14 | $-36,452.14 |
 
 **Key Loss Factors Identified:**
 - Opponent hired more workers, indicating we might be under-hiring or expanding too slowly.
 - Opponent bought more Sheep (6 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on MELON sales by $5,586.00.
-- Opponent outperformed on STRAWBERRY sales by $16,345.00.
-- Opponent outperformed on WOOL sales by $36,154.00.
+- Opponent outperformed on MELON sales by $6,092.50.
+- Opponent outperformed on STRAWBERRY sales by $16,168.43.
+- Opponent outperformed on WOOL sales by $36,452.14.
 
 ---
 
@@ -1345,17 +1343,17 @@
 | Cows Purchased | 8 | 8 | 0 |
 | Sheep Purchased | 0 | 4 | -4 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,848.00 | $0.00 | $1,848.00 |
-| Sales: FERTILIZER | $10,582.00 | $13,007.00 | $-2,425.00 |
-| Sales: MELON | $22,512.00 | $19,620.00 | $2,892.00 |
-| Sales: MILK | $47,418.00 | $49,581.00 | $-2,163.00 |
-| Sales: STRAWBERRY | $54,008.00 | $38,700.00 | $15,308.00 |
-| Sales: WHEAT | $10,511.00 | $1,284.00 | $9,227.00 |
-| Sales: WOOL | $0.00 | $25,640.00 | $-25,640.00 |
+| Sales: CARROT | $2,010.76 | $0.00 | $2,010.76 |
+| Sales: FERTILIZER | $10,615.06 | $13,226.15 | $-2,611.09 |
+| Sales: MELON | $22,893.60 | $20,250.93 | $2,642.67 |
+| Sales: MILK | $47,727.02 | $49,847.49 | $-2,120.48 |
+| Sales: STRAWBERRY | $54,052.74 | $38,675.35 | $15,377.38 |
+| Sales: WHEAT | $10,417.83 | $1,225.51 | $9,192.31 |
+| Sales: WOOL | $0.00 | $25,561.57 | $-25,561.57 |
 
 **Key Loss Factors Identified:**
 - Opponent bought more Sheep (4 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on WOOL sales by $25,640.00.
+- Opponent outperformed on WOOL sales by $25,561.57.
 
 ---
 
@@ -1371,21 +1369,21 @@
 | Cows Purchased | 8 | 10 | -2 |
 | Sheep Purchased | 0 | 8 | -8 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,572.00 | $1,224.00 | $348.00 |
-| Sales: FERTILIZER | $11,351.00 | $20,708.00 | $-9,357.00 |
-| Sales: MELON | $18,787.00 | $26,074.00 | $-7,287.00 |
-| Sales: MILK | $55,060.00 | $100,213.00 | $-45,153.00 |
-| Sales: STRAWBERRY | $61,870.00 | $46,463.00 | $15,407.00 |
-| Sales: WHEAT | $9,327.00 | $843.00 | $8,484.00 |
-| Sales: WOOL | $0.00 | $64,352.00 | $-64,352.00 |
+| Sales: CARROT | $1,673.44 | $1,329.73 | $343.71 |
+| Sales: FERTILIZER | $11,473.35 | $15,440.63 | $-3,967.28 |
+| Sales: MELON | $21,040.35 | $26,741.23 | $-5,700.88 |
+| Sales: MILK | $55,457.82 | $64,499.57 | $-9,041.74 |
+| Sales: STRAWBERRY | $62,336.89 | $41,600.95 | $20,735.94 |
+| Sales: WHEAT | $9,257.15 | $840.78 | $8,416.38 |
+| Sales: WOOL | $0.00 | $28,136.12 | $-28,136.12 |
 
 **Key Loss Factors Identified:**
 - Opponent hired more workers, indicating we might be under-hiring or expanding too slowly.
 - Opponent invested more in Cows (10 vs 8), yielding higher Milk revenues.
 - Opponent bought more Sheep (8 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on MELON sales by $7,287.00.
-- Opponent outperformed on MILK sales by $45,153.00.
-- Opponent outperformed on WOOL sales by $64,352.00.
+- Opponent outperformed on MELON sales by $5,700.88.
+- Opponent outperformed on MILK sales by $9,041.74.
+- Opponent outperformed on WOOL sales by $28,136.12.
 
 ---
 
@@ -1401,19 +1399,19 @@
 | Cows Purchased | 8 | 8 | 0 |
 | Sheep Purchased | 0 | 6 | -6 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,842.00 | $0.00 | $1,842.00 |
-| Sales: FERTILIZER | $11,429.00 | $11,494.00 | $-65.00 |
-| Sales: MELON | $23,095.00 | $20,518.00 | $2,577.00 |
-| Sales: MILK | $30,965.00 | $33,090.00 | $-2,125.00 |
-| Sales: STRAWBERRY | $27,224.00 | $54,874.00 | $-27,650.00 |
-| Sales: WHEAT | $9,031.00 | $36,642.00 | $-27,611.00 |
-| Sales: WOOL | $0.00 | $39,782.00 | $-39,782.00 |
+| Sales: CARROT | $1,978.89 | $0.00 | $1,978.89 |
+| Sales: FERTILIZER | $11,254.35 | $11,568.87 | $-314.52 |
+| Sales: MELON | $23,934.44 | $22,254.51 | $1,679.93 |
+| Sales: MILK | $33,097.96 | $33,842.77 | $-744.81 |
+| Sales: STRAWBERRY | $30,536.16 | $56,658.32 | $-26,122.16 |
+| Sales: WHEAT | $8,707.20 | $37,121.34 | $-28,414.14 |
+| Sales: WOOL | $0.00 | $39,124.19 | $-39,124.19 |
 
 **Key Loss Factors Identified:**
 - Opponent hired more workers, indicating we might be under-hiring or expanding too slowly.
 - Opponent bought more Sheep (6 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on STRAWBERRY sales by $27,650.00.
-- Opponent outperformed on WOOL sales by $39,782.00.
+- Opponent outperformed on STRAWBERRY sales by $26,122.16.
+- Opponent outperformed on WOOL sales by $39,124.19.
 
 ---
 
@@ -1429,17 +1427,17 @@
 | Cows Purchased | 9 | 3 | 6 |
 | Sheep Purchased | 0 | 12 | -12 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,422.00 | $84.00 | $1,338.00 |
-| Sales: FERTILIZER | $9,876.00 | $11,872.00 | $-1,996.00 |
-| Sales: MELON | $24,820.00 | $18,076.00 | $6,744.00 |
-| Sales: MILK | $34,262.00 | $14,124.00 | $20,138.00 |
-| Sales: STRAWBERRY | $51,127.00 | $54,957.00 | $-3,830.00 |
-| Sales: WHEAT | $10,075.00 | $108,629.00 | $-98,554.00 |
-| Sales: WOOL | $0.00 | $37,692.00 | $-37,692.00 |
+| Sales: CARROT | $1,492.85 | $84.00 | $1,408.85 |
+| Sales: FERTILIZER | $9,820.41 | $12,031.70 | $-2,211.29 |
+| Sales: MELON | $27,346.32 | $19,211.20 | $8,135.12 |
+| Sales: MILK | $36,239.60 | $14,642.76 | $21,596.83 |
+| Sales: STRAWBERRY | $50,866.97 | $55,195.50 | $-4,328.53 |
+| Sales: WHEAT | $10,031.85 | $108,470.47 | $-98,438.62 |
+| Sales: WOOL | $0.00 | $37,642.37 | $-37,642.37 |
 
 **Key Loss Factors Identified:**
 - Opponent bought more Sheep (12 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on WOOL sales by $37,692.00.
+- Opponent outperformed on WOOL sales by $37,642.37.
 
 ---
 
@@ -1455,19 +1453,19 @@
 | Cows Purchased | 8 | 2 | 6 |
 | Sheep Purchased | 0 | 10 | -10 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $2,208.00 | $1,197.00 | $1,011.00 |
-| Sales: FERTILIZER | $15,205.00 | $13,350.00 | $1,855.00 |
-| Sales: MELON | $23,544.00 | $17,523.00 | $6,021.00 |
-| Sales: MILK | $53,974.00 | $16,593.00 | $37,381.00 |
-| Sales: STRAWBERRY | $46,813.00 | $47,490.00 | $-677.00 |
-| Sales: WHEAT | $10,828.00 | $33,524.00 | $-22,696.00 |
-| Sales: WOOL | $0.00 | $34,982.00 | $-34,982.00 |
+| Sales: CARROT | $2,259.03 | $1,192.87 | $1,066.16 |
+| Sales: FERTILIZER | $15,308.27 | $13,506.16 | $1,802.11 |
+| Sales: MELON | $25,599.68 | $18,370.45 | $7,229.23 |
+| Sales: MILK | $54,614.99 | $16,546.13 | $38,068.86 |
+| Sales: STRAWBERRY | $47,468.73 | $47,756.16 | $-287.43 |
+| Sales: WHEAT | $10,803.29 | $33,501.74 | $-22,698.44 |
+| Sales: WOOL | $0.00 | $36,249.49 | $-36,249.49 |
 
 **Key Win Factors Identified:**
 - We hired more workers (13 vs 12), giving us labor superiority.
 - We invested more in Cows (8 vs 2), yielding higher Milk revenues.
-- We outperformed on MELON sales by $6,021.00.
-- We outperformed on MILK sales by $37,381.00.
+- We outperformed on MELON sales by $7,229.23.
+- We outperformed on MILK sales by $38,068.86.
 
 ---
 
@@ -1483,17 +1481,17 @@
 | Cows Purchased | 8 | 3 | 5 |
 | Sheep Purchased | 0 | 12 | -12 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,884.00 | $726.00 | $1,158.00 |
-| Sales: FERTILIZER | $14,217.00 | $16,926.00 | $-2,709.00 |
-| Sales: MELON | $24,592.00 | $19,653.00 | $4,939.00 |
-| Sales: MILK | $49,030.00 | $19,517.00 | $29,513.00 |
-| Sales: STRAWBERRY | $56,965.00 | $30,333.00 | $26,632.00 |
-| Sales: WHEAT | $10,150.00 | $28,184.00 | $-18,034.00 |
-| Sales: WOOL | $0.00 | $65,038.00 | $-65,038.00 |
+| Sales: CARROT | $2,065.53 | $732.34 | $1,333.19 |
+| Sales: FERTILIZER | $14,347.79 | $17,422.41 | $-3,074.62 |
+| Sales: MELON | $25,799.85 | $20,368.56 | $5,431.30 |
+| Sales: MILK | $49,959.87 | $19,637.72 | $30,322.15 |
+| Sales: STRAWBERRY | $57,120.08 | $30,443.08 | $26,677.00 |
+| Sales: WHEAT | $10,099.87 | $28,217.86 | $-18,117.99 |
+| Sales: WOOL | $0.00 | $64,990.03 | $-64,990.03 |
 
 **Key Loss Factors Identified:**
 - Opponent bought more Sheep (12 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on WOOL sales by $65,038.00.
+- Opponent outperformed on WOOL sales by $64,990.03.
 
 ---
 
@@ -1509,20 +1507,20 @@
 | Cows Purchased | 9 | 4 | 5 |
 | Sheep Purchased | 0 | 6 | -6 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $2,226.00 | $672.00 | $1,554.00 |
-| Sales: FERTILIZER | $10,867.00 | $12,682.00 | $-1,815.00 |
-| Sales: MELON | $11,255.00 | $27,674.00 | $-16,419.00 |
-| Sales: MILK | $31,426.00 | $18,644.00 | $12,782.00 |
-| Sales: STRAWBERRY | $44,211.00 | $52,298.00 | $-8,087.00 |
-| Sales: WHEAT | $12,933.00 | $9,137.00 | $3,796.00 |
-| Sales: WOOL | $0.00 | $26,999.00 | $-26,999.00 |
+| Sales: CARROT | $2,267.26 | $671.17 | $1,596.09 |
+| Sales: FERTILIZER | $10,927.07 | $11,657.76 | $-730.68 |
+| Sales: MELON | $12,133.00 | $28,882.43 | $-16,749.43 |
+| Sales: MILK | $33,662.57 | $19,567.31 | $14,095.26 |
+| Sales: STRAWBERRY | $44,274.85 | $52,527.03 | $-8,252.18 |
+| Sales: WHEAT | $12,823.25 | $8,875.65 | $3,947.60 |
+| Sales: WOOL | $0.00 | $25,989.64 | $-25,989.64 |
 
 **Key Loss Factors Identified:**
 - Opponent hired more workers, indicating we might be under-hiring or expanding too slowly.
 - Opponent bought more Sheep (6 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on MELON sales by $16,419.00.
-- Opponent outperformed on STRAWBERRY sales by $8,087.00.
-- Opponent outperformed on WOOL sales by $26,999.00.
+- Opponent outperformed on MELON sales by $16,749.43.
+- Opponent outperformed on STRAWBERRY sales by $8,252.18.
+- Opponent outperformed on WOOL sales by $25,989.64.
 
 ---
 
@@ -1538,17 +1536,17 @@
 | Cows Purchased | 9 | 3 | 6 |
 | Sheep Purchased | 0 | 12 | -12 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,886.00 | $536.00 | $1,350.00 |
-| Sales: FERTILIZER | $9,895.00 | $15,373.00 | $-5,478.00 |
-| Sales: MELON | $21,439.00 | $19,971.00 | $1,468.00 |
-| Sales: MILK | $24,417.00 | $12,346.00 | $12,071.00 |
-| Sales: STRAWBERRY | $55,257.00 | $41,923.00 | $13,334.00 |
-| Sales: WHEAT | $10,261.00 | $58,512.00 | $-48,251.00 |
-| Sales: WOOL | $0.00 | $60,301.00 | $-60,301.00 |
+| Sales: CARROT | $2,081.87 | $561.31 | $1,520.56 |
+| Sales: FERTILIZER | $9,847.14 | $15,701.00 | $-5,853.86 |
+| Sales: MELON | $21,633.28 | $21,548.88 | $84.40 |
+| Sales: MILK | $27,363.63 | $12,869.28 | $14,494.35 |
+| Sales: STRAWBERRY | $55,696.27 | $42,012.14 | $13,684.13 |
+| Sales: WHEAT | $10,164.81 | $58,516.09 | $-48,351.29 |
+| Sales: WOOL | $0.00 | $60,009.30 | $-60,009.30 |
 
 **Key Loss Factors Identified:**
 - Opponent bought more Sheep (12 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on WOOL sales by $60,301.00.
+- Opponent outperformed on WOOL sales by $60,009.30.
 
 ---
 
@@ -1564,18 +1562,18 @@
 | Cows Purchased | 10 | 12 | -2 |
 | Sheep Purchased | 0 | 10 | -10 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,890.00 | $0.00 | $1,890.00 |
-| Sales: FERTILIZER | $12,572.00 | $14,725.00 | $-2,153.00 |
-| Sales: MELON | $20,781.00 | $22,476.00 | $-1,695.00 |
-| Sales: MILK | $34,523.00 | $34,827.00 | $-304.00 |
-| Sales: STRAWBERRY | $28,434.00 | $22,183.00 | $6,251.00 |
-| Sales: WHEAT | $11,684.00 | $1,856.00 | $9,828.00 |
-| Sales: WOOL | $0.00 | $27,900.00 | $-27,900.00 |
+| Sales: CARROT | $2,090.69 | $0.00 | $2,090.69 |
+| Sales: FERTILIZER | $12,619.96 | $15,147.88 | $-2,527.92 |
+| Sales: MELON | $22,275.90 | $23,642.84 | $-1,366.94 |
+| Sales: MILK | $37,596.75 | $35,430.25 | $2,166.50 |
+| Sales: STRAWBERRY | $28,382.87 | $22,015.88 | $6,366.99 |
+| Sales: WHEAT | $8,454.84 | $1,642.78 | $6,812.05 |
+| Sales: WOOL | $0.00 | $27,547.37 | $-27,547.37 |
 
 **Key Loss Factors Identified:**
 - Opponent invested more in Cows (12 vs 10), yielding higher Milk revenues.
 - Opponent bought more Sheep (10 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on WOOL sales by $27,900.00.
+- Opponent outperformed on WOOL sales by $27,547.37.
 
 ---
 
@@ -1591,19 +1589,19 @@
 | Cows Purchased | 10 | 10 | 0 |
 | Sheep Purchased | 0 | 8 | -8 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,678.00 | $1,119.00 | $559.00 |
-| Sales: FERTILIZER | $11,712.00 | $13,714.00 | $-2,002.00 |
-| Sales: MELON | $28,064.00 | $19,812.00 | $8,252.00 |
-| Sales: MILK | $16,353.00 | $19,565.00 | $-3,212.00 |
-| Sales: STRAWBERRY | $31,455.00 | $50,290.00 | $-18,835.00 |
-| Sales: WHEAT | $13,997.00 | $13,972.00 | $25.00 |
-| Sales: WOOL | $0.00 | $41,057.00 | $-41,057.00 |
+| Sales: CARROT | $1,780.70 | $1,205.94 | $574.77 |
+| Sales: FERTILIZER | $11,664.84 | $11,473.52 | $191.32 |
+| Sales: MELON | $28,636.81 | $20,239.70 | $8,397.11 |
+| Sales: MILK | $21,460.79 | $19,719.07 | $1,741.72 |
+| Sales: STRAWBERRY | $30,969.40 | $44,011.03 | $-13,041.63 |
+| Sales: WHEAT | $5,375.46 | $4,755.40 | $620.07 |
+| Sales: WOOL | $0.00 | $25,781.35 | $-25,781.35 |
 
 **Key Loss Factors Identified:**
 - Opponent hired more workers, indicating we might be under-hiring or expanding too slowly.
 - Opponent bought more Sheep (8 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on STRAWBERRY sales by $18,835.00.
-- Opponent outperformed on WOOL sales by $41,057.00.
+- Opponent outperformed on STRAWBERRY sales by $13,041.63.
+- Opponent outperformed on WOOL sales by $25,781.35.
 
 ---
 
@@ -1619,18 +1617,18 @@
 | Cows Purchased | 10 | 6 | 4 |
 | Sheep Purchased | 0 | 4 | -4 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,848.00 | $0.00 | $1,848.00 |
-| Sales: FERTILIZER | $15,098.00 | $8,048.00 | $7,050.00 |
-| Sales: MELON | $24,036.00 | $17,466.00 | $6,570.00 |
-| Sales: MILK | $41,140.00 | $28,707.00 | $12,433.00 |
-| Sales: STRAWBERRY | $39,716.00 | $52,192.00 | $-12,476.00 |
-| Sales: WHEAT | $11,899.00 | $4,248.00 | $7,651.00 |
-| Sales: WOOL | $0.00 | $24,972.00 | $-24,972.00 |
+| Sales: CARROT | $2,005.01 | $0.00 | $2,005.01 |
+| Sales: FERTILIZER | $15,180.33 | $8,138.60 | $7,041.73 |
+| Sales: MELON | $27,302.89 | $19,712.09 | $7,590.80 |
+| Sales: MILK | $43,195.67 | $29,268.99 | $13,926.68 |
+| Sales: STRAWBERRY | $39,754.45 | $51,559.33 | $-11,804.89 |
+| Sales: WHEAT | $8,543.65 | $4,288.32 | $4,255.33 |
+| Sales: WOOL | $0.00 | $24,458.66 | $-24,458.66 |
 
 **Key Loss Factors Identified:**
 - Opponent bought more Sheep (4 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on STRAWBERRY sales by $12,476.00.
-- Opponent outperformed on WOOL sales by $24,972.00.
+- Opponent outperformed on STRAWBERRY sales by $11,804.89.
+- Opponent outperformed on WOOL sales by $24,458.66.
 
 ---
 
@@ -1646,18 +1644,18 @@
 | Cows Purchased | 10 | 8 | 2 |
 | Sheep Purchased | 0 | 6 | -6 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,579.00 | $0.00 | $1,579.00 |
-| Sales: FERTILIZER | $14,748.00 | $10,514.00 | $4,234.00 |
-| Sales: MELON | $25,613.00 | $18,314.00 | $7,299.00 |
-| Sales: MILK | $42,363.00 | $26,969.00 | $15,394.00 |
-| Sales: STRAWBERRY | $28,927.00 | $44,149.00 | $-15,222.00 |
-| Sales: WHEAT | $15,823.00 | $2,030.00 | $13,793.00 |
-| Sales: WOOL | $0.00 | $35,046.00 | $-35,046.00 |
+| Sales: CARROT | $1,716.16 | $0.00 | $1,716.16 |
+| Sales: FERTILIZER | $14,895.37 | $10,615.96 | $4,279.41 |
+| Sales: MELON | $26,343.62 | $20,248.61 | $6,095.02 |
+| Sales: MILK | $44,172.12 | $27,698.43 | $16,473.69 |
+| Sales: STRAWBERRY | $28,859.10 | $44,023.21 | $-15,164.12 |
+| Sales: WHEAT | $7,266.63 | $2,015.22 | $5,251.40 |
+| Sales: WOOL | $0.00 | $34,457.56 | $-34,457.56 |
 
 **Key Loss Factors Identified:**
 - Opponent bought more Sheep (6 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on STRAWBERRY sales by $15,222.00.
-- Opponent outperformed on WOOL sales by $35,046.00.
+- Opponent outperformed on STRAWBERRY sales by $15,164.12.
+- Opponent outperformed on WOOL sales by $34,457.56.
 
 ---
 
@@ -1673,18 +1671,18 @@
 | Cows Purchased | 10 | 8 | 2 |
 | Sheep Purchased | 0 | 6 | -6 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,926.00 | $0.00 | $1,926.00 |
-| Sales: FERTILIZER | $10,458.00 | $12,801.00 | $-2,343.00 |
-| Sales: MELON | $32,699.00 | $9,473.00 | $23,226.00 |
-| Sales: MILK | $13,397.00 | $13,187.00 | $210.00 |
-| Sales: STRAWBERRY | $14,025.00 | $32,570.00 | $-18,545.00 |
-| Sales: WHEAT | $17,623.00 | $2,562.00 | $15,061.00 |
-| Sales: WOOL | $0.00 | $41,591.00 | $-41,591.00 |
+| Sales: CARROT | $1,972.76 | $0.00 | $1,972.76 |
+| Sales: FERTILIZER | $10,582.09 | $12,899.12 | $-2,317.03 |
+| Sales: MELON | $36,994.48 | $9,648.48 | $27,346.00 |
+| Sales: MILK | $15,834.47 | $14,174.24 | $1,660.23 |
+| Sales: STRAWBERRY | $13,584.06 | $32,474.26 | $-18,890.20 |
+| Sales: WHEAT | $10,461.14 | $1,658.98 | $8,802.15 |
+| Sales: WOOL | $0.00 | $41,129.91 | $-41,129.91 |
 
 **Key Loss Factors Identified:**
 - Opponent bought more Sheep (6 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on STRAWBERRY sales by $18,545.00.
-- Opponent outperformed on WOOL sales by $41,591.00.
+- Opponent outperformed on STRAWBERRY sales by $18,890.20.
+- Opponent outperformed on WOOL sales by $41,129.91.
 
 ---
 
@@ -1700,20 +1698,20 @@
 | Cows Purchased | 10 | 9 | 1 |
 | Sheep Purchased | 0 | 8 | -8 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,579.00 | $0.00 | $1,579.00 |
-| Sales: FERTILIZER | $12,370.00 | $13,583.00 | $-1,213.00 |
-| Sales: MELON | $31,185.00 | $19,129.00 | $12,056.00 |
-| Sales: MILK | $49,600.00 | $33,051.00 | $16,549.00 |
-| Sales: STRAWBERRY | $43,770.00 | $25,474.00 | $18,296.00 |
-| Sales: WHEAT | $12,270.00 | $1,740.00 | $10,530.00 |
-| Sales: WOOL | $0.00 | $42,556.00 | $-42,556.00 |
+| Sales: CARROT | $1,728.53 | $0.00 | $1,728.53 |
+| Sales: FERTILIZER | $12,704.31 | $14,160.77 | $-1,456.46 |
+| Sales: MELON | $31,766.01 | $20,671.81 | $11,094.21 |
+| Sales: MILK | $52,421.85 | $34,374.42 | $18,047.44 |
+| Sales: STRAWBERRY | $43,174.73 | $25,499.84 | $17,674.89 |
+| Sales: WHEAT | $8,929.57 | $1,589.94 | $7,339.63 |
+| Sales: WOOL | $0.00 | $42,710.23 | $-42,710.23 |
 
 **Key Win Factors Identified:**
 - We hired more workers (13 vs 10), giving us labor superiority.
 - We invested more in Cows (10 vs 9), yielding higher Milk revenues.
-- We outperformed on MELON sales by $12,056.00.
-- We outperformed on STRAWBERRY sales by $18,296.00.
-- We outperformed on MILK sales by $16,549.00.
+- We outperformed on MELON sales by $11,094.21.
+- We outperformed on STRAWBERRY sales by $17,674.89.
+- We outperformed on MILK sales by $18,047.44.
 
 ---
 
@@ -1729,18 +1727,18 @@
 | Cows Purchased | 11 | 8 | 3 |
 | Sheep Purchased | 0 | 6 | -6 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,517.00 | $0.00 | $1,517.00 |
-| Sales: FERTILIZER | $13,920.00 | $10,224.00 | $3,696.00 |
-| Sales: MELON | $26,917.00 | $23,639.00 | $3,278.00 |
-| Sales: MILK | $43,972.00 | $36,202.00 | $7,770.00 |
-| Sales: STRAWBERRY | $40,551.00 | $50,870.00 | $-10,319.00 |
-| Sales: WHEAT | $9,122.00 | $7,199.00 | $1,923.00 |
-| Sales: WOOL | $0.00 | $33,838.00 | $-33,838.00 |
+| Sales: CARROT | $1,637.64 | $0.00 | $1,637.64 |
+| Sales: FERTILIZER | $14,048.99 | $10,209.18 | $3,839.82 |
+| Sales: MELON | $29,665.50 | $25,403.22 | $4,262.28 |
+| Sales: MILK | $46,346.80 | $37,351.29 | $8,995.51 |
+| Sales: STRAWBERRY | $40,708.58 | $51,166.91 | $-10,458.33 |
+| Sales: WHEAT | $5,522.50 | $7,174.73 | $-1,652.23 |
+| Sales: WOOL | $0.00 | $33,499.68 | $-33,499.68 |
 
 **Key Loss Factors Identified:**
 - Opponent bought more Sheep (6 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on STRAWBERRY sales by $10,319.00.
-- Opponent outperformed on WOOL sales by $33,838.00.
+- Opponent outperformed on STRAWBERRY sales by $10,458.33.
+- Opponent outperformed on WOOL sales by $33,499.68.
 
 ---
 
@@ -1756,20 +1754,20 @@
 | Cows Purchased | 11 | 6 | 5 |
 | Sheep Purchased | 0 | 7 | -7 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,810.00 | $0.00 | $1,810.00 |
-| Sales: FERTILIZER | $13,224.00 | $7,131.00 | $6,093.00 |
-| Sales: MELON | $27,341.00 | $21,039.00 | $6,302.00 |
-| Sales: MILK | $56,894.00 | $23,894.00 | $33,000.00 |
-| Sales: STRAWBERRY | $46,761.00 | $30,511.00 | $16,250.00 |
-| Sales: WHEAT | $10,663.00 | $36,285.00 | $-25,622.00 |
-| Sales: WOOL | $0.00 | $33,224.00 | $-33,224.00 |
+| Sales: CARROT | $1,947.59 | $0.00 | $1,947.59 |
+| Sales: FERTILIZER | $13,346.63 | $7,195.21 | $6,151.42 |
+| Sales: MELON | $29,462.84 | $21,897.59 | $7,565.25 |
+| Sales: MILK | $57,014.02 | $23,981.96 | $33,032.06 |
+| Sales: STRAWBERRY | $46,882.28 | $29,961.63 | $16,920.64 |
+| Sales: WHEAT | $7,439.64 | $32,552.05 | $-25,112.40 |
+| Sales: WOOL | $0.00 | $33,121.55 | $-33,121.55 |
 
 **Key Win Factors Identified:**
 - We hired more workers (13 vs 12), giving us labor superiority.
 - We invested more in Cows (11 vs 6), yielding higher Milk revenues.
-- We outperformed on MELON sales by $6,302.00.
-- We outperformed on STRAWBERRY sales by $16,250.00.
-- We outperformed on MILK sales by $33,000.00.
+- We outperformed on MELON sales by $7,565.25.
+- We outperformed on STRAWBERRY sales by $16,920.64.
+- We outperformed on MILK sales by $33,032.06.
 
 ---
 
@@ -1785,20 +1783,20 @@
 | Cows Purchased | 10 | 8 | 2 |
 | Sheep Purchased | 0 | 6 | -6 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,810.00 | $0.00 | $1,810.00 |
-| Sales: FERTILIZER | $12,215.00 | $15,766.00 | $-3,551.00 |
-| Sales: MELON | $36,674.00 | $5,616.00 | $31,058.00 |
-| Sales: MILK | $62,920.00 | $44,091.00 | $18,829.00 |
-| Sales: STRAWBERRY | $45,829.00 | $28,661.00 | $17,168.00 |
-| Sales: WHEAT | $23,528.00 | $10,789.00 | $12,739.00 |
-| Sales: WOOL | $0.00 | $32,224.00 | $-32,224.00 |
+| Sales: CARROT | $1,955.77 | $0.00 | $1,955.77 |
+| Sales: FERTILIZER | $12,623.86 | $16,767.09 | $-4,143.23 |
+| Sales: MELON | $36,968.48 | $6,005.67 | $30,962.81 |
+| Sales: MILK | $63,656.06 | $44,394.73 | $19,261.32 |
+| Sales: STRAWBERRY | $46,220.11 | $28,764.95 | $17,455.17 |
+| Sales: WHEAT | $17,116.71 | $10,628.17 | $6,488.54 |
+| Sales: WOOL | $0.00 | $31,549.39 | $-31,549.39 |
 
 **Key Win Factors Identified:**
 - We hired more workers (13 vs 10), giving us labor superiority.
 - We invested more in Cows (10 vs 8), yielding higher Milk revenues.
-- We outperformed on MELON sales by $31,058.00.
-- We outperformed on STRAWBERRY sales by $17,168.00.
-- We outperformed on MILK sales by $18,829.00.
+- We outperformed on MELON sales by $30,962.81.
+- We outperformed on STRAWBERRY sales by $17,455.17.
+- We outperformed on MILK sales by $19,261.32.
 
 ---
 
@@ -1814,19 +1812,19 @@
 | Cows Purchased | 18 | 8 | 10 |
 | Sheep Purchased | 0 | 2 | -2 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,517.00 | $0.00 | $1,517.00 |
-| Sales: FERTILIZER | $7,273.00 | $13,217.00 | $-5,944.00 |
-| Sales: MELON | $31,776.00 | $18,287.00 | $13,489.00 |
-| Sales: MILK | $20,802.00 | $39,201.00 | $-18,399.00 |
-| Sales: STRAWBERRY | $20,872.00 | $34,117.00 | $-13,245.00 |
-| Sales: WHEAT | $21,398.00 | $7,534.00 | $13,864.00 |
-| Sales: WOOL | $0.00 | $15,582.00 | $-15,582.00 |
+| Sales: CARROT | $1,636.65 | $0.00 | $1,636.65 |
+| Sales: FERTILIZER | $7,265.82 | $13,213.60 | $-5,947.77 |
+| Sales: MELON | $32,643.06 | $19,756.24 | $12,886.82 |
+| Sales: MILK | $21,302.72 | $40,007.41 | $-18,704.69 |
+| Sales: STRAWBERRY | $20,562.85 | $33,963.79 | $-13,400.94 |
+| Sales: WHEAT | $14,744.90 | $7,661.93 | $7,082.96 |
+| Sales: WOOL | $0.00 | $15,327.03 | $-15,327.03 |
 
 **Key Loss Factors Identified:**
 - Opponent bought more Sheep (2 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on STRAWBERRY sales by $13,245.00.
-- Opponent outperformed on MILK sales by $18,399.00.
-- Opponent outperformed on WOOL sales by $15,582.00.
+- Opponent outperformed on STRAWBERRY sales by $13,400.94.
+- Opponent outperformed on MILK sales by $18,704.69.
+- Opponent outperformed on WOOL sales by $15,327.03.
 
 ---
 
@@ -1842,22 +1840,19 @@
 | Cows Purchased | 10 | 8 | 2 |
 | Sheep Purchased | 0 | 6 | -6 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $2,226.00 | $529.00 | $1,697.00 |
-| Sales: EGG | $0.00 | $512.00 | $-512.00 |
-| Sales: FERTILIZER | $10,102.00 | $26,154.00 | $-16,052.00 |
-| Sales: MELON | $26,780.00 | $40,538.00 | $-13,758.00 |
-| Sales: MILK | $50,844.00 | $195,528.00 | $-144,684.00 |
-| Sales: STRAWBERRY | $24,562.00 | $243,370.00 | $-218,808.00 |
-| Sales: TOMATO | $0.00 | $256.00 | $-256.00 |
-| Sales: WHEAT | $26,082.00 | $50,844.00 | $-24,762.00 |
-| Sales: WOOL | $0.00 | $97,474.00 | $-97,474.00 |
+| Sales: CARROT | $2,267.64 | $116.23 | $2,151.42 |
+| Sales: FERTILIZER | $10,282.59 | $14,608.35 | $-4,325.76 |
+| Sales: MELON | $28,168.00 | $16,420.81 | $11,747.19 |
+| Sales: MILK | $52,410.23 | $47,398.96 | $5,011.27 |
+| Sales: STRAWBERRY | $24,573.41 | $68,452.68 | $-43,879.27 |
+| Sales: TOMATO | $0.00 | $20.54 | $-20.54 |
+| Sales: WHEAT | $16,929.13 | $30,638.56 | $-13,709.43 |
+| Sales: WOOL | $0.00 | $33,884.87 | $-33,884.87 |
 
 **Key Loss Factors Identified:**
 - Opponent bought more Sheep (6 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on MELON sales by $13,758.00.
-- Opponent outperformed on STRAWBERRY sales by $218,808.00.
-- Opponent outperformed on MILK sales by $144,684.00.
-- Opponent outperformed on WOOL sales by $97,474.00.
+- Opponent outperformed on STRAWBERRY sales by $43,879.27.
+- Opponent outperformed on WOOL sales by $33,884.87.
 
 ---
 
@@ -1873,18 +1868,18 @@
 | Cows Purchased | 10 | 3 | 7 |
 | Sheep Purchased | 0 | 8 | -8 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,850.00 | $592.00 | $1,258.00 |
-| Sales: FERTILIZER | $11,097.00 | $8,383.00 | $2,714.00 |
-| Sales: MELON | $25,308.00 | $20,300.00 | $5,008.00 |
-| Sales: MILK | $58,613.00 | $22,681.00 | $35,932.00 |
-| Sales: STRAWBERRY | $22,292.00 | $57,193.00 | $-34,901.00 |
-| Sales: WHEAT | $22,210.00 | $3,196.00 | $19,014.00 |
-| Sales: WOOL | $0.00 | $30,373.00 | $-30,373.00 |
+| Sales: CARROT | $2,050.61 | $645.63 | $1,404.98 |
+| Sales: FERTILIZER | $11,085.01 | $8,420.23 | $2,664.79 |
+| Sales: MELON | $26,317.39 | $22,300.50 | $4,016.88 |
+| Sales: MILK | $59,113.66 | $22,881.23 | $36,232.44 |
+| Sales: STRAWBERRY | $22,501.21 | $57,246.65 | $-34,745.44 |
+| Sales: WHEAT | $12,888.12 | $2,582.26 | $10,305.86 |
+| Sales: WOOL | $0.00 | $29,932.51 | $-29,932.51 |
 
 **Key Loss Factors Identified:**
 - Opponent bought more Sheep (8 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on STRAWBERRY sales by $34,901.00.
-- Opponent outperformed on WOOL sales by $30,373.00.
+- Opponent outperformed on STRAWBERRY sales by $34,745.44.
+- Opponent outperformed on WOOL sales by $29,932.51.
 
 ---
 
@@ -1900,21 +1895,20 @@
 | Cows Purchased | 10 | 8 | 2 |
 | Sheep Purchased | 0 | 6 | -6 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,848.00 | $529.00 | $1,319.00 |
-| Sales: EGG | $0.00 | $488.00 | $-488.00 |
-| Sales: FERTILIZER | $10,494.00 | $25,988.00 | $-15,494.00 |
-| Sales: MELON | $27,158.00 | $31,988.00 | $-4,830.00 |
-| Sales: MILK | $29,690.00 | $78,478.00 | $-48,788.00 |
-| Sales: STRAWBERRY | $21,795.00 | $139,191.00 | $-117,396.00 |
-| Sales: TOMATO | $0.00 | $256.00 | $-256.00 |
-| Sales: WHEAT | $26,178.00 | $48,524.00 | $-22,346.00 |
-| Sales: WOOL | $0.00 | $90,089.00 | $-90,089.00 |
+| Sales: CARROT | $1,998.78 | $0.00 | $1,998.78 |
+| Sales: EGG | $0.00 | $293.28 | $-293.28 |
+| Sales: FERTILIZER | $10,672.58 | $14,583.87 | $-3,911.29 |
+| Sales: MELON | $28,386.94 | $15,228.49 | $13,158.45 |
+| Sales: MILK | $31,564.03 | $32,216.24 | $-652.21 |
+| Sales: STRAWBERRY | $21,901.30 | $64,433.64 | $-42,532.34 |
+| Sales: TOMATO | $0.00 | $23.84 | $-23.84 |
+| Sales: WHEAT | $16,933.37 | $30,747.22 | $-13,813.85 |
+| Sales: WOOL | $0.00 | $39,288.41 | $-39,288.41 |
 
 **Key Loss Factors Identified:**
 - Opponent bought more Sheep (6 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on STRAWBERRY sales by $117,396.00.
-- Opponent outperformed on MILK sales by $48,788.00.
-- Opponent outperformed on WOOL sales by $90,089.00.
+- Opponent outperformed on STRAWBERRY sales by $42,532.34.
+- Opponent outperformed on WOOL sales by $39,288.41.
 
 ---
 
@@ -1930,21 +1924,19 @@
 | Cows Purchased | 10 | 8 | 2 |
 | Sheep Purchased | 0 | 6 | -6 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $2,226.00 | $536.00 | $1,690.00 |
-| Sales: EGG | $0.00 | $520.00 | $-520.00 |
-| Sales: FERTILIZER | $10,184.00 | $24,514.00 | $-14,330.00 |
-| Sales: MELON | $25,829.00 | $28,384.00 | $-2,555.00 |
-| Sales: MILK | $15,493.00 | $28,171.00 | $-12,678.00 |
-| Sales: STRAWBERRY | $16,152.00 | $94,028.00 | $-77,876.00 |
-| Sales: TOMATO | $0.00 | $256.00 | $-256.00 |
-| Sales: WHEAT | $27,768.00 | $50,343.00 | $-22,575.00 |
-| Sales: WOOL | $0.00 | $58,463.00 | $-58,463.00 |
+| Sales: CARROT | $2,267.52 | $215.99 | $2,051.53 |
+| Sales: FERTILIZER | $10,375.94 | $14,561.74 | $-4,185.80 |
+| Sales: MELON | $27,301.20 | $15,519.76 | $11,781.43 |
+| Sales: MILK | $17,735.58 | $18,684.58 | $-949.01 |
+| Sales: STRAWBERRY | $15,785.08 | $66,358.90 | $-50,573.82 |
+| Sales: TOMATO | $0.00 | $24.83 | $-24.83 |
+| Sales: WHEAT | $18,546.69 | $35,398.00 | $-16,851.31 |
+| Sales: WOOL | $0.00 | $38,456.19 | $-38,456.19 |
 
 **Key Loss Factors Identified:**
 - Opponent bought more Sheep (6 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on STRAWBERRY sales by $77,876.00.
-- Opponent outperformed on MILK sales by $12,678.00.
-- Opponent outperformed on WOOL sales by $58,463.00.
+- Opponent outperformed on STRAWBERRY sales by $50,573.82.
+- Opponent outperformed on WOOL sales by $38,456.19.
 
 ---
 
@@ -1960,19 +1952,19 @@
 | Cows Purchased | 10 | 3 | 7 |
 | Sheep Purchased | 0 | 6 | -6 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,848.00 | $0.00 | $1,848.00 |
-| Sales: EGG | $0.00 | $5,749.00 | $-5,749.00 |
-| Sales: FERTILIZER | $11,452.00 | $9,799.00 | $1,653.00 |
-| Sales: MELON | $23,316.00 | $18,822.00 | $4,494.00 |
-| Sales: MILK | $45,130.00 | $8,498.00 | $36,632.00 |
-| Sales: STRAWBERRY | $20,867.00 | $43,100.00 | $-22,233.00 |
-| Sales: WHEAT | $29,146.00 | $16,010.00 | $13,136.00 |
-| Sales: WOOL | $0.00 | $5,581.00 | $-5,581.00 |
+| Sales: CARROT | $2,008.88 | $0.00 | $2,008.88 |
+| Sales: EGG | $0.00 | $5,680.35 | $-5,680.35 |
+| Sales: FERTILIZER | $11,599.13 | $9,911.23 | $1,687.90 |
+| Sales: MELON | $24,482.63 | $19,545.29 | $4,937.33 |
+| Sales: MILK | $47,007.44 | $8,629.37 | $38,378.07 |
+| Sales: STRAWBERRY | $20,671.52 | $43,469.42 | $-22,797.90 |
+| Sales: WHEAT | $19,914.41 | $15,540.41 | $4,374.01 |
+| Sales: WOOL | $0.00 | $5,553.93 | $-5,553.93 |
 
 **Key Win Factors Identified:**
 - We hired more workers (13 vs 9), giving us labor superiority.
 - We invested more in Cows (10 vs 3), yielding higher Milk revenues.
-- We outperformed on MILK sales by $36,632.00.
+- We outperformed on MILK sales by $38,378.07.
 
 ---
 
@@ -1988,18 +1980,18 @@
 | Cows Purchased | 10 | 6 | 4 |
 | Sheep Purchased | 0 | 3 | -3 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,571.00 | $6,762.00 | $-5,191.00 |
-| Sales: FERTILIZER | $11,290.00 | $24,437.00 | $-13,147.00 |
-| Sales: MELON | $22,160.00 | $22,534.00 | $-374.00 |
-| Sales: MILK | $42,268.00 | $32,653.00 | $9,615.00 |
-| Sales: STRAWBERRY | $21,237.00 | $14,563.00 | $6,674.00 |
-| Sales: TOMATO | $0.00 | $5,312.00 | $-5,312.00 |
-| Sales: WHEAT | $22,077.00 | $17,035.00 | $5,042.00 |
-| Sales: WOOL | $0.00 | $16,979.00 | $-16,979.00 |
+| Sales: CARROT | $1,641.86 | $6,926.88 | $-5,285.02 |
+| Sales: FERTILIZER | $11,318.71 | $24,604.23 | $-13,285.52 |
+| Sales: MELON | $23,489.03 | $23,853.76 | $-364.73 |
+| Sales: MILK | $44,205.11 | $33,784.03 | $10,421.08 |
+| Sales: STRAWBERRY | $21,036.81 | $14,506.78 | $6,530.02 |
+| Sales: TOMATO | $0.00 | $5,247.66 | $-5,247.66 |
+| Sales: WHEAT | $12,850.48 | $16,934.82 | $-4,084.34 |
+| Sales: WOOL | $0.00 | $16,790.84 | $-16,790.84 |
 
 **Key Loss Factors Identified:**
 - Opponent bought more Sheep (3 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on WOOL sales by $16,979.00.
+- Opponent outperformed on WOOL sales by $16,790.84.
 
 ---
 
@@ -2015,18 +2007,18 @@
 | Cows Purchased | 10 | 13 | -3 |
 | Sheep Purchased | 0 | 2 | -2 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,716.00 | $976.00 | $740.00 |
-| Sales: FERTILIZER | $9,198.00 | $14,864.00 | $-5,666.00 |
-| Sales: MELON | $28,622.00 | $19,343.00 | $9,279.00 |
-| Sales: MILK | $24,605.00 | $23,991.00 | $614.00 |
-| Sales: STRAWBERRY | $34,476.00 | $20,503.00 | $13,973.00 |
-| Sales: WHEAT | $19,617.00 | $3,650.00 | $15,967.00 |
-| Sales: WOOL | $0.00 | $16,312.00 | $-16,312.00 |
+| Sales: CARROT | $1,868.29 | $924.07 | $944.22 |
+| Sales: FERTILIZER | $9,367.82 | $15,228.56 | $-5,860.74 |
+| Sales: MELON | $29,173.15 | $20,055.56 | $9,117.59 |
+| Sales: MILK | $26,565.58 | $29,138.00 | $-2,572.42 |
+| Sales: STRAWBERRY | $34,110.21 | $18,816.51 | $15,293.70 |
+| Sales: WHEAT | $11,154.96 | $3,283.48 | $7,871.48 |
+| Sales: WOOL | $0.00 | $15,395.82 | $-15,395.82 |
 
 **Key Win Factors Identified:**
 - We hired more workers (13 vs 12), giving us labor superiority.
-- We outperformed on MELON sales by $9,279.00.
-- We outperformed on STRAWBERRY sales by $13,973.00.
+- We outperformed on MELON sales by $9,117.59.
+- We outperformed on STRAWBERRY sales by $15,293.70.
 
 ---
 
@@ -2042,21 +2034,17 @@
 | Cows Purchased | 8 | 8 | 0 |
 | Sheep Purchased | 6 | 6 | 0 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $524.00 | $524.00 | $0.00 |
-| Sales: EGG | $536.00 | $536.00 | $0.00 |
-| Sales: FERTILIZER | $23,840.00 | $23,840.00 | $0.00 |
-| Sales: MELON | $46,994.00 | $64,595.00 | $-17,601.00 |
-| Sales: MILK | $129,033.00 | $178,594.00 | $-49,561.00 |
-| Sales: STRAWBERRY | $70,309.00 | $109,505.00 | $-39,196.00 |
-| Sales: TOMATO | $256.00 | $256.00 | $0.00 |
-| Sales: WHEAT | $50,262.00 | $51,550.00 | $-1,288.00 |
-| Sales: WOOL | $95,506.00 | $112,388.00 | $-16,882.00 |
+| Sales: CARROT | $361.21 | $22.78 | $338.44 |
+| Sales: FERTILIZER | $13,458.10 | $13,345.46 | $112.64 |
+| Sales: MELON | $24,837.84 | $27,187.28 | $-2,349.44 |
+| Sales: MILK | $45,524.31 | $42,131.61 | $3,392.70 |
+| Sales: STRAWBERRY | $30,798.04 | $35,578.58 | $-4,780.54 |
+| Sales: TOMATO | $114.49 | $97.31 | $17.18 |
+| Sales: WHEAT | $34,261.20 | $31,038.71 | $3,222.49 |
+| Sales: WOOL | $31,306.80 | $38,900.27 | $-7,593.47 |
 
 **Key Loss Factors Identified:**
-- Opponent outperformed on MELON sales by $17,601.00.
-- Opponent outperformed on STRAWBERRY sales by $39,196.00.
-- Opponent outperformed on MILK sales by $49,561.00.
-- Opponent outperformed on WOOL sales by $16,882.00.
+- Opponent outperformed on WOOL sales by $7,593.47.
 
 ---
 
@@ -2072,17 +2060,17 @@
 | Cows Purchased | 10 | 5 | 5 |
 | Sheep Purchased | 0 | 6 | -6 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,517.00 | $0.00 | $1,517.00 |
-| Sales: FERTILIZER | $10,022.00 | $14,928.00 | $-4,906.00 |
-| Sales: MELON | $28,488.00 | $14,796.00 | $13,692.00 |
-| Sales: MILK | $38,245.00 | $24,696.00 | $13,549.00 |
-| Sales: STRAWBERRY | $34,785.00 | $856.00 | $33,929.00 |
-| Sales: WHEAT | $21,857.00 | $47,789.00 | $-25,932.00 |
-| Sales: WOOL | $0.00 | $36,893.00 | $-36,893.00 |
+| Sales: CARROT | $1,647.99 | $0.00 | $1,647.99 |
+| Sales: FERTILIZER | $10,064.45 | $14,864.09 | $-4,799.64 |
+| Sales: MELON | $28,958.85 | $18,942.48 | $10,016.38 |
+| Sales: MILK | $41,748.26 | $28,428.96 | $13,319.30 |
+| Sales: STRAWBERRY | $34,386.98 | $854.18 | $33,532.80 |
+| Sales: WHEAT | $13,805.46 | $46,975.43 | $-33,169.97 |
+| Sales: WOOL | $0.00 | $36,241.86 | $-36,241.86 |
 
 **Key Loss Factors Identified:**
 - Opponent bought more Sheep (6 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on WOOL sales by $36,893.00.
+- Opponent outperformed on WOOL sales by $36,241.86.
 
 ---
 
@@ -2098,20 +2086,20 @@
 | Cows Purchased | 10 | 4 | 6 |
 | Sheep Purchased | 0 | 8 | -8 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $2,076.00 | $2,022.00 | $54.00 |
-| Sales: FERTILIZER | $10,090.00 | $13,773.00 | $-3,683.00 |
-| Sales: MELON | $25,487.00 | $17,594.00 | $7,893.00 |
-| Sales: MILK | $54,048.00 | $25,902.00 | $28,146.00 |
-| Sales: STRAWBERRY | $27,714.00 | $15,015.00 | $12,699.00 |
-| Sales: WHEAT | $26,002.00 | $6,748.00 | $19,254.00 |
-| Sales: WOOL | $0.00 | $32,514.00 | $-32,514.00 |
+| Sales: CARROT | $2,212.93 | $2,015.84 | $197.09 |
+| Sales: FERTILIZER | $10,257.65 | $14,050.93 | $-3,793.27 |
+| Sales: MELON | $26,754.00 | $17,772.01 | $8,981.99 |
+| Sales: MILK | $54,730.20 | $25,672.32 | $29,057.88 |
+| Sales: STRAWBERRY | $27,745.23 | $14,783.95 | $12,961.28 |
+| Sales: WHEAT | $16,957.99 | $6,575.44 | $10,382.55 |
+| Sales: WOOL | $0.00 | $33,248.51 | $-33,248.51 |
 
 **Key Win Factors Identified:**
 - We hired more workers (13 vs 10), giving us labor superiority.
 - We invested more in Cows (10 vs 4), yielding higher Milk revenues.
-- We outperformed on MELON sales by $7,893.00.
-- We outperformed on STRAWBERRY sales by $12,699.00.
-- We outperformed on MILK sales by $28,146.00.
+- We outperformed on MELON sales by $8,981.99.
+- We outperformed on STRAWBERRY sales by $12,961.28.
+- We outperformed on MILK sales by $29,057.88.
 
 ---
 
@@ -2127,17 +2115,17 @@
 | Cows Purchased | 10 | 4 | 6 |
 | Sheep Purchased | 0 | 11 | -11 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,528.00 | $729.00 | $799.00 |
-| Sales: FERTILIZER | $8,679.00 | $15,776.00 | $-7,097.00 |
-| Sales: MELON | $21,979.00 | $20,140.00 | $1,839.00 |
-| Sales: MILK | $51,895.00 | $22,600.00 | $29,295.00 |
-| Sales: STRAWBERRY | $33,071.00 | $35,095.00 | $-2,024.00 |
-| Sales: WHEAT | $27,515.00 | $61,398.00 | $-33,883.00 |
-| Sales: WOOL | $0.00 | $46,761.00 | $-46,761.00 |
+| Sales: CARROT | $1,650.04 | $732.20 | $917.84 |
+| Sales: FERTILIZER | $8,851.97 | $16,251.78 | $-7,399.81 |
+| Sales: MELON | $22,996.24 | $21,669.97 | $1,326.27 |
+| Sales: MILK | $52,891.64 | $22,788.34 | $30,103.30 |
+| Sales: STRAWBERRY | $33,041.94 | $35,009.31 | $-1,967.37 |
+| Sales: WHEAT | $17,864.16 | $61,426.23 | $-43,562.07 |
+| Sales: WOOL | $0.00 | $46,971.17 | $-46,971.17 |
 
 **Key Loss Factors Identified:**
 - Opponent bought more Sheep (11 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on WOOL sales by $46,761.00.
+- Opponent outperformed on WOOL sales by $46,971.17.
 
 ---
 
@@ -2153,17 +2141,17 @@
 | Cows Purchased | 10 | 8 | 2 |
 | Sheep Purchased | 0 | 8 | -8 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,499.00 | $148.00 | $1,351.00 |
-| Sales: FERTILIZER | $11,331.00 | $13,851.00 | $-2,520.00 |
-| Sales: MELON | $25,479.00 | $18,012.00 | $7,467.00 |
-| Sales: MILK | $54,724.00 | $43,134.00 | $11,590.00 |
-| Sales: STRAWBERRY | $34,689.00 | $35,913.00 | $-1,224.00 |
-| Sales: WHEAT | $26,339.00 | $2,910.00 | $23,429.00 |
-| Sales: WOOL | $0.00 | $38,952.00 | $-38,952.00 |
+| Sales: CARROT | $1,616.03 | $149.00 | $1,467.03 |
+| Sales: FERTILIZER | $11,490.74 | $13,953.02 | $-2,462.28 |
+| Sales: MELON | $25,829.85 | $18,119.94 | $7,709.92 |
+| Sales: MILK | $55,594.63 | $43,506.69 | $12,087.93 |
+| Sales: STRAWBERRY | $35,477.17 | $36,122.60 | $-645.43 |
+| Sales: WHEAT | $16,964.57 | $2,938.59 | $14,025.98 |
+| Sales: WOOL | $0.00 | $38,862.16 | $-38,862.16 |
 
 **Key Loss Factors Identified:**
 - Opponent bought more Sheep (8 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on WOOL sales by $38,952.00.
+- Opponent outperformed on WOOL sales by $38,862.16.
 
 ---
 
@@ -2179,18 +2167,18 @@
 | Cows Purchased | 10 | 8 | 2 |
 | Sheep Purchased | 0 | 37 | -37 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,846.00 | $0.00 | $1,846.00 |
-| Sales: FERTILIZER | $10,861.00 | $13,142.00 | $-2,281.00 |
-| Sales: MELON | $37,299.00 | $10,038.00 | $27,261.00 |
-| Sales: MILK | $50,442.00 | $46,647.00 | $3,795.00 |
-| Sales: STRAWBERRY | $38,203.00 | $48,545.00 | $-10,342.00 |
-| Sales: WHEAT | $23,336.00 | $4,540.00 | $18,796.00 |
-| Sales: WOOL | $0.00 | $37,721.00 | $-37,721.00 |
+| Sales: CARROT | $1,981.89 | $0.00 | $1,981.89 |
+| Sales: FERTILIZER | $10,982.03 | $14,257.25 | $-3,275.21 |
+| Sales: MELON | $37,576.95 | $10,230.36 | $27,346.59 |
+| Sales: MILK | $51,363.97 | $48,099.34 | $3,264.63 |
+| Sales: STRAWBERRY | $38,179.68 | $48,469.69 | $-10,290.00 |
+| Sales: WHEAT | $14,816.48 | $3,813.30 | $11,003.18 |
+| Sales: WOOL | $0.00 | $37,447.07 | $-37,447.07 |
 
 **Key Loss Factors Identified:**
 - Opponent bought more Sheep (37 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on STRAWBERRY sales by $10,342.00.
-- Opponent outperformed on WOOL sales by $37,721.00.
+- Opponent outperformed on STRAWBERRY sales by $10,290.00.
+- Opponent outperformed on WOOL sales by $37,447.07.
 
 ---
 
@@ -2206,20 +2194,20 @@
 | Cows Purchased | 20 | 8 | 12 |
 | Sheep Purchased | 0 | 7 | -7 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,812.00 | $82.00 | $1,730.00 |
-| Sales: FERTILIZER | $8,448.00 | $0.00 | $8,448.00 |
-| Sales: MELON | $21,183.00 | $25,902.00 | $-4,719.00 |
-| Sales: MILK | $20,905.00 | $42,293.00 | $-21,388.00 |
-| Sales: STRAWBERRY | $21,025.00 | $32,394.00 | $-11,369.00 |
-| Sales: TOMATO | $0.00 | $1,320.00 | $-1,320.00 |
-| Sales: WHEAT | $27,890.00 | $2,808.00 | $25,082.00 |
-| Sales: WOOL | $0.00 | $28,237.00 | $-28,237.00 |
+| Sales: CARROT | $1,947.06 | $81.71 | $1,865.36 |
+| Sales: FERTILIZER | $8,445.41 | $0.00 | $8,445.41 |
+| Sales: MELON | $21,809.51 | $26,617.76 | $-4,808.25 |
+| Sales: MILK | $21,178.21 | $42,596.62 | $-21,418.41 |
+| Sales: STRAWBERRY | $20,901.56 | $32,371.23 | $-11,469.67 |
+| Sales: TOMATO | $0.00 | $1,317.56 | $-1,317.56 |
+| Sales: WHEAT | $20,932.24 | $2,837.00 | $18,095.24 |
+| Sales: WOOL | $0.00 | $28,212.12 | $-28,212.12 |
 
 **Key Loss Factors Identified:**
 - Opponent bought more Sheep (7 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on STRAWBERRY sales by $11,369.00.
-- Opponent outperformed on MILK sales by $21,388.00.
-- Opponent outperformed on WOOL sales by $28,237.00.
+- Opponent outperformed on STRAWBERRY sales by $11,469.67.
+- Opponent outperformed on MILK sales by $21,418.41.
+- Opponent outperformed on WOOL sales by $28,212.12.
 
 ---
 
@@ -2235,17 +2223,17 @@
 | Cows Purchased | 10 | 9 | 1 |
 | Sheep Purchased | 0 | 9 | -9 |
 | Max Weeds Count | 0 | 0 | 0 |
-| Sales: CARROT | $1,848.00 | $0.00 | $1,848.00 |
-| Sales: FERTILIZER | $11,719.00 | $10,837.00 | $882.00 |
-| Sales: MELON | $34,470.00 | $9,636.00 | $24,834.00 |
-| Sales: MILK | $9,117.00 | $11,852.00 | $-2,735.00 |
-| Sales: STRAWBERRY | $10,493.00 | $24,617.00 | $-14,124.00 |
-| Sales: WHEAT | $26,623.00 | $3,355.00 | $23,268.00 |
-| Sales: WOOL | $0.00 | $25,648.00 | $-25,648.00 |
+| Sales: CARROT | $1,995.95 | $0.00 | $1,995.95 |
+| Sales: FERTILIZER | $11,836.09 | $10,847.18 | $988.91 |
+| Sales: MELON | $35,630.60 | $9,840.48 | $25,790.12 |
+| Sales: MILK | $10,946.97 | $12,215.04 | $-1,268.07 |
+| Sales: STRAWBERRY | $10,023.21 | $24,516.72 | $-14,493.51 |
+| Sales: WHEAT | $17,908.18 | $3,336.75 | $14,571.43 |
+| Sales: WOOL | $0.00 | $25,615.83 | $-25,615.83 |
 
 **Key Loss Factors Identified:**
 - Opponent bought more Sheep (9 vs 0), yielding higher Wool revenues.
-- Opponent outperformed on STRAWBERRY sales by $14,124.00.
-- Opponent outperformed on WOOL sales by $25,648.00.
+- Opponent outperformed on STRAWBERRY sales by $14,493.51.
+- Opponent outperformed on WOOL sales by $25,615.83.
 
 ---
