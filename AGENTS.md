@@ -63,11 +63,14 @@ kaggriculture/
    table in `implementation_plan.md`). A bank improvement with no matching movement in the
    targeted metric is noise, not a result.
 
-6. **The $160,000 Goal:** The bot must score **above $160,000**, measured as the **median
-   final bank over ≥30 self-play seeds** (goal G1 in `implementation_plan.md`). Work does not
-   stop until this is met — strategy and benchmark are iterated together in cycles until it
-   is. Current standing: $70k–$102k self-play; best score by *any* agent across all analysed
-   replays is $125,896.
+6. **The Primary Goal is Win Rate, Not Bank:** The ladder ranks on win/loss only — the
+   coin difference does not affect rating. The acceptance gate is **G2: head-to-head win rate
+   ≥ 60% against the previous approved artifact, never < 50%**, measured over ≥60 paired
+   episodes (sides swapped). G1 (self-play median bank) is a capability tracker reported
+   alongside G2 but never used alone to accept or reject a change. A change that raises G1
+   and lowers G2 is a regression. (The $160,000 G1 target was retired in Cycle 3 after three
+   independent changes each raised self-play bank while head-to-head stayed at 50%/52%/23%.
+   See `walkthrough.md` Cycle 3, premise 8.)
 
    A bank figure without its opponent named is not a result. Never report the goal as
    reached from a non-competitive fixture.
@@ -88,4 +91,49 @@ kaggriculture/
      glut-tolerance table at `overview.md:257-267`, the production clocks) rather than from
      "a winning replay did it."
    - **The benchmark's thresholds, seed count and opponent roster are config,** so raising
-     the bar past $160,000 is a one-line change rather than a rewrite.
+     the bar is a one-line change rather than a rewrite.
+
+---
+
+## Negative-Result Database Rules
+
+Cycles 1–13 have already measured and closed the most tempting strategy directions.
+Re-proposing a closed direction wastes a benchmark run (~35 s) and produces false confidence
+when a re-try scores differently due to seed variance.
+
+8. **Read `walkthrough.md` before proposing any strategy change.** Every cycle records what
+   was changed, what metric it targeted, and whether it was accepted or rejected with exact
+   numbers. If a proposal matches a rejected experiment, do not re-propose it without a new
+   hypothesis that explains why the outcome would differ this time.
+
+9. **The following directions are closed — do not re-open without new mechanistic evidence:**
+
+   - **Sheep / wool expansion** — rejected in Cycles 3, 5, 10, 11. Root cause: labour and
+     cash cannot support a larger herd without collapsing the crop loop. Symptoms: wheat
+     purchases balloon to $86k–$108k/episode, strawberry revenue collapses, roster win rate
+     fell from 11/17 to 4/17. Note: `LATE_SHEEP_TARGET = 6` exists in the code but has
+     **never shipped** — its presence is not evidence it works. Re-opening requires a
+     demonstrated feed-loop and placement fix, not just a new target value.
+   - **Goose / egg expansion (`EARLY_GOOSE_TARGET > 0`)** — rejected in Cycle 1. Measured
+     net-negative: ~$6k egg revenue against ~$9k wheat feed cost plus ~30 hand-turns/day.
+   - **Fourth land quadrant** — rejected in Cycle 1. Net-negative: more travel overhead and
+     weed spawn than the extra tiles repay.
+   - **Watering logic overhaul (porting `_needs_water` from `agent_allocator.py`)** —
+     rejected in Cycle 3. Freed labour was spent planting wheat at net-zero margin; median
+     bank fell $12.6k.
+   - **Wheat surplus harvesting / opportunistic wheat selling** — measured net-zero or
+     negative in Cycles 2–3. The round-trip is nearly cash-neutral; capacity freed by
+     selling surplus is immediately consumed by more wheat purchases.
+   - **Adaptive worker scaling past `HANDS_PER_DAY = 14`** — the cap is already at 14
+     (verified `agent.py:24`). Any suggestion to raise it from a lower number has not read
+     the current code.
+
+10. **Never delete or compress `walkthrough.md` cycles.** They are the evidence base for
+    Rules 8–9. A session without them will re-propose the same experiments. If the document
+    becomes unwieldy, move detailed traces to `replays/` notes with a reference — do not
+    remove the rejection record or the accepted/rejected verdict.
+
+11. **Verify current constant values before proposing changes to them.** Read the relevant
+    lines of `agent.py` with `view_file` before stating what a constant currently is. The
+    2026-08-07 session received a proposal to change `HANDS_PER_DAY` from 13 → 14; the file
+    already had 14. A one-line check would have caught this before the benchmark was discussed.

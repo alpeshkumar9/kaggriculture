@@ -38,3 +38,5 @@ yarn-error.log*
 # Submission bundle (regenerate with package_submission.py)
 python_bot/submission.tar.gz
 .env
+/replays/debug
+/replays/debug_orig
