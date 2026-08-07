@@ -31,22 +31,35 @@ rating.**
 
 ## The goal
 
-**Win rate ≥ 50% aggregate across the replay-derived opponent roster, with a 25% floor
-against every individual opponent** — the `roster` tier in `run_official_tournament.py`
-(`--roster-goal` / `--opponent-floor`), because the ladder ranks on win/loss only — coin
-margin does not affect rating. The roster is built from real Kaggle ladder replays in
-`logs/` and is the primary release measurement; it superseded the single frozen-adversary
-"G0" gate as of Cycle 6 in `implementation_plan.md`. The former adversary,
-`python_bot/opponent_dumper.py`, was renamed to `python_bot/opponent_base.py` in commit
-`f76721e` and still works as a fixed guard opponent (pass it via
-`--opponents python_bot/opponent_base.py`), but it is no longer the acceptance gate alone.
+**There is no fixed win-rate target and no threshold that counts as "done."** The live
+competition is a continuous Bradley-Terry skill ladder (`overview.md`, "Ranking System"):
+submissions are matched against opponents near their own current rating, win/loss moves the
+rating, and as the rating climbs the matchmaking pool gets tougher. There is no bracket to
+finish and no fixed opponent set to "beat all of" — the 79-opponent roster below is a fixed
+sample of *past* ladder games used offline as a proxy for "would this change raise the
+rating," not the live matchmaking pool. The only real objective is: **maximize win rate,
+keep raising it, and never ship a change that lowers it.** A specific percentage (50%
+aggregate / 25% floor) was written into this file in a past session (Cycle 6,
+`implementation_plan.md`) as an interim checkpoint bookkeeping figure — it is not a
+competition rule and is not a stopping point. Ignore it as a target; keep chasing the higher
+number.
+
+The `roster` tier in `run_official_tournament.py` (`--roster-goal` / `--opponent-floor`) is
+still the primary **measurement** — it's the best offline proxy for rating available, built
+from real Kaggle ladder replays in `logs/`, replayed via `python_bot/opponents/_ghost.py`.
+Paired head-to-head against the previous artifact (`--baseline`, G2) is the more decisive
+signal for any individual change, since it's a same-seed A/B comparison independent of
+whatever the roster's current aggregate number happens to be.
 
 Last recorded checkpoint (Cycle 11, `implementation_plan.md`, 2026-08-06): roster win rate
 15/25 (60%), median bank $104,344; head-to-head vs the previous artifact 36/60 (60%);
-self-play median $106,984; frozen-adversary guard 58/60 (97%). The roster has since grown
-to 79 opponents (`replays/report.json`) showing 31/79 (39%) win rate — this larger sample
-is not yet reflected in a plan checkpoint; treat it as the current standing until one is
-written.
+self-play median $106,984; frozen-adversary guard 58/60 (97%). The roster was since
+regenerated (commit `c0b5a0b`) and grew to 79 opponents; the 31/79 (39%) figure recorded
+right after that regeneration is now itself stale. **Current verified baseline (2026-08-07,
+`agent.py` at this commit, deterministic — the roster replays real recorded actions, so
+reruns reproduce it exactly): 27/79 (34%).** Re-measure with
+`run_official_tournament.py` before trusting any older number in this file, and update this
+line when it moves.
 
 **Self-play bank (G1) is a capability tracker, not a gate.** Currently ~$80k. Do not accept
 or reject a change on G1 alone. Self-play is a *mirror match* — the opponent is a copy of the
@@ -90,33 +103,28 @@ callout before reintroducing any bank-based gate.
 python3 -m unittest python_bot.test_agent python_bot.test_agent_allocator
 ```
 
-The release gate. Default `--opponents` is the replay-derived roster (`replay-roster`) —
-**this is the acceptance gate**, scored against `--roster-goal` (aggregate, default 50%)
-and `--opponent-floor` (per opponent, default 25%). Add `--baseline <path>` for the paired
-head-to-head (G2, `--h2h-goal` default 60%, hard floor 50%). Self-play is opt-in via
-`--opponents self` and is reported (G1) but never gates. Exits non-zero when the roster
-gate, G2, or per-episode liveness checks fail.
+The release gate. Default `--opponents` is the replay-derived roster (`replay-roster`) — the
+primary measurement, scored against `--roster-goal` / `--opponent-floor` thresholds that
+exist as CLI defaults for the exit-code check, not as an accepted target (see "The goal"
+above — there is no win-rate number that counts as done). Add `--baseline <path>` for the
+paired head-to-head (G2, `--h2h-goal` default 60%, hard floor 50%) — treat G2 as the more
+decisive per-change signal, since it's a same-seed A/B comparison independent of the
+roster's current aggregate. Self-play is opt-in via `--opponents self` and is reported (G1)
+but never gates. Exits non-zero when the roster gate, G2, or per-episode liveness checks
+fail; a non-zero exit means "this change measurably lost," not "stop working."
 
 ```bash
 python3 python_bot/run_official_tournament.py --agent python_bot/agent.py --seed-count 30 --baseline python_bot/agent_allocator.py
 ```
 
 The full roster is 79 opponents and runs paired seeds against each — heavier than a quick
-check. To measure against just the frozen guard opponent instead of the whole roster:
-
-```bash
-python3 python_bot/run_official_tournament.py --agent python_bot/agent.py --opponents python_bot/opponent_base.py --seed-count 30
-```
+check.
 
 A quick during-development check — 30 self-play seeds, no roster, no gate:
 
 ```bash
 python3 python_bot/run_official_tournament.py --agent python_bot/agent.py --opponents self --seed-count 30 --no-gate
 ```
-
-`python_bot/opponent_base.py` (renamed from `opponent_dumper.py` in commit `f76721e`) is a
-**frozen test fixture** — never tune it, never re-sync it with `agent.py`, never submit it.
-It is only comparable across cycles while it stays frozen.
 
 `kaggle_environments` accepts a **file path** as an agent, so any previous artifact works
 directly as `--baseline` or in `--opponents`. Full replay JSON is off by default (it is

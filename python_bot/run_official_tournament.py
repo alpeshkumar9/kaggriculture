@@ -126,14 +126,11 @@ def resolve_opponent(spec: str, candidate: Agent) -> Any:
         if not path.is_file():
             # Roster entries name a profiles.json episode ID rather than a real
             # file on disk (see replay_roster_entries()); dispatch straight to
-            # the ghost/profile builders instead of requiring a wrapper file.
+            # the ghost builder instead of requiring a wrapper file.
             name = path.stem
             if name.startswith("replay_"):
                 from opponents._ghost import build_ghost_agent
                 return build_ghost_agent(name.split("_", 1)[1])
-            if name.startswith("profile_"):
-                from opponents._profile import build_replay_agent
-                return build_replay_agent(name.split("_", 1)[1])
         return load_agent(path)
     raise ValueError(
         f"Unsupported opponent {spec!r}; use 'self', '{ROSTER_TOKEN}', or an agent .py path"
@@ -144,9 +141,13 @@ def replay_roster_entries() -> tuple[tuple[str, int, bool], ...]:
     """Return ghost path, source seed, and candidate-side swap flag."""
     directory = Path(__file__).resolve().parent / "opponents"
     profiles = json.loads((directory / "profiles.json").read_text(encoding="utf-8"))
+    # resolve_opponent() dispatches on the stem alone (the file never actually
+    # exists on disk), so a repo-relative path is just as functional and reads
+    # far better in report.json than an absolute machine-specific one.
+    relative_directory = Path("python_bot") / "opponents"
     return tuple(
         (
-            str(directory / f"replay_{episode_id}.py"),
+            str(relative_directory / f"replay_{episode_id}.py"),
             int(profile["source_seed"]),
             int(profile["source_seat"]) == 0,
         )

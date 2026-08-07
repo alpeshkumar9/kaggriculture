@@ -10,7 +10,15 @@ import sys
 import unittest
 
 sys.path.insert(0, os.path.dirname(__file__))
-from agent import _episode_config, _livestock_action, _premium_crop_plan, _sell_orders, agent
+from agent import (
+    STRAWBERRY_DEMAND_PRIORITY_DAY,
+    STRAWBERRY_PRIORITY_DAY,
+    _episode_config,
+    _livestock_action,
+    _premium_crop_plan,
+    _sell_orders,
+    agent,
+)
 
 
 def observation(tile, seeds=None, day=0, shed=None, hires_today=0):
@@ -90,13 +98,13 @@ class CropFirstAgentTests(unittest.TestCase):
         plan = _premium_crop_plan(
             {"unlocked_shops": ["FARMERS_MARKET", "PIZZA_SHOP"]}
         )
-        self.assertEqual(plan, (8, 40, 18, 6))
+        self.assertEqual(plan, (STRAWBERRY_DEMAND_PRIORITY_DAY, 40, 18, 6))
 
     def test_non_pizza_without_strawberry_demand_keeps_default_plan(self):
         plan = _premium_crop_plan(
             {"unlocked_shops": ["BAKERY", "YARN_STORE"]}
         )
-        self.assertEqual(plan, (10, 40, 18, 6))
+        self.assertEqual(plan, (STRAWBERRY_PRIORITY_DAY, 40, 18, 6))
 
     def test_plants_available_seed_on_empty_tile(self):
         action = agent(observation(None, {"CARROT": 1}))
