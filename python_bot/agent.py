@@ -25,6 +25,11 @@ HANDS_PER_DAY = 14
 HIRE_COSTS = (1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610)
 SEED_BUFFER = 25
 MAX_SEED_PURCHASE = 12
+# Wheat tiles needed to cover feed for the typical 8-cow herd at WHEAT_RESERVE_DAYS=2.
+# (8 cows × 2 days) / ~4 units per tile = 4 tiles minimum; +2 buffer for weed gaps.
+# Keeping this well below the workload ceiling (60 crop tiles at 14 hands) is what
+# prevents the weed-cap liveness failure seen in Cycle 13.
+WHEAT_TILE_CAP = 6
 # The fourth quadrant costs $4k with too little remaining season to recover
 # its labour and weed-management cost.  The proven high-output replay uses
 # three quadrants, so expansion stops after NE and SW.
@@ -440,6 +445,7 @@ def _market_actions(
             "STRAWBERRY": strawberry_target,
             "TOMATO": TOMATO_TARGET,
             "MELON": melon_target,
+            "WHEAT": WHEAT_TILE_CAP,
         }.get(crop, SEED_BUFFER)
         target_seed_count = max(0, base_target - current_crop_counts.get(crop, 0))
     crop_seed_count = int(private.get("seeds", {}).get(crop, 0))
@@ -520,11 +526,8 @@ def _next_crop(
         isinstance(tile, dict) and tile.get("kind") == "PLANT" and tile.get("crop") == "WHEAT"
         for row in tiles for tile in row
     )
-    if wheat < 7:
+    if wheat < WHEAT_TILE_CAP:
         return "WHEAT"
-        
-    if day <= 3:
-        return "CARROT"
 
     return None
 
@@ -709,9 +712,16 @@ def _available_crop(
         return "MELON"
     if 4 <= day <= 21 and seed_budget.get("TOMATO", 0) > 0:
         return "TOMATO"
-    if (day >= 26 or day <= 3) and seed_budget.get("CARROT", 0) > 0:
-        return "CARROT"
-    return min(available, key=lambda crop: -seed_budget[crop])
+    # Wheat only up to the feed-sized tile cap — no uncapped fallback.
+    # Carrot is removed: it realises below base, opponents plant none (D3), and
+    # every tile it occupies is a tile that cannot clear weeds or grow strawberry.
+    current_wheat = sum(
+        isinstance(t, dict) and t.get("kind") == "PLANT" and t.get("crop") == "WHEAT"
+        for row in tiles for t in row
+    )
+    if current_wheat < WHEAT_TILE_CAP and seed_budget.get("WHEAT", 0) > 0:
+        return "WHEAT"
+    return None
 
 
 def _nearest_target(

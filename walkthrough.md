@@ -795,3 +795,101 @@ Rejected follow-ups were a 35/30 balanced portfolio (14/25), a visible-opponent 
 * **Liveness:** Failed on seed `663784208` against `replay_90386123` with 12 weed tiles (limit is 10)
 
 The agent lost every single match against the 10 newly introduced replay opponents, pulling the overall win rate down to 29%.
+
+---
+
+## Cycle 14 — Overplanting fix: crop workload cap & carrot removal (2026-08-07)
+
+**Root cause diagnosed (from Cycle 13 liveness failure).** `_next_crop` and `_available_crop`
+both fell back to unlimited wheat/carrot on every open tile. With ~92 crops and 14 workers
+(some already servicing 9 animals), workers spent all turns on water/harvest in their assigned
+regions and never had capacity to clear weeds elsewhere. Result: 12 weed tiles on seed
+`663784208` vs `replay_90386123` (limit: 10).
+
+**What changed in `agent.py`.**
+
+- `WHEAT_TILE_CAP = 6` — new named constant: enough tiles to grow feed for 8 cows at
+  `WHEAT_RESERVE_DAYS = 2` (~4 units/tile), plus 2 tile buffer.
+- `_next_crop`: replaced `if wheat < 7: return "WHEAT" / if day <= 3: return "CARROT"` with
+  `if wheat < WHEAT_TILE_CAP: return "WHEAT"` only. Carrot removed entirely.
+- `_available_crop`: removed the carrot branch and the uncapped `min(available, ...)` fallback.
+  Replaced with a wheat tile-count check against `WHEAT_TILE_CAP`, then `return None`.
+  Workers now leave tiles empty rather than filling them with wheat once the feed quota is met.
+- Seed purchase target for `"WHEAT"` capped at `WHEAT_TILE_CAP` (was using `SEED_BUFFER = 25`).
+- `test_agent.py`: updated `test_plants_available_seed_on_empty_tile` to expect `PLANT WHEAT`
+  (carrot intentionally removed per D3 — realises below base, opponents plant none).
+
+**Measured, 35-opponent roster.**
+
+| metric | Cycle 13 baseline | Cycle 14 | |
+| --- | ---: | ---: | --- |
+| Roster win rate | 29% (10/35) | **42% (15/35)** | +13pp |
+| Median bank | $94,679 | **$106,684** | +$12k |
+| Min bank | $49,911 | $31,341 | regressed (one outlier) |
+| Max bank | $126,682 | $127,834 | flat |
+| **Liveness** | **FAILED** (12 weeds) | **36/36 PASS** | ✅ fixed |
+| Peak weeds | 12 | **5** | |
+| Peak wheat tiles | — | **6.0** | cap working |
+
+Roster gate (50%) **not met** — but this is a clear improvement on the Cycle 13 baseline (29%).
+
+**Per-product diagnostics (candidate side).**
+
+| Product | units/ep | revenue/ep | realised | base | below-base |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| STRAWBERRY | 222.4 | $50,569 | $227 | $120 | 4% |
+| MILK | 197.9 | $41,821 | $211 | $160 | 16% |
+| WOOL | 98.1 | $20,906 | $213 | $200 | 23% |
+| MELON | 61.8 | $14,372 | $233 | $250 | 76% |
+| FERTILIZER | 82.9 | $6,276 | $76 | $100 | **98%** |
+| WHEAT | 33.5 | $1,897 | $57 | $25 | 0% |
+
+Herd: peak 12.0 animals (8 cow + 4 sheep), complete day 16, **lost 0.00**.
+Unharvested at turn 720: $21. Shed at season end: 2.2 units.
+
+**Unexpected finding: sheep are running without catastrophic failure.**
+
+`LATE_SHEEP_TARGET = 6` and `SHEEP_PURCHASE_START_DAY = 0` were already in the code and
+remained unchanged. With the overplanting fix freeing ~30 worker turns per episode that were
+previously spent watering wheat/carrot, sheep appear to be receiving adequate service: peak
+herd 12.0, animals lost 0.00 across all 36 episodes, wool $20,906/ep at $213/unit (above base).
+
+This is the **first run where sheep have not caused catastrophic crop-loop collapse**. Previous
+sheep cycles (3, 5, 10, 11) all suffered wheat purchase explosion and strawberry revenue
+collapse. Those failures were rooted in overplanting (workers had no spare capacity); with the
+cap in place, the symptom no longer appears.
+
+This is a single-measurement observation, not a controlled experiment. The sheep code was
+not changed — only the crop workload ceiling was fixed. **Do not re-open the sheep direction
+as a tuning exercise yet.** Record this as a premise for the next investigation: if the
+labour freed by the overplanting fix is genuinely what made sheep viable, a targeted sheep
+measurement (vs previous artifact, sides swapped) should confirm it. That is separate work.
+
+**Largest remaining losses.**
+
+| opponent | ours | theirs | gap |
+| --- | ---: | ---: | ---: |
+| replay_90642136 | $31,341 | $108,023 | −$76k (outlier) |
+| replay_90541840 | $80,625 | $162,778 | −$82k |
+| replay_90543543 | $83,658 | $129,729 | −$46k |
+| replay_90544317 | $106,972 | $139,382 | −$32k |
+| replay_90595197 | $118,276 | $130,123 | −$12k |
+| replay_90588066 | $115,637 | $126,487 | −$11k |
+| replay_90616307 | $113,561 | $133,565 | −$20k |
+
+`replay_90541840` opponent at $162,778 is the highest score observed from any opponent.
+`replay_90642136` at $31,341 for us is a structural failure on that specific seed — likely
+an early-game cash crunch worth tracing before the next cycle.
+
+**Two open issues.**
+
+1. **Fertilizer selling at 98% below base.** We collect and sell fertilizer at ~$76 against a
+   $100 base, but 98% of units clear below base (likely at the $1 floor). This wastes market
+   order slots and worker pickup/delivery turns. Not selling fertilizer at all (or only selling
+   above base) may be net-positive.
+2. **replay_90642136 structural failure.** Our $31,341 bank against their $108,023 is more
+   than a competitive loss — it suggests a seed-specific early failure. Trace before next cycle.
+
+**Unit tests: 37/37 pass.** (`python_bot.test_agent` and `python_bot.test_agent_allocator`;
+`test_replay_opponents` has 4 pre-existing KeyErrors on old episode IDs not in the current
+`ghost_actions.json` — unrelated to this cycle's changes.)

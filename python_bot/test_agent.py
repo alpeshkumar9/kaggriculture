@@ -99,8 +99,10 @@ class CropFirstAgentTests(unittest.TestCase):
         self.assertEqual(plan, (7, 42, 12, 6))
 
     def test_plants_available_seed_on_empty_tile(self):
-        action = agent(observation(None, {"CARROT": 1}))
-        self.assertEqual(action["farmer"], ["PLANT", "CARROT"])
+        # Carrot was removed from the rotation (realises below base; see D3).
+        # The feed-crop fallback is now wheat; verify it plants on an empty tile.
+        action = agent(observation(None, {"WHEAT": 1}))
+        self.assertEqual(action["farmer"], ["PLANT", "WHEAT"])
 
     def test_waters_before_a_crop_is_ready(self):
         crop = {"kind": "PLANT", "crop": "CARROT", "planted_day": 0, "watered_today": False}
