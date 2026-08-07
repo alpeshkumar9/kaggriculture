@@ -191,42 +191,41 @@ def analyze_replay(log_path):
     }
 
 def print_diagnostic_report(analyses):
-    """Print a clean diagnostic markdown report summarizing the new replays."""
+    """Print and save a clean diagnostic markdown report summarizing the replays."""
     if not analyses:
         print("No new analyses to report.")
         return
         
-    print("\n" + "="*50)
-    print(" KAGGRICULTURE MATCH DIAGNOSTIC REPORT")
-    print("="*50)
+    report = []
+    report.append("# Kaggle Match Diagnostic Report\n")
     
     for analysis in analyses:
-        print(f"\n### Match {analysis['episode_id']} | Outcome: **{analysis['outcome']}**")
-        print(f"- **{analysis['our_name']}** (Us): ${analysis['our_score']:,.2f}")
-        print(f"- **{analysis['opp_name']}** (Opponent): ${analysis['opp_score']:,.2f}")
+        report.append(f"### Match {analysis['episode_id']} | Outcome: **{analysis['outcome']}**")
+        report.append(f"- **{analysis['our_name']}** (Us): ${analysis['our_score']:,.2f}")
+        report.append(f"- **{analysis['opp_name']}** (Opponent): ${analysis['opp_score']:,.2f}\n")
         
         our_met = analysis['metrics']['our']
         opp_met = analysis['metrics']['opp']
         
-        print("\n| Metric | Us | Opponent | Difference |")
-        print("| :--- | :--- | :--- | :--- |")
-        print(f"| Final Bank | ${analysis['our_score']:,.2f} | ${analysis['opp_score']:,.2f} | ${analysis['our_score'] - analysis['opp_score']:,.2f} |")
-        print(f"| Max Workers | {our_met['hands']} | {opp_met['hands']} | {our_met['hands'] - opp_met['hands']} |")
-        print(f"| Land Purchases | {our_met['land']} | {opp_met['land']} | {our_met['land'] - opp_met['land']} |")
-        print(f"| Cows Purchased | {our_met['cows']} | {opp_met['cows']} | {our_met['cows'] - opp_met['cows']} |")
-        print(f"| Sheep Purchased | {our_met['sheep']} | {opp_met['sheep']} | {our_met['sheep'] - opp_met['sheep']} |")
-        print(f"| Max Weeds Count | {our_met['max_weeds']} | {opp_met['max_weeds']} | {our_met['max_weeds'] - opp_met['max_weeds']} |")
+        report.append("| Metric | Us | Opponent | Difference |")
+        report.append("| :--- | :--- | :--- | :--- |")
+        report.append(f"| Final Bank | ${analysis['our_score']:,.2f} | ${analysis['opp_score']:,.2f} | ${analysis['our_score'] - analysis['opp_score']:,.2f} |")
+        report.append(f"| Max Workers | {our_met['hands']} | {opp_met['hands']} | {our_met['hands'] - opp_met['hands']} |")
+        report.append(f"| Land Purchases | {our_met['land']} | {opp_met['land']} | {our_met['land'] - opp_met['land']} |")
+        report.append(f"| Cows Purchased | {our_met['cows']} | {opp_met['cows']} | {our_met['cows'] - opp_met['cows']} |")
+        report.append(f"| Sheep Purchased | {our_met['sheep']} | {opp_met['sheep']} | {our_met['sheep'] - opp_met['sheep']} |")
+        report.append(f"| Max Weeds Count | {our_met['max_weeds']} | {opp_met['max_weeds']} | {our_met['max_weeds'] - opp_met['max_weeds']} |")
         
         # Product sales revenue
         all_products = set(our_met['sales'].keys()) | set(opp_met['sales'].keys())
         for prod in sorted(all_products):
             our_val = our_met['sales'].get(prod, 0)
             opp_val = opp_met['sales'].get(prod, 0)
-            print(f"| Sales: {prod} | ${our_val:,.2f} | ${opp_val:,.2f} | ${our_val - opp_val:,.2f} |")
-
-        # Explain why we lost if it was a loss
+            report.append(f"| Sales: {prod} | ${our_val:,.2f} | ${opp_val:,.2f} | ${our_val - opp_val:,.2f} |")
+        
+        # Explain why we won/lost
+        reasons = []
         if analysis['outcome'] == "LOSS":
-            reasons = []
             if opp_met['hands'] > our_met['hands']:
                 reasons.append("Opponent hired more workers, indicating we might be under-hiring or expanding too slowly.")
             if opp_met['cows'] > our_met['cows']:
@@ -247,9 +246,47 @@ def print_diagnostic_report(analyses):
             if not reasons:
                 reasons.append("Difference in general pacing or price optimization (selling at better market peaks).")
                 
-            print("\n**Key Loss Factors Identified:**")
+            report.append("\n**Key Loss Factors Identified:**")
             for r in reasons:
-                print(f"- {r}")
+                report.append(f"- {r}")
+        elif analysis['outcome'] == "WIN":
+            if our_met['hands'] > opp_met['hands']:
+                reasons.append(f"We hired more workers ({our_met['hands']} vs {opp_met['hands']}), giving us labor superiority.")
+            if our_met['cows'] > opp_met['cows']:
+                reasons.append(f"We invested more in Cows ({our_met['cows']} vs {opp_met['cows']}), yielding higher Milk revenues.")
+            if our_met['sheep'] > opp_met['sheep']:
+                reasons.append(f"We bought more Sheep ({our_met['sheep']} vs {opp_met['sheep']}), yielding higher Wool revenues.")
+            
+            # Compare premium sales
+            for premium in ["MELON", "STRAWBERRY", "MILK", "WOOL"]:
+                our_val = our_met['sales'].get(premium, 0)
+                opp_val = opp_met['sales'].get(premium, 0)
+                if our_val > opp_val + 5000:
+                    reasons.append(f"We outperformed on {premium} sales by ${our_val - opp_val:,.2f}.")
+            
+            if opp_met['max_weeds'] > 12:
+                reasons.append(f"Opponent hit a peak of {opp_met['max_weeds']} weeds, suggesting their care loop was overwhelmed.")
+            
+            if not reasons:
+                reasons.append("Superior general pacing or price optimization (selling at better market peaks).")
+            
+            report.append("\n**Key Win Factors Identified:**")
+            for r in reasons:
+                report.append(f"- {r}")
+        
+        report.append("\n" + "---" + "\n")
+        
+    full_report = "\n".join(report)
+    print(full_report)
+    
+    # Save report
+    project_root = Path(__file__).resolve().parents[1]
+    report_file = project_root / "match_diagnostic_report.md"
+    try:
+        report_file.write_text(full_report, encoding="utf-8")
+        print(f"Saved diagnostic report to: {report_file}")
+    except Exception as e:
+        print(f"Warning: Failed to save diagnostic report to file: {e}")
 
 def main():
     parser = argparse.ArgumentParser(description="Fetch and analyze new Kaggle replays.")
