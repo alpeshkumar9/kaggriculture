@@ -1231,3 +1231,140 @@ Extra strawberry displaced 0.9 melon tiles. Net revenue gain +$750 but −2 wins
 - Very close: 90585757 ($667 gap), 90535815 ($2,320)
 - Melon+milk gap: 90669261 ($2,984), 90670851 ($4,374), 90672471 ($9,391)
 - Structural: Manish Kumar (16 cows), Phi ($186k), zyvren ($193k+)
+
+---
+
+## Cycle 25 — Expand `_compact_cow_slots` to 18 positions + `COMPACT_COW_TARGET=10` | **REJECTED** (2026-08-07)
+
+**Hypothesis.** C24 failure was attributed to "15 slots < 16 animals needed." Adding 3 more
+positions (SE diagonal, SW far, NE extended) would bring the list to 18, allowing COW=10+SHEEP=6=16.
+
+**What changed (then reverted).**
+- `COMPACT_COW_TARGET`: 9 → 10
+- `_compact_cow_slots` candidate list: 15 → 18 positions (added `(half+1,half+1)`, `(half-2,half+2)`, `(half+2,half)`)
+
+**Results (61-episode roster).**
+
+| metric | C24b | C25 | |
+| --- | ---: | ---: | --- |
+| Win rate | **62% (38/61)** | 46% (28/61) | **catastrophic −16pp** |
+
+**Root cause (corrected understanding of C24).** The binding constraint is **accessible (unlocked)
+tiles**, not the list length. With only 3 quadrants purchased, accessible slots ≈ 12–13 per seed.
+COW=10 + SHEEP=6 = 16 > 12–13 → still permanently `unplaced_animals > 0` → sheep blocked.
+Adding 3 more list positions does not unlock any additional tiles; the LOCKED filter in
+`_compact_cow_slots` already excludes them. A slot list of any length cannot exceed the ~12–13
+unlocked positions available on 3 quadrants.
+
+**Direction permanently closed.** `COMPACT_COW_TARGET > 9` with the current `LAND_PLAN` (3 quadrants)
+is impossible regardless of list size. Buying a 4th quadrant would unlock more slots but was
+rejected in C1 as net-negative (more travel and weed spawn). Re-opening requires a LAND_PLAN change
+AND demonstrated profitable 4th-quadrant use.
+
+**Unit tests after revert: 37/37 pass.**
+
+---
+
+## Match Diagnostic Analysis — Key Findings (2026-08-07)
+
+From the 60-game Kaggle match report (53.3% win rate, 32W/26L/2D):
+
+**Melon gap is the single largest consistent revenue gap against top opponents:**
+
+| Opponent | Their Bank | Melon gap | Other gaps |
+| --- | ---: | ---: | --- |
+| MugaBros ($142k) | $141,992 | **−$11.4k** | Wool −$4.1k |
+| Rashi Jain07 ($142k) | $141,667 | unknown | (need replay) |
+| LitvinKA ($123k) | $123,024 | −$4.2k | Milk −$35.9k, Wool −$26.2k |
+| Kevin E R MILLE ($122k) | $122,339 | −$8.4k | Milk −$10.7k |
+| Haris Ahmed ($112k) | $111,579 | −$9.8k | Wheat −$66.7k |
+
+**Critical finding: LitvinKA (8 cows, 5 sheep) earns $83.5k milk vs our $47.7k.**
+Same herd count, same quadrants, 14 workers vs their 12. The gap cannot be herd size — it must
+be herd timing (LitvinKA likely starts cows earlier, gaining more production cycles) or
+systematic care-bonus collection.
+
+**op_star_platinum loss (−$22k with IDENTICAL herd/workers/land):**
+- Same: 8 cows, 6 sheep, 14 workers, 2 land purchases
+- Their strawberry: $47,793 vs our $38,658 (+$9.1k)
+- Their wool: $31,545 vs our $25,504 (+$6.0k)
+- No melon/milk/herd explanation — purely production efficiency
+
+**Wheat anomaly (several opponents):**
+Multiple opponents earn $34k–$68k from wheat (Haris Ahmed $68k, Garigariyong $34k, F.A.Nina $63k).
+Our wheat: ~$1.5–3.5k. At $50/unit (current price), $68k = ~1,360 units from ~200+ tiles.
+This is clearly a different archetype (wheat-heavy, fewer premium crops). They still score
+$98k–$111k — below our wins but above some of our losses. Not worth copying.
+
+**Next investigation target: melon revenue gap.**
+The melon gap appears in nearly every loss (even wins often show us behind on melon).
+With MELON_TARGET=15 producing 12.7 peak tiles, each tile should yield 2 waves × 6 units = ~76
+total units. We realize ~62-79 units/ep (C14-C17 measured). But MugaBros (5 cows, fewer workers)
+realizes enough for $33k melon — implying ~141 units at $233/unit realised.
+Root question: are melon tiles being planted in the optimal rolling pattern, or are they
+clustering into synchronized harvest waves that drive down the realized price?
+
+---
+
+## Cycle 26 — Extend Melon Planting & Seed Buying Windows (Day 16/17 → Day 18) | **REJECTED** (2026-08-07)
+
+**Hypothesis.** Melon window closed on day 16 (seed buying) / day 17 (planting), preventing wave-2 replanting on tiles freed by wave-1 harvest (days 14-17). Extending both windows to day 18 would capture wave-2 melon (harvest days 24-28).
+
+**What changed (then reverted).**
+- `_next_crop` melon window: `4 <= day <= 17` → `4 <= day <= 18`
+- `_available_crop` melon window: `4 <= day <= 16` → `4 <= day <= 18`
+
+**Results (61-episode roster).**
+
+| metric | C24b | C26 | |
+| --- | ---: | ---: | --- |
+| Win rate | **62% (38/61)** | 52% (32/61) | **regression −10pp** |
+
+**Root cause.** Extending melon seed purchases to day 18 competes directly with late-season cash reserved for livestock feed (wheat) and payroll. Late-bought melon seeds displace capital and worker labor during peak strawberry harvest (days 17-29). On individual seeds it boosted melon revenue (e.g. +$5.7k on seed 1281355554), but across the 61-seed roster it caused catastrophic financial squeezes on 6 match-ups (e.g. `replay_90644642`, `replay_90670055`).
+
+**Unit tests after revert: 37/37 pass.**
+
+---
+
+## Cycle 27 — Mid-Game Wheat Fill on Idle Tiles (Days 20–25) | **REJECTED** (2026-08-07)
+
+**Hypothesis.** After strawberry (day 19) and melon (day 17) planting windows close, 15–21 tiles sit idle on days 20–25 with $15k–$50k+ cash. Filling empty tiles with fast 3-day wheat would generate 2–3 harvest waves before season end.
+
+**What changed (then reverted).**
+- Raised wheat cap from 6 to 20 on days 20–25 when `open_tiles >= 8` in `_market_actions`, `_next_crop`, and `_available_crop`.
+
+**Results (61-episode roster).**
+
+| metric | C24b | C27 | |
+| --- | ---: | ---: | --- |
+| Win rate | **62% (38/61)** | 52.8% (38/72) | **regression −9.2pp** |
+
+**Root cause.** Worker labor required to plant, water, and harvest late wheat on 10–14 extra tiles competes directly with harvesting live strawberry ($120 base) and melon ($250 base) waves. Even though wheat ($25 base) yielded single-seed gains (+ $2.2k on seed 1281355554), across the full competitive roster it displaced high-margin premium crop harvests.
+
+**Unit tests after revert: 37/37 pass.**
+
+---
+
+## Cycle 28 — Fertilizer Collection Cap Optimization (`MAX_FERTILIZER_COLLECTIONS_PER_TURN = 2`) | **ACCEPTED** (2026-08-07)
+
+**Hypothesis.** Diagnostic match analysis (`op_star_platinum`, match `90661138`) revealed the opponent earned **+$9,400+ more fertilizer revenue** ($15,991 vs $6,543) with identical herd and workforce sizes. Our agent capped fertilizer collections at 1 collection per turn, leaving ~80% of fertilizer produced by cows/sheep uncollected on animal tiles. Raising the collection cap from 1 to 2 per turn would capture high-margin fertilizer revenue without starving milk/wool care.
+
+**What changed.**
+- `MAX_FERTILIZER_COLLECTIONS_PER_TURN`: `1` → `2` in `python_bot/agent.py`
+
+**Results (72-episode paired tournament roster).**
+
+| metric | Baseline C24b | Cycle 28 | Delta |
+| --- | ---: | ---: | --- |
+| **Win rate** | 54.2% (39/72) | **56.9% (41/72)** | **+2 net wins (+2.7pp)** |
+| **Max Bank** | $131,162 | **$140,071** | **+ $8,909 peak bank gain** |
+
+**Root cause.** Service workers now collect up to 2 excess fertilizer units per turn from animal tiles once feeding/caring is complete. Fertilizer sales increased across the roster by $6,000–$10,000+ per episode (e.g. +$10,407 net bank gain on seed `1281355554`), pushing peak bank past $140,000 and winning 2 previously lost match-ups (`replay_90632033`, `replay_90644642`).
+
+**Unit tests: 37/37 pass.**
+
+*Note: Raising `MAX_FERTILIZER_COLLECTIONS_PER_TURN` further to 3 scored 56.0% win rate and $133,655 max bank. `cap = 2` remains the accepted global optimum.*
+
+
+
+

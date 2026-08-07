@@ -6328,5 +6328,266 @@
     "source_result": "loss",
     "source_seat": 1,
     "source_seed": 613606376
+  },
+  "90696205": {
+    "episode_id": "90696205",
+    "observed": {
+      "animal_buys": {
+        "COW": 8,
+        "GOOSE": 0,
+        "SHEEP": 2
+      },
+      "below_base_fraction": {
+        "CARROT": 0.0,
+        "EGG": 0.0,
+        "FERTILIZER": 1.0,
+        "MELON": 0.73,
+        "MILK": 0.126,
+        "STRAWBERRY": 0.0,
+        "TOMATO": 0.0,
+        "WHEAT": 0.0,
+        "WOOL": 0.379
+      },
+      "land_days": [
+        8,
+        13
+      ],
+      "peak_tiles": {
+        "CARROT": 4,
+        "COW": 8,
+        "MELON": 25,
+        "SHEEP": 2,
+        "STRAWBERRY": 30,
+        "WHEAT": 9
+      }
+    },
+    "selection": "non-player seat",
+    "settings": {
+      "COW_PURCHASE_LAST_DAY": 7,
+      "COW_TARGET": 8,
+      "EARLY_GOOSE_TARGET": 0,
+      "HANDS_PER_DAY": 13,
+      "LAND_PLAN": [
+        [
+          8,
+          1600
+        ],
+        [
+          13,
+          3200
+        ]
+      ],
+      "LATE_SHEEP_TARGET": 2,
+      "LIVESTOCK_SLOT_TARGET": 10,
+      "MELON_TARGET": 25,
+      "PREMIUM_SELL_BATCH": 8,
+      "PROFILE_CROP_PLAN": [
+        4,
+        30,
+        25,
+        4
+      ],
+      "SELL_BATCHES": {
+        "CARROT": 2,
+        "FERTILIZER": 4,
+        "MELON": 8,
+        "MILK": 12,
+        "STRAWBERRY": 16,
+        "WHEAT": 2,
+        "WOOL": 4
+      },
+      "SELL_PRICE_MULTIPLIERS": {
+        "CARROT": 1.0,
+        "EGG": 1.0,
+        "FERTILIZER": 0.0,
+        "MELON": 0.5,
+        "MILK": 1.0,
+        "STRAWBERRY": 1.0,
+        "TOMATO": 1.0,
+        "WHEAT": 1.0,
+        "WOOL": 1.0
+      },
+      "SHEEP_PURCHASE_END_DAY": 0,
+      "SHEEP_PURCHASE_START_DAY": 0,
+      "STAPLE_SELL_BATCH": 3,
+      "STRAWBERRY_TARGET": 30
+    },
+    "source_bank": 112263.0,
+    "source_file": "90696205.json",
+    "source_name": "Shadowfishes",
+    "source_result": "win",
+    "source_seat": 0,
+    "source_seed": 2080375329
+  },
+  "90697027": {
+    "episode_id": "90697027",
+    "observed": {
+      "animal_buys": {
+        "COW": 9,
+        "GOOSE": 0,
+        "SHEEP": 7
+      },
+      "below_base_fraction": {
+        "CARROT": 0.0,
+        "EGG": 0.0,
+        "FERTILIZER": 0.998,
+        "MELON": 0.773,
+        "MILK": 0.0,
+        "STRAWBERRY": 0.0,
+        "TOMATO": 0.0,
+        "WHEAT": 0.0,
+        "WOOL": 0.0
+      },
+      "land_days": [
+        11
+      ],
+      "peak_tiles": {
+        "COW": 5,
+        "MELON": 21,
+        "SHEEP": 6,
+        "STRAWBERRY": 18,
+        "WHEAT": 13
+      }
+    },
+    "selection": "non-player seat",
+    "settings": {
+      "COW_PURCHASE_LAST_DAY": 13,
+      "COW_TARGET": 5,
+      "EARLY_GOOSE_TARGET": 0,
+      "HANDS_PER_DAY": 11,
+      "LAND_PLAN": [
+        [
+          11,
+          1600
+        ]
+      ],
+      "LATE_SHEEP_TARGET": 6,
+      "LIVESTOCK_SLOT_TARGET": 11,
+      "MELON_TARGET": 21,
+      "PREMIUM_SELL_BATCH": 2,
+      "PROFILE_CROP_PLAN": [
+        11,
+        18,
+        21,
+        2
+      ],
+      "SELL_BATCHES": {
+        "FERTILIZER": 2,
+        "MELON": 1,
+        "MILK": 5,
+        "STRAWBERRY": 5,
+        "WHEAT": 6,
+        "WOOL": 4
+      },
+      "SELL_PRICE_MULTIPLIERS": {
+        "CARROT": 1.0,
+        "EGG": 1.0,
+        "FERTILIZER": 0.0,
+        "MELON": 0.0,
+        "MILK": 1.0,
+        "STRAWBERRY": 1.0,
+        "TOMATO": 1.0,
+        "WHEAT": 1.0,
+        "WOOL": 1.0
+      },
+      "SHEEP_PURCHASE_END_DAY": 14,
+      "SHEEP_PURCHASE_START_DAY": 0,
+      "STAPLE_SELL_BATCH": 2,
+      "STRAWBERRY_TARGET": 18
+    },
+    "source_bank": 92037.0,
+    "source_file": "90697027.json",
+    "source_name": "Ramon van Dijk",
+    "source_result": "loss",
+    "source_seat": 0,
+    "source_seed": 1509694061
+  },
+  "90697840": {
+    "episode_id": "90697840",
+    "observed": {
+      "animal_buys": {
+        "COW": 4,
+        "GOOSE": 0,
+        "SHEEP": 13
+      },
+      "below_base_fraction": {
+        "CARROT": 0.0,
+        "EGG": 0.0,
+        "FERTILIZER": 0.992,
+        "MELON": 1.0,
+        "MILK": 0.706,
+        "STRAWBERRY": 0.0,
+        "TOMATO": 0.0,
+        "WHEAT": 0.0,
+        "WOOL": 0.975
+      },
+      "land_days": [
+        9,
+        13
+      ],
+      "peak_tiles": {
+        "COW": 4,
+        "MELON": 16,
+        "SHEEP": 13,
+        "STRAWBERRY": 9,
+        "WHEAT": 16
+      }
+    },
+    "selection": "non-player seat",
+    "settings": {
+      "COW_PURCHASE_LAST_DAY": 8,
+      "COW_TARGET": 4,
+      "EARLY_GOOSE_TARGET": 0,
+      "HANDS_PER_DAY": 12,
+      "LAND_PLAN": [
+        [
+          9,
+          1600
+        ],
+        [
+          13,
+          3200
+        ]
+      ],
+      "LATE_SHEEP_TARGET": 13,
+      "LIVESTOCK_SLOT_TARGET": 17,
+      "MELON_TARGET": 16,
+      "PREMIUM_SELL_BATCH": 6,
+      "PROFILE_CROP_PLAN": [
+        9,
+        9,
+        16,
+        2
+      ],
+      "SELL_BATCHES": {
+        "FERTILIZER": 2,
+        "MELON": 18,
+        "MILK": 9,
+        "STRAWBERRY": 2,
+        "WHEAT": 10,
+        "WOOL": 6
+      },
+      "SELL_PRICE_MULTIPLIERS": {
+        "CARROT": 1.0,
+        "EGG": 1.0,
+        "FERTILIZER": 0.0,
+        "MELON": 0.0,
+        "MILK": 0.5,
+        "STRAWBERRY": 1.0,
+        "TOMATO": 1.0,
+        "WHEAT": 1.0,
+        "WOOL": 0.0
+      },
+      "SHEEP_PURCHASE_END_DAY": 15,
+      "SHEEP_PURCHASE_START_DAY": 4,
+      "STAPLE_SELL_BATCH": 2,
+      "STRAWBERRY_TARGET": 9
+    },
+    "source_bank": 71461.0,
+    "source_file": "90697840.json",
+    "source_name": "Kakarott 10",
+    "source_result": "loss",
+    "source_seat": 0,
+    "source_seed": 1414096833
   }
 }

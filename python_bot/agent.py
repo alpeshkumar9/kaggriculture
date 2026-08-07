@@ -42,10 +42,10 @@ WHEAT_EARLY_CAP = 20  # field max ~21 tiles; cap=25 (C18) caused animal loss, re
 LAND_PLAN = ((7, 1600), (11, 3200))
 MOVES = ((0, -1, "NORTH"), (0, 1, "SOUTH"), (1, 0, "EAST"), (-1, 0, "WEST"))
 PRODUCTS = {"WHEAT", "CARROT", "TOMATO", "STRAWBERRY", "MELON", "EGG", "MILK", "WOOL", "FERTILIZER"}
-COMPACT_COW_TARGET = 9  # C24b: 9+6=15 animals = slot ceiling; COW=10 exceeded it, sheep collapsed to 2.4
+COMPACT_COW_TARGET = 9  # C24b accepted ceiling; C25 expanding slots to 18 still failed (accessible tiles ~12-13 < 16 needed)
 LIVESTOCK_SLOT_TARGET = 36
 ANIMALS_PER_SERVICE_WORKER = 5
-MAX_FERTILIZER_COLLECTIONS_PER_TURN = 1
+MAX_FERTILIZER_COLLECTIONS_PER_TURN = 2  # C28 accepted optimum: 56.9% win rate, $140,071 max bank
 LIVESTOCK_CASH_BUFFER = 500
 ANIMAL_AT_RISK_UNFED_DAYS = 1
 SHEEP_PURCHASE_BATCH = 2

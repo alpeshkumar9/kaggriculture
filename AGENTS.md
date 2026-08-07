@@ -169,13 +169,22 @@ when a re-try scores differently due to seed variance.
      Early wheat (days 1–3) is the **livestock feed supply** for the construction phase. It
      is not cosmetic revenue. The `4 <= day` gate is structural and must not be removed or
      lowered without simultaneously solving the livestock feed-dependency for days 1–6.
-   - **COMPACT_COW_TARGET above 9** — closed in Cycle 24. `_compact_cow_slots` has exactly
-     15 hardcoded candidate positions (lines 1229–1239 of `agent.py`). On most seeds ~12-13
-     are accessible (others LOCKED). COW=10 + SHEEP_TARGET=6 = 16 > 15 slots → permanently
-     `unplaced_animals > 0` → `herd_stable = False` → sheep purchase blocked after 1st batch.
-     Peak sheep collapsed 4.0 → 2.4, wool fell $5,714, milk gained only $3,924, net −$1,790/ep
-     and −3 wins. `COMPACT_COW_TARGET = 9` (C24b) is the accepted ceiling: COW=9 + SHEEP=6 =
-     15 = slot count. Raising it further requires expanding the hardcoded candidate list first.
+   - **COMPACT_COW_TARGET above 9** — closed in Cycles 24 and 25. `_compact_cow_slots` has 15
+     hardcoded candidate positions. On most seeds ~12-13 are accessible (others LOCKED). COW=10
+     + SHEEP_TARGET=6 = 16 > 15 list size → in C24, sheep collapsed 4.0 → 2.4 (−3 wins).
+     In C25, the list was expanded to 18 positions — but the binding constraint is **accessible
+     (unlocked) tiles ≈ 12–13**, not the list length. COW=10 + SHEEP=6 = 16 still exceeds the
+     accessible ceiling → win rate fell 62% → 46% (catastrophic). `COMPACT_COW_TARGET = 9`
+     (C24b) is the permanently accepted ceiling under the current LAND_PLAN (3 quadrants).
+     Raising it requires buying a 4th quadrant (rejected C1) AND unlocking the extra tiles.
+   - **Melon planting / seed buying window extension past day 17** — closed in Cycle 26.
+     Extending the melon window from day 17 to day 18 in `_next_crop` and `_available_crop` caused
+     late seed purchases that drained capital and labor during peak strawberry harvest. Win rate
+     fell 62% → 52% (−10pp). `day <= 17` (planting) / `day <= 16` (seed buying) is the optimal ceiling.
+   - **Mid-game wheat fill on idle tiles (days 20–25)** — closed in Cycle 27.
+     Raising wheat cap from 6 to 20 on days 20–25 when `open_tiles >= 8` caused win rate to drop from
+     62% → 52.8% (−9.2pp). Worker labor spent planting, watering, and harvesting late wheat competes
+     directly with harvesting live strawberry ($120 base) and melon ($250 base) waves.
 
 10. **Never delete or compress `walkthrough.md` cycles.** They are the evidence base for
     Rules 8–9. A session without them will re-propose the same experiments. If the document

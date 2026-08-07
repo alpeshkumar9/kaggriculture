@@ -199,6 +199,51 @@ def print_diagnostic_report(analyses):
     report = []
     report.append("# Kaggle Match Diagnostic Report\n")
     
+    # Calculate overall leaderboard and stats
+    opp_stats = defaultdict(lambda: {"max_score": 0.0, "scores": [], "opp_wins": 0, "our_wins": 0, "draws": 0})
+    total_wins = 0
+    total_losses = 0
+    total_draws = 0
+    
+    for analysis in analyses:
+        opp_name = analysis['opp_name']
+        opp_score = float(analysis['opp_score'])
+        our_score = float(analysis['our_score'])
+        outcome = analysis['outcome']
+        
+        st = opp_stats[opp_name]
+        st['scores'].append(opp_score)
+        st['max_score'] = max(st['max_score'], opp_score)
+        
+        if outcome == "LOSS":
+            st['opp_wins'] += 1
+            total_losses += 1
+        elif outcome == "WIN":
+            st['our_wins'] += 1
+            total_wins += 1
+        else:
+            st['draws'] += 1
+            total_draws += 1
+
+    total_matches = len(analyses)
+    win_rate = (total_wins / total_matches * 100) if total_matches > 0 else 0
+    
+    report.append("## Overall Dataset Summary")
+    report.append(f"- **Total Analyzed Matches**: {total_matches}")
+    report.append(f"- **Record**: {total_wins} Wins / {total_losses} Losses / {total_draws} Draws ({win_rate:.1f}% Win Rate)\n")
+    
+    report.append("## Top Opponents Leaderboard (Ranked by Max Bank Achieved)")
+    report.append("| Opponent Name | Max Bank | Avg Bank | Matches | Opponent Wins | Our Wins |")
+    report.append("| :--- | :--- | :--- | :--- | :--- | :--- |")
+    
+    ranked_opps = sorted(opp_stats.items(), key=lambda x: x[1]['max_score'], reverse=True)
+    for name, st in ranked_opps:
+        avg_score = sum(st['scores']) / len(st['scores'])
+        report.append(f"| **{name}** | ${st['max_score']:,.2f} | ${avg_score:,.2f} | {len(st['scores'])} | {st['opp_wins']} | {st['our_wins']} |")
+        
+    report.append("\n" + "---" + "\n")
+    report.append("## Detailed Match Diagnostics\n")
+    
     for analysis in analyses:
         report.append(f"### Match {analysis['episode_id']} | Outcome: **{analysis['outcome']}**")
         report.append(f"- **{analysis['our_name']}** (Us): ${analysis['our_score']:,.2f}")
