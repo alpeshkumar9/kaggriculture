@@ -31,9 +31,22 @@ rating.**
 
 ## The goal
 
-**Win rate ≥ 60% against an adversarial opponent** (G0), because the ladder ranks on
-win/loss only — coin margin does not affect rating. Current standing: no such opponent
-exists yet (W10 builds it); head-to-head against the previous artifact sits at 50–52%.
+**Win rate ≥ 50% aggregate across the replay-derived opponent roster, with a 25% floor
+against every individual opponent** — the `roster` tier in `run_official_tournament.py`
+(`--roster-goal` / `--opponent-floor`), because the ladder ranks on win/loss only — coin
+margin does not affect rating. The roster is built from real Kaggle ladder replays in
+`logs/` and is the primary release measurement; it superseded the single frozen-adversary
+"G0" gate as of Cycle 6 in `implementation_plan.md`. The former adversary,
+`python_bot/opponent_dumper.py`, was renamed to `python_bot/opponent_base.py` in commit
+`f76721e` and still works as a fixed guard opponent (pass it via
+`--opponents python_bot/opponent_base.py`), but it is no longer the acceptance gate alone.
+
+Last recorded checkpoint (Cycle 11, `implementation_plan.md`, 2026-08-06): roster win rate
+15/25 (60%), median bank $104,344; head-to-head vs the previous artifact 36/60 (60%);
+self-play median $106,984; frozen-adversary guard 58/60 (97%). The roster has since grown
+to 79 opponents (`replays/report.json`) showing 31/79 (39%) win rate — this larger sample
+is not yet reflected in a plan checkpoint; treat it as the current standing until one is
+written.
 
 **Self-play bank (G1) is a capability tracker, not a gate.** Currently ~$80k. Do not accept
 or reject a change on G1 alone. Self-play is a *mirror match* — the opponent is a copy of the
@@ -56,7 +69,7 @@ callout before reintroducing any bank-based gate.
    `random` $0, `starter` $3,514 — against real ladder opponents at $84,682–$125,241. Our
    agent scores $136,548 vs `starter` and loses 6 of 7 ladder games. **Never quote a
    vs-`starter` bank, or `RECORD_MILESTONE = 154615`, as evidence of improvement.** Use
-   self-play and head-to-head against the previous artifact.
+   the replay-derived roster, self-play, and head-to-head against the previous artifact.
 
 3. **A bank improvement without movement in the targeted metric is noise.** Each work item
    names the metric that must move and a guard that must not regress. Both are checked.
@@ -77,29 +90,33 @@ callout before reintroducing any bank-based gate.
 python3 -m unittest python_bot.test_agent python_bot.test_agent_allocator
 ```
 
-The release gate. `--adversary` runs the paired G0/G3 tier against the W10 dumper — **this
-is the acceptance gate**; `--baseline` adds the paired head-to-head (G2); `--smoke` adds the
-vs-built-in liveness tier; self-play is the default opponent and reports G1 without gating on
-it. Exits non-zero when G0/G2/G3 or the liveness checks fail.
+The release gate. Default `--opponents` is the replay-derived roster (`replay-roster`) —
+**this is the acceptance gate**, scored against `--roster-goal` (aggregate, default 50%)
+and `--opponent-floor` (per opponent, default 25%). Add `--baseline <path>` for the paired
+head-to-head (G2, `--h2h-goal` default 60%, hard floor 50%). Self-play is opt-in via
+`--opponents self` and is reported (G1) but never gates. Exits non-zero when the roster
+gate, G2, or per-episode liveness checks fail.
 
 ```bash
-python3 python_bot/run_official_tournament.py --agent python_bot/agent.py --seed-count 30 --smoke --adversary python_bot/opponent_dumper.py --baseline python_bot/agent_allocator.py
+python3 python_bot/run_official_tournament.py --agent python_bot/agent.py --seed-count 30 --baseline python_bot/agent_allocator.py
 ```
 
-The G0 measurement alone — 30 paired seeds vs the adversary, no other tier:
+The full roster is 79 opponents and runs paired seeds against each — heavier than a quick
+check. To measure against just the frozen guard opponent instead of the whole roster:
 
 ```bash
-python3 python_bot/run_official_tournament.py --agent python_bot/agent.py --opponents "" --adversary python_bot/opponent_dumper.py --seed-count 30
+python3 python_bot/run_official_tournament.py --agent python_bot/agent.py --opponents python_bot/opponent_base.py --seed-count 30
 ```
 
-A quick during-development check — 30 self-play seeds, ~35s on 11 workers, no gate:
+A quick during-development check — 30 self-play seeds, no roster, no gate:
 
 ```bash
-python3 python_bot/run_official_tournament.py --agent python_bot/agent.py --seed-count 30 --no-gate
+python3 python_bot/run_official_tournament.py --agent python_bot/agent.py --opponents self --seed-count 30 --no-gate
 ```
 
-`python_bot/opponent_dumper.py` is a **frozen test fixture** — never tune it, never re-sync
-it with `agent.py`, never submit it. G0 is only comparable across cycles while it is fixed.
+`python_bot/opponent_base.py` (renamed from `opponent_dumper.py` in commit `f76721e`) is a
+**frozen test fixture** — never tune it, never re-sync it with `agent.py`, never submit it.
+It is only comparable across cycles while it stays frozen.
 
 `kaggle_environments` accepts a **file path** as an agent, so any previous artifact works
 directly as `--baseline` or in `--opponents`. Full replay JSON is off by default (it is
