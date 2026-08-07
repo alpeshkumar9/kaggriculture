@@ -157,6 +157,25 @@ when a re-try scores differently due to seed variance.
      improved $2,417 but win rate fell 64% → 61%. `MELON_TARGET = 15` (12.7 peak tiles)
      is the accepted optimum under the current land plan. Re-opening requires demonstrating
      the extra tile does not displace the Sida Zuo (`90548189`) matchup.
+   - **STRAWBERRY_TARGET above 42** — closed in Cycle 21. Target=46 hit the tile cap (46.0
+     peak) but displaced 0.9 melon tiles (12.7→11.8). Net revenue gain +$750 but win rate
+     fell 64%→58% (lost 3 wins, gained 1). Field space is binding — raising strawberry costs
+     melon tiles which are higher-margin. Re-opening requires a different land plan.
+   - **SHEEP_PURCHASE_END_DAY as timing fix** — closed in Cycle 22. Extending from 20→25
+     had zero effect (peak sheep still 4.0). Cash is the binding constraint, not the window.
+     Real Kaggle games show "Sheep Purchased: 6" consistently; simulation underestimates.
+   - **Melon planting before day 4** — closed in Cycle 23. Removing the `4 <= day` lower
+     bound caused catastrophic failure: 3% win rate, 2.08 animals lost/ep, 40 peak weeds.
+     Early wheat (days 1–3) is the **livestock feed supply** for the construction phase. It
+     is not cosmetic revenue. The `4 <= day` gate is structural and must not be removed or
+     lowered without simultaneously solving the livestock feed-dependency for days 1–6.
+   - **COMPACT_COW_TARGET above 9** — closed in Cycle 24. `_compact_cow_slots` has exactly
+     15 hardcoded candidate positions (lines 1229–1239 of `agent.py`). On most seeds ~12-13
+     are accessible (others LOCKED). COW=10 + SHEEP_TARGET=6 = 16 > 15 slots → permanently
+     `unplaced_animals > 0` → `herd_stable = False` → sheep purchase blocked after 1st batch.
+     Peak sheep collapsed 4.0 → 2.4, wool fell $5,714, milk gained only $3,924, net −$1,790/ep
+     and −3 wins. `COMPACT_COW_TARGET = 9` (C24b) is the accepted ceiling: COW=9 + SHEEP=6 =
+     15 = slot count. Raising it further requires expanding the hardcoded candidate list first.
 
 10. **Never delete or compress `walkthrough.md` cycles.** They are the evidence base for
     Rules 8–9. A session without them will re-propose the same experiments. If the document

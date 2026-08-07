@@ -1067,9 +1067,167 @@ tile ≈ $1,840/ep (2 cycles × 4 units × $230 realised). Raised from 12 → 15
 Peak melon tiles 12.7 at target 15 — field or seed timing constrains us below target.
 Raising to 18 is the next step to see if actual tiles can reach 13-14.
 
+
 **Remaining closest losses:**
 - replay_90535815: gap $166 (seed noise — George Byne STRW=35 vs our 42)
 - replay_90585757: gap $1,656 (KucingGanteng — structural twin with SHEEP=6 vs our 4)
 - replay_90541180: gap $3,190 (victor souza — STRW=50)
 
 **Unit tests: 37/37 pass.**
+
+---
+
+## Cycle 20 — MELON_TARGET=18 | **REJECTED** (2026-08-07)
+
+**Hypothesis.** Raising melon target from 15 → 18 would add 1+ tile and capture more revenue.
+
+**Results (36 episodes, vs C19 baseline).**
+
+| metric | C19 | C20 | |
+| --- | ---: | ---: | --- |
+| Win rate | **64% (23/36)** | 61% (22/36) | −1 win |
+| Peak melon tiles | 12.7 | 13.7 | +1.0 tile |
+| Melon revenue | $19,637 | $21,337 | +$1,700 |
+| replay_90548189 | **WIN** | **LOSS** ($412 gap) | regressed |
+
+One extra melon tile (+$1,700 revenue) cost one win. Sida Zuo (90548189) is melon-sensitive — our gap had been $402 and melon market saturation on that seed pushed price below base. `MELON_TARGET = 15` is the accepted optimum.
+
+---
+
+## Cycle 21 — STRAWBERRY_TARGET=46 | **REJECTED** (2026-08-07)
+
+**Hypothesis.** Victor souza (STRW=50) beats us by $3k. Raising from 42 → 46 using the early-wheat freed tiles.
+
+**Results (36 episodes, vs C19 baseline).**
+
+| metric | C19 | C21 | |
+| --- | ---: | ---: | --- |
+| Win rate | **64% (23/36)** | 58% (21/36) | −2 wins |
+| Peak strawberry tiles | 42.0 | **46.0** | cap hit |
+| Strawberry revenue | $51,461 | $54,117 | +$2,656 |
+| Peak melon tiles | **12.7** | 11.8 | −0.9 displaced |
+| Melon revenue | **$19,637** | $17,731 | −$1,906 |
+| Lost wins | — | 90531348, 90548189, 90616307 | 3 lost |
+| New wins | — | 90536517 | 1 gained |
+
+Extra strawberry displaced 0.9 melon tiles. Net revenue gain +$750 but −2 wins. `STRAWBERRY_TARGET = 42` is the ceiling under the current field plan. Victor souza's STRW=50 advantage cannot be closed without a different land/field structure.
+
+---
+
+## Cycle 22 — SHEEP_PURCHASE_END_DAY=25 + 61-episode roster | **ACCEPTED (null result)** (2026-08-07)
+
+**Hypothesis.** Herd completes day 13; with only 7 days left (13–20) to buy 3 sheep batches, the purchase window may be the binding constraint. Extending to day 25 gives 12 days.
+
+**Roster expanded from 36 → 61 episodes** (24 new episodes from `logs/55319744/`).
+
+**Results (61 episodes).**
+
+| metric | C22 | |
+| --- | ---: | --- |
+| Win rate (61 ep) | 61% (37/61) | — |
+| Win rate (original 36 ep) | **64% (23/36)** | identical to C19 |
+| Peak sheep tiles | 4.0 | unchanged |
+
+**Key finding.** `SHEEP_PURCHASE_END_DAY=25` had zero effect — peak sheep still 4.0. The purchase window is NOT the binding constraint; the constraint is cash (actual sheep market price ≈ $736 vs estimated $500 budget). SHEEP_PURCHASE_END_DAY=25 is harmless and kept.
+
+**New diagnostic finding (from `match_diagnostic_report.md`).** Real Kaggle games show "Sheep Purchased: 6" consistently for us. The simulation showing 4.0 peak is a ghost-run artifact — real game cash flows are sufficient to purchase all 6. Sheep strategy is NOT broken in production.
+
+**New opponent roster wins (14/25 new episodes = 56%):** new ladder opponents are slightly harder on average.
+
+---
+
+## Cycle 23 — Melon start day 1 (was 4) | **CATASTROPHIC FAILURE — REJECTED** (2026-08-07)
+
+**Hypothesis.** Strong opponents get $25–40k melon vs our $19k. Root cause: we start planting melon on day 4; by then, early wheat has filled all tiles. Changing the lower bound from `4 <= day` to `day` would let workers plant melon before wheat occupies tiles.
+
+**Result: 3% win rate, liveness gate failed.**
+
+| metric | C22 | C23 | |
+| --- | ---: | ---: | --- |
+| Win rate | 61% (37/61) | **3% (2/61)** | catastrophic |
+| Animals lost/ep | 0.00 | **2.08** | starvation |
+| Peak weeds | 5 | **40** | collapse |
+| Peak wheat tiles | 20.0 | **4.1** | wheat starved |
+| Median bank | $110,276 | **~$20,000** | collapse |
+
+**Root cause.** Early wheat (days 1–3) is not cosmetic revenue — it is the **feed supply** for the livestock herd during the construction phase. With melon priority consuming tiles on days 1–3, wheat tiles dropped from 20 to 4. Animals starved (2.08 lost/ep) before the strawberry harvest could provide revenue. The weed cascade followed immediately.
+
+**Rule added to AGENTS.md:** The `4 <= day` lower bound on melon planting is a structural feed-loop gate. It must not be removed or lowered without simultaneously resolving the livestock feed dependency for days 1–6.
+
+---
+
+## Current Baseline — C22 (2026-08-07)
+
+**Active constants:**
+- `WHEAT_EARLY_CAP = 20` (C17 accepted)
+- `MELON_TARGET = 15` (C19 accepted)
+- `STRAWBERRY_TARGET = 42` (ceiling under current field plan)
+- `LATE_SHEEP_TARGET = 6` (always set; achieves 6 in real Kaggle games)
+- `SHEEP_PURCHASE_END_DAY = 25` (C22 null result, harmless)
+- `HANDS_PER_DAY = 14`
+
+**Roster:** 61 episodes. Win rate 61% (37/61). Original 36: 64% (23/36).
+
+**Remaining losses by gap (61-episode roster):**
+- Noise tier (< $2k): 90535815 ($166), 90669261 ($2,057), 90670851 ($2,542)
+- Melon-gap tier ($5–22k): SeaGoat, Juyong, Kevin E R MILLE, F.A.Nina, Veeranuch Leelalai
+- Structural tier (> $15k): Manish Kumar (16 cows), Phi ($186k), zyvren, op_star_platinum, Quantum Farm
+
+**Closed directions (do not re-open without new mechanistic evidence):**
+- Early melon start (< day 4): C23. Catastrophic — starves livestock.
+- MELON_TARGET > 15: C20. Net-negative (costs a win vs Sida Zuo).
+- STRAWBERRY_TARGET > 42: C21. Displaces melon, net −2 wins.
+- SHEEP expansion (LATE_SHEEP_TARGET > 6): C3/5/10/11. Closed per AGENTS.md rule 9.
+- WHEAT_EARLY_CAP > 20: C18. Field saturates at 21 tiles.
+- COMPACT_COW_TARGET > 9: C24. Exceeds livestock slot ceiling (15 positions); sheep collapsed 4→2.4, net −3 wins.
+
+---
+
+## Cycle 24 — COMPACT_COW_TARGET=10 | **REJECTED** (2026-08-07)
+
+**Hypothesis.** Milk-gap losses (Kevin E R MILLE, F.A.Nina, Veeranuch) all run 10-11 cows. +2 cows should close the gap.
+
+| metric | C22 | C24 | |
+| --- | ---: | ---: | --- |
+| Win rate | **61% (37/61)** | 56% (34/61) | −3 wins |
+| Peak SHEEP | **4.0** | **2.4** | ← collapse |
+| Milk | $42,367 | $46,291 | +$3,924 |
+| Wool | **$21,291** | $15,577 | −$5,714 |
+
+**Root cause: 15-slot ceiling.** `_compact_cow_slots` has exactly 15 hardcoded positions. COW=10 + SHEEP=6 = 16 > 15 → permanently `unplaced_animals > 0` → sheep blocked. Wool loss > milk gain. **COW=10 is above the slot ceiling.**
+
+---
+
+## Cycle 24b — COMPACT_COW_TARGET=9 | **ACCEPTED** (2026-08-07)
+
+**Hypothesis.** COW=9 + SHEEP=6 = 15 = exactly the slot count. One extra cow, clean.
+
+| metric | C22 | C24b | |
+| --- | ---: | ---: | --- |
+| Win rate | 61% (37/61) | **62% (38/61)** | **+1 win** |
+| Median bank | $110,276 | **$111,048** | +$772 |
+| Peak COW | 8.0 | **8.8** | +0.8 |
+| Peak SHEEP | 4.0 | 3.2 | −0.8 (slot pressure) |
+| Milk | $42,367 | **$44,985** | +$2,618 |
+| Wool | **$21,291** | $18,926 | −$2,365 |
+| Fertilizer | $6,752 | **$7,615** | +$863 |
+| 90536517 | loss | **WIN** | flipped |
+| 90644642 | loss | **WIN** | flipped |
+| 90673291 | win | loss | −1 |
+
+**Accepted.** COW=9 is the optimum. Net +$1,116/ep revenue, +1 win.
+
+**Livestock slot ceiling (key finding):** Only 15 hardcoded livestock candidate positions in `_compact_cow_slots` (lines 1229–1239). Accessible slots per seed ~12-13 (some LOCKED). COW_TARGET + SHEEP_TARGET must stay ≤ ~13 for both to reach target. LIVESTOCK_SLOT_TARGET=36 constant is irrelevant — the hardcoded list is the true bound.
+
+---
+
+## Current Baseline — C24b (2026-08-07)
+
+**Active constants:** `COMPACT_COW_TARGET=9`, `WHEAT_EARLY_CAP=20`, `MELON_TARGET=15`, `STRAWBERRY_TARGET=42`, `LATE_SHEEP_TARGET=6`, `SHEEP_PURCHASE_END_DAY=25`, `HANDS_PER_DAY=14`.
+
+**Roster:** 61 episodes. Win rate **62% (38/61)**. Original 36: **67% (24/36)**.
+
+**Remaining losses:**
+- Very close: 90585757 ($667 gap), 90535815 ($2,320)
+- Melon+milk gap: 90669261 ($2,984), 90670851 ($4,374), 90672471 ($9,391)
+- Structural: Manish Kumar (16 cows), Phi ($186k), zyvren ($193k+)

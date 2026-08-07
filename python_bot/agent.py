@@ -42,7 +42,7 @@ WHEAT_EARLY_CAP = 20  # field max ~21 tiles; cap=25 (C18) caused animal loss, re
 LAND_PLAN = ((7, 1600), (11, 3200))
 MOVES = ((0, -1, "NORTH"), (0, 1, "SOUTH"), (1, 0, "EAST"), (-1, 0, "WEST"))
 PRODUCTS = {"WHEAT", "CARROT", "TOMATO", "STRAWBERRY", "MELON", "EGG", "MILK", "WOOL", "FERTILIZER"}
-COMPACT_COW_TARGET = 8
+COMPACT_COW_TARGET = 9  # C24b: 9+6=15 animals = slot ceiling; COW=10 exceeded it, sheep collapsed to 2.4
 LIVESTOCK_SLOT_TARGET = 36
 ANIMALS_PER_SERVICE_WORKER = 5
 MAX_FERTILIZER_COLLECTIONS_PER_TURN = 1
@@ -62,10 +62,10 @@ LAST_PLANTING_DAY = 28
 FINAL_GLOBAL_MELON_THRESHOLD = 8
 EARLY_GOOSE_TARGET = 0
 EARLY_SHEEP_TARGET = 0
-LATE_SHEEP_TARGET = 6
+LATE_SHEEP_TARGET = 6  # C21: first test under C19 feed-efficient baseline (was blocked pre-C17)
 SHEEP_PURCHASE_START_DAY = 0
-SHEEP_PURCHASE_END_DAY = 20
-STRAWBERRY_TARGET = 42
+SHEEP_PURCHASE_END_DAY = 25  # C22: herd_stable only from day 13; 7 days (13-20) not enough for 3 batches
+STRAWBERRY_TARGET = 42  # C21: target=46 displaced 0.9 melon tiles, net -2 wins, rejected
 TOMATO_TARGET = 0
 MELON_TARGET = 15  # C19 accepted: 12.7 peak tiles; target=18 (C20) cost a win, rejected
 SHED_CAPACITY = 100
