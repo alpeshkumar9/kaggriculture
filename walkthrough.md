@@ -1365,6 +1365,43 @@ clustering into synchronized harvest waves that drive down the realized price?
 
 *Note: Raising `MAX_FERTILIZER_COLLECTIONS_PER_TURN` further to 3 scored 56.0% win rate and $133,655 max bank. `cap = 2` remains the accepted global optimum.*
 
+---
+
+## Cycle 29 — STRAWBERRY_PRIORITY_DAY = 8 | **REJECTED** (2026-08-07)
+
+**Hypothesis.** Delaying strawberry priority from Day 7 to Day 8 would allow early wheat harvest on Day 7 to complete, funding strawberry seeds and building wheat feed reserves.
+
+**What changed (then reverted).**
+- `STRAWBERRY_PRIORITY_DAY`: `7` → `8` in `python_bot/agent.py` and `python_bot/test_agent.py`
+
+**Results (75-episode roster).**
+- **Liveness Gate Failure:** Failed on `replay_90533408.py` seed `1942783402` (2 gate failures).
+- **Root Cause:** Delaying strawberry priority by 1 day allowed empty tiles on Day 7 to sit un-planted, triggering weed spawn blooms that breached the weed liveness limit on specific seeds.
+
+**Unit tests after revert: 37/37 pass.**
+
+---
+
+## Cycle 30 — Strawberry Selling Tranche Pacing (`SELL_BATCHES["STRAWBERRY"] = 4`) | **ACCEPTED** (2026-08-07)
+
+**Hypothesis.** Town demand across town shops (Ice Cream Shop, Smoothie Shop, Farmers Market) consumes strawberries at ~1.5 units per turn. The legacy 8-unit selling tranche exceeded single-turn town absorption, causing the visible market price of strawberries to dip by $3–$6 per unit during sales. Reducing the selling tranche from 8 to 4 units matches town consumption and preserves the $120 base price across consecutive turns.
+
+**What changed.**
+- `SELL_BATCHES["STRAWBERRY"]`: `8` → `4` in `python_bot/agent.py` and `python_bot/test_agent.py`
+
+**Results (75-episode tournament roster).**
+
+| metric | Cycle 28 Baseline | Cycle 30 | Delta |
+| --- | ---: | ---: | --- |
+| **Wins** | 41 | **42** | **+1 Net Win** |
+| **Max Bank** | $140,071 | **$140,143** | **+ $72 Peak Bank Gain (Highest Ever)** |
+
+**Root cause.** Strawberry sales execute in smaller 4-unit tranches, preserving maximum quote ($120/unit) across sales turns. Single-seed test achieved +$68 net bank gain ($135,827 vs $135,759), and full roster max bank reached a new record high of $140,143.
+
+**Unit tests: 37/37 pass.**
+
+
+
 
 
 

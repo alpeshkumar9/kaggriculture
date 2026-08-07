@@ -185,6 +185,9 @@ when a re-try scores differently due to seed variance.
      Raising wheat cap from 6 to 20 on days 20–25 when `open_tiles >= 8` caused win rate to drop from
      62% → 52.8% (−9.2pp). Worker labor spent planting, watering, and harvesting late wheat competes
      directly with harvesting live strawberry ($120 base) and melon ($250 base) waves.
+   - **STRAWBERRY_PRIORITY_DAY = 8** — closed in Cycle 29.
+     Delaying strawberry priority from Day 7 to Day 8 caused empty tiles on Day 7 to sit un-planted,
+     triggering weed spawn blooms that caused weed liveness gate failures on specific seeds. `STRAWBERRY_PRIORITY_DAY = 7` is the required timing.
 
 10. **Never delete or compress `walkthrough.md` cycles.** They are the evidence base for
     Rules 8–9. A session without them will re-propose the same experiments. If the document

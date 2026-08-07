@@ -133,7 +133,7 @@ class CropFirstAgentTests(unittest.TestCase):
             {"shed": {"STRAWBERRY": 20}}, day=18,
             market_state={"prices": {"STRAWBERRY": 120}},
         )
-        self.assertEqual(orders, [["SELL", "STRAWBERRY", 8]])
+        self.assertEqual(orders, [["SELL", "STRAWBERRY", 4]])
 
     def test_retains_wheat_reserve_for_animals(self):
         orders = _sell_orders(

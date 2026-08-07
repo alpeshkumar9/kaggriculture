@@ -103,7 +103,7 @@ SELL_BATCHES = {
     "WHEAT": 4,
     "CARROT": 4,
     "TOMATO": 4,
-    "STRAWBERRY": 8,
+    "STRAWBERRY": 4,  # C30: smaller tranche matches town consumption (~1.5/turn) to preserve $120 base quote
     "MELON": 6,
     "EGG": 4,
     "MILK": 3,

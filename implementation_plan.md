@@ -1299,3 +1299,11 @@ Release evidence is stored in `replays/final-selfplay-30-seed-report.json` and
 - **Target metric:** Fertilizer revenue across roster increased by $6,000–$10,000+ per episode, matching the `op_star_platinum` diagnostic gap.
 - **Guards:** All 37 unit tests pass cleanly.
 
+## Current checkpoint — Cycle 30 (2026-08-07)
+
+- **Accepted:** `SELL_BATCHES["STRAWBERRY"] = 4` (down from 8).
+- **Primary gate:** Tournament wins **41 → 42 (+1 net win)**, peak bank **$140,071 → $140,143 (+$72, highest recorded)**.
+- **Target metric:** Strawberry selling tranche size matches town consumption (~1.5/turn), preserving $120 base price across consecutive sales turns.
+- **Guards:** All 37 unit tests pass cleanly.
+
+
