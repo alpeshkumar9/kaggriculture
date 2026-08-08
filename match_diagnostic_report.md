@@ -3,8 +3,8 @@
 *Per-product sales are reconstructed from each turn's public money delta (exact accounting identity: money_after = money_before - buy_cost + sell_revenue), not from raw SELL order face value. Raw order quantities overstate revenue whenever an order exceeds available shed stock and silently fails. The per-turn total is exact; only the split across products sold in the same turn is approximated (weighted by that turn's SELL order notional).*
 
 ## Overall Dataset Summary
-- **Total Analyzed Matches**: 79
-- **Record**: 31 Wins / 48 Losses / 0 Draws (39.2% Win Rate)
+- **Total Analyzed Matches**: 87
+- **Record**: 36 Wins / 51 Losses / 0 Draws (41.4% Win Rate)
 
 ## Top Opponents Leaderboard (Ranked by Max Bank Achieved)
 | Opponent Name | Max Bank | Avg Bank | Matches | Opponent Wins | Our Wins |
@@ -40,7 +40,7 @@
 | **D S S Kumar** | $115,388.00 | $115,388.00 | 1 | 1 | 0 |
 | **KodamaSec Labs LTD** | $112,376.00 | $112,376.00 | 1 | 1 | 0 |
 | **an Expired Engineer** | $110,162.00 | $110,162.00 | 1 | 0 | 1 |
-| **Alpesh Kumar** | $110,156.00 | $110,156.00 | 1 | 1 | 0 |
+| **Alpesh Kumar** | $110,156.00 | $84,990.00 | 2 | 2 | 0 |
 | **Datta Dhebe** | $109,897.00 | $109,897.00 | 1 | 1 | 0 |
 | **Xiaolei Lian** | $108,217.00 | $108,217.00 | 1 | 0 | 1 |
 | **Quyền Thịnh** | $108,120.00 | $108,120.00 | 1 | 1 | 0 |
@@ -73,15 +73,242 @@
 | **bhavya shah** | $78,612.00 | $78,612.00 | 1 | 1 | 0 |
 | **Shuichi Fushimi** | $78,291.00 | $74,069.50 | 2 | 1 | 1 |
 | **Hiroyasu Okuno** | $78,142.00 | $78,142.00 | 1 | 0 | 1 |
+| **Aparna Mantha** | $73,909.00 | $73,909.00 | 1 | 0 | 1 |
 | **harmo-miu** | $73,091.00 | $73,091.00 | 1 | 0 | 1 |
+| **wata** | $70,354.00 | $70,354.00 | 1 | 1 | 0 |
 | **Matt Motoki** | $60,890.00 | $60,890.00 | 1 | 0 | 1 |
+| **Hoaquason** | $60,540.00 | $60,540.00 | 1 | 0 | 1 |
+| **Victor Orihuel** | $53,739.00 | $53,739.00 | 1 | 1 | 0 |
 | **Rohan Lopes** | $52,850.00 | $52,850.00 | 1 | 0 | 1 |
 | **MarvelousXun** | $50,411.00 | $50,411.00 | 1 | 1 | 0 |
+| **Drakus_Julia** | $50,321.00 | $50,321.00 | 1 | 0 | 1 |
 | **RacoonTW** | $46,087.00 | $46,087.00 | 1 | 0 | 1 |
+| **williamrawling** | $38,542.00 | $38,542.00 | 1 | 0 | 1 |
+| **quantcrypto3** | $27,815.00 | $27,815.00 | 1 | 0 | 1 |
 
 ---
 
 ## Detailed Match Diagnostics
+
+### Match 90845289 | Outcome: **LOSS**
+- **Alpesh Kumar** (Us): $57,934.00
+- **Alpesh Kumar** (Opponent): $59,824.00
+
+| Metric | Us | Opponent | Difference |
+| :--- | :--- | :--- | :--- |
+| Final Bank | $57,934.00 | $59,824.00 | $-1,890.00 |
+| Max Workers | 13 | 13 | 0 |
+| Land Purchases | 2 | 2 | 0 |
+| Cows Purchased | 8 | 8 | 0 |
+| Sheep Purchased | 1 | 1 | 0 |
+| Max Weeds Count | 0 | 0 | 0 |
+| Sales: CARROT | $1,378.72 | $1,378.72 | $0.00 |
+| Sales: FERTILIZER | $6,410.58 | $6,577.99 | $-167.41 |
+| Sales: MELON | $11,455.63 | $11,455.63 | $0.00 |
+| Sales: MILK | $20,338.83 | $20,370.83 | $-32.00 |
+| Sales: STRAWBERRY | $40,698.68 | $42,507.43 | $-1,808.75 |
+| Sales: WHEAT | $3,104.59 | $3,270.26 | $-165.68 |
+| Sales: WOOL | $4,478.98 | $4,490.14 | $-11.16 |
+
+**Key Loss Factors Identified:**
+- Difference in general pacing or price optimization (selling at better market peaks).
+
+---
+
+### Match 90845800 | Outcome: **WIN**
+- **Alpesh Kumar** (Us): $74,972.00
+- **williamrawling** (Opponent): $38,542.00
+
+| Metric | Us | Opponent | Difference |
+| :--- | :--- | :--- | :--- |
+| Final Bank | $74,972.00 | $38,542.00 | $36,430.00 |
+| Max Workers | 13 | 12 | 1 |
+| Land Purchases | 2 | 2 | 0 |
+| Cows Purchased | 8 | 6 | 2 |
+| Sheep Purchased | 1 | 4 | -3 |
+| Max Weeds Count | 0 | 0 | 0 |
+| Sales: CARROT | $2,081.65 | $1,801.65 | $280.00 |
+| Sales: FERTILIZER | $23,467.66 | $5,073.39 | $18,394.27 |
+| Sales: MELON | $9,225.18 | $24,360.45 | $-15,135.27 |
+| Sales: MILK | $22,990.33 | $10,310.27 | $12,680.06 |
+| Sales: STRAWBERRY | $56,007.43 | $0.00 | $56,007.43 |
+| Sales: TOMATO | $0.00 | $2,255.57 | $-2,255.57 |
+| Sales: WHEAT | $2,578.20 | $8,259.70 | $-5,681.50 |
+| Sales: WOOL | $4,473.56 | $4,170.98 | $302.58 |
+
+**Key Win Factors Identified:**
+- We hired more workers (13 vs 12), giving us labor superiority.
+- We invested more in Cows (8 vs 6), yielding higher Milk revenues.
+- We outperformed on STRAWBERRY sales by $56,007.43.
+- We outperformed on MILK sales by $12,680.06.
+
+---
+
+### Match 90846606 | Outcome: **WIN**
+- **Alpesh Kumar** (Us): $96,210.00
+- **Hoaquason** (Opponent): $60,540.00
+
+| Metric | Us | Opponent | Difference |
+| :--- | :--- | :--- | :--- |
+| Final Bank | $96,210.00 | $60,540.00 | $35,670.00 |
+| Max Workers | 13 | 12 | 1 |
+| Land Purchases | 2 | 3 | -1 |
+| Cows Purchased | 8 | 5 | 3 |
+| Sheep Purchased | 2 | 5 | -3 |
+| Max Weeds Count | 0 | 0 | 0 |
+| Sales: CARROT | $1,847.94 | $402.00 | $1,445.94 |
+| Sales: EGG | $0.00 | $12,370.25 | $-12,370.25 |
+| Sales: FERTILIZER | $26,749.17 | $17,334.05 | $9,415.11 |
+| Sales: MELON | $3,086.66 | $28,229.44 | $-25,142.77 |
+| Sales: MILK | $59,814.12 | $27,355.45 | $32,458.67 |
+| Sales: STRAWBERRY | $47,427.41 | $2,450.52 | $44,976.89 |
+| Sales: WHEAT | $3,343.54 | $46,106.80 | $-42,763.26 |
+| Sales: WOOL | $6,682.15 | $14,581.48 | $-7,899.33 |
+
+**Key Win Factors Identified:**
+- We hired more workers (13 vs 12), giving us labor superiority.
+- We invested more in Cows (8 vs 5), yielding higher Milk revenues.
+- We outperformed on STRAWBERRY sales by $44,976.89.
+- We outperformed on MILK sales by $32,458.67.
+
+---
+
+### Match 90847440 | Outcome: **LOSS**
+- **Alpesh Kumar** (Us): $50,389.00
+- **wata** (Opponent): $70,354.00
+
+| Metric | Us | Opponent | Difference |
+| :--- | :--- | :--- | :--- |
+| Final Bank | $50,389.00 | $70,354.00 | $-19,965.00 |
+| Max Workers | 13 | 13 | 0 |
+| Land Purchases | 2 | 3 | -1 |
+| Cows Purchased | 8 | 8 | 0 |
+| Sheep Purchased | 1 | 7 | -6 |
+| Max Weeds Count | 0 | 0 | 0 |
+| Sales: CARROT | $1,617.96 | $0.00 | $1,617.96 |
+| Sales: FERTILIZER | $5,901.47 | $8,640.79 | $-2,739.32 |
+| Sales: MELON | $9,296.00 | $21,848.47 | $-12,552.47 |
+| Sales: MILK | $12,714.19 | $4,625.62 | $8,088.58 |
+| Sales: STRAWBERRY | $33,639.22 | $39,598.83 | $-5,959.61 |
+| Sales: WHEAT | $6,645.13 | $5,894.95 | $750.18 |
+| Sales: WOOL | $5,124.02 | $32,551.34 | $-27,427.31 |
+
+**Key Loss Factors Identified:**
+- Opponent bought more Sheep (7 vs 1), yielding higher Wool revenues.
+- Opponent outperformed on MELON sales by $12,552.47.
+- Opponent outperformed on STRAWBERRY sales by $5,959.61.
+- Opponent outperformed on WOOL sales by $27,427.31.
+
+---
+
+### Match 90848270 | Outcome: **WIN**
+- **Alpesh Kumar** (Us): $51,981.00
+- **Drakus_Julia** (Opponent): $50,321.00
+
+| Metric | Us | Opponent | Difference |
+| :--- | :--- | :--- | :--- |
+| Final Bank | $51,981.00 | $50,321.00 | $1,660.00 |
+| Max Workers | 13 | 12 | 1 |
+| Land Purchases | 2 | 1 | 1 |
+| Cows Purchased | 8 | 8 | 0 |
+| Sheep Purchased | 1 | 6 | -5 |
+| Max Weeds Count | 0 | 0 | 0 |
+| Sales: CARROT | $2,263.02 | $455.12 | $1,807.90 |
+| Sales: FERTILIZER | $4,836.97 | $17,167.38 | $-12,330.40 |
+| Sales: MELON | $7,165.00 | $23,545.95 | $-16,380.95 |
+| Sales: MILK | $6,642.91 | $5,195.31 | $1,447.60 |
+| Sales: STRAWBERRY | $43,760.82 | $0.00 | $43,760.82 |
+| Sales: WHEAT | $5,261.65 | $33.77 | $5,227.87 |
+| Sales: WOOL | $5,476.63 | $29,897.47 | $-24,420.84 |
+
+**Key Win Factors Identified:**
+- We hired more workers (13 vs 12), giving us labor superiority.
+- We outperformed on STRAWBERRY sales by $43,760.82.
+
+---
+
+### Match 90848543 | Outcome: **WIN**
+- **Alpesh Kumar** (Us): $110,400.00
+- **quantcrypto3** (Opponent): $27,815.00
+
+| Metric | Us | Opponent | Difference |
+| :--- | :--- | :--- | :--- |
+| Final Bank | $110,400.00 | $27,815.00 | $82,585.00 |
+| Max Workers | 13 | 8 | 5 |
+| Land Purchases | 2 | 1 | 1 |
+| Cows Purchased | 8 | 5 | 3 |
+| Sheep Purchased | 1 | 13 | -12 |
+| Max Weeds Count | 0 | 0 | 0 |
+| Sales: CARROT | $2,261.51 | $0.00 | $2,261.51 |
+| Sales: FERTILIZER | $22,736.31 | $17,179.96 | $5,556.35 |
+| Sales: MELON | $17,259.40 | $5,974.97 | $11,284.43 |
+| Sales: MILK | $49,980.36 | $9,162.67 | $40,817.69 |
+| Sales: STRAWBERRY | $64,346.46 | $0.00 | $64,346.46 |
+| Sales: WHEAT | $2,558.21 | $5,221.74 | $-2,663.53 |
+| Sales: WOOL | $82.75 | $12,526.66 | $-12,443.91 |
+
+**Key Win Factors Identified:**
+- We hired more workers (13 vs 8), giving us labor superiority.
+- We invested more in Cows (8 vs 5), yielding higher Milk revenues.
+- We outperformed on MELON sales by $11,284.43.
+- We outperformed on STRAWBERRY sales by $64,346.46.
+- We outperformed on MILK sales by $40,817.69.
+
+---
+
+### Match 90849208 | Outcome: **LOSS**
+- **Alpesh Kumar** (Us): $34,526.00
+- **Victor Orihuel** (Opponent): $53,739.00
+
+| Metric | Us | Opponent | Difference |
+| :--- | :--- | :--- | :--- |
+| Final Bank | $34,526.00 | $53,739.00 | $-19,213.00 |
+| Max Workers | 13 | 10 | 3 |
+| Land Purchases | 2 | 5 | -3 |
+| Cows Purchased | 8 | 40 | -32 |
+| Sheep Purchased | 1 | 62 | -61 |
+| Max Weeds Count | 0 | 0 | 0 |
+| Sales: CARROT | $2,445.17 | $0.00 | $2,445.17 |
+| Sales: FERTILIZER | $4,509.44 | $23,416.34 | $-18,906.90 |
+| Sales: MELON | $10,794.93 | $21,649.00 | $-10,854.07 |
+| Sales: MILK | $7,811.95 | $4,884.93 | $2,927.01 |
+| Sales: STRAWBERRY | $24,417.10 | $0.00 | $24,417.10 |
+| Sales: WHEAT | $3,859.68 | $2,562.00 | $1,297.68 |
+| Sales: WOOL | $5,293.74 | $30,078.73 | $-24,785.00 |
+
+**Key Loss Factors Identified:**
+- Opponent invested more in Cows (40 vs 8), yielding higher Milk revenues.
+- Opponent bought more Sheep (62 vs 1), yielding higher Wool revenues.
+- Opponent outperformed on MELON sales by $10,854.07.
+- Opponent outperformed on WOOL sales by $24,785.00.
+
+---
+
+### Match 90850103 | Outcome: **WIN**
+- **Alpesh Kumar** (Us): $96,845.00
+- **Aparna Mantha** (Opponent): $73,909.00
+
+| Metric | Us | Opponent | Difference |
+| :--- | :--- | :--- | :--- |
+| Final Bank | $96,845.00 | $73,909.00 | $22,936.00 |
+| Max Workers | 13 | 12 | 1 |
+| Land Purchases | 2 | 2 | 0 |
+| Cows Purchased | 8 | 8 | 0 |
+| Sheep Purchased | 2 | 6 | -4 |
+| Max Weeds Count | 0 | 0 | 0 |
+| Sales: CARROT | $1,367.75 | $0.00 | $1,367.75 |
+| Sales: FERTILIZER | $18,693.52 | $16,872.93 | $1,820.59 |
+| Sales: MELON | $11,104.66 | $21,143.22 | $-10,038.56 |
+| Sales: MILK | $46,157.06 | $42,651.21 | $3,505.85 |
+| Sales: STRAWBERRY | $59,031.47 | $16,252.03 | $42,779.44 |
+| Sales: WHEAT | $4,899.71 | $34,768.41 | $-29,868.70 |
+| Sales: WOOL | $1,361.83 | $11,265.19 | $-9,903.36 |
+
+**Key Win Factors Identified:**
+- We hired more workers (13 vs 12), giving us labor superiority.
+- We outperformed on STRAWBERRY sales by $42,779.44.
+
+---
 
 ### Match 90372802 | Outcome: **LOSS**
 - **Alpesh Kumar** (Us): $107,097.00
