@@ -203,6 +203,20 @@ def ensure_opponents_synced(force=False) -> bool:
             if all(path.stat().st_mtime <= profiles_mtime for path in log_files):
                 return False
 
+    # ghost_fidelity is measured by validate_ghosts.py, not derived from the
+    # logs, so a rebuild must carry it across or the roster silently loses its
+    # broken-ghost filter the next time a log is added.
+    try:
+        previous_fidelity = {
+            episode_id: profile["ghost_fidelity"]
+            for episode_id, profile in json.loads(
+                profiles_path.read_text(encoding="utf-8")
+            ).items()
+            if profile.get("ghost_fidelity") is not None
+        }
+    except Exception:
+        previous_fidelity = {}
+
     output_dir.mkdir(parents=True, exist_ok=True)
     profiles = {}
     ghost_actions = {}
@@ -212,6 +226,8 @@ def ensure_opponents_synced(force=False) -> bool:
             continue
         profile = profile_replay(path)
         episode_id = profile["episode_id"]
+        if episode_id in previous_fidelity:
+            profile["ghost_fidelity"] = previous_fidelity[episode_id]
         profiles[episode_id] = profile
         seat = profile["source_seat"]
         ghost_actions[episode_id] = [
@@ -227,7 +243,14 @@ def ensure_opponents_synced(force=False) -> bool:
     ghost_actions_path.write_text(
         json.dumps(ghost_actions, separators=(",", ":")) + "\n", encoding="utf-8"
     )
+    carried = sum(1 for p in profiles.values() if p.get("ghost_fidelity") is not None)
+    unscored = len(profiles) - carried
     print(f"Built {len(profiles)} replay opponents in {output_dir}")
+    if unscored:
+        print(
+            f"  {unscored} have no ghost_fidelity yet; run validate_ghosts.py --write "
+            f"so the broken-ghost filter can see them."
+        )
     return True
 
 

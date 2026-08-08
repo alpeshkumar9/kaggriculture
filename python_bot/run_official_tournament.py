@@ -137,10 +137,25 @@ def resolve_opponent(spec: str, candidate: Agent) -> Any:
     )
 
 
-def replay_roster_entries() -> tuple[tuple[str, int, bool], ...]:
-    """Return ghost path, source seed, and candidate-side swap flag."""
+def replay_roster_entries(min_ghost_fidelity: float = 0.0) -> tuple[tuple[str, int, bool], ...]:
+    """Return ghost path, source seed, and candidate-side swap flag.
+
+    ``min_ghost_fidelity`` drops ghosts that fail to reproduce their source game
+    (see validate_ghosts.py).  A ghost whose replay collapses is a free win, not
+    an opponent: at the 0.8 threshold this removes 29 of 132 roster entries that
+    the candidate beat 29/29, which alone moved the reported roster win rate
+    from 44% to 64%.  Entries without a recorded ``ghost_fidelity`` are kept, so
+    an unvalidated roster still behaves exactly as before.
+    """
     directory = Path(__file__).resolve().parent / "opponents"
     profiles = json.loads((directory / "profiles.json").read_text(encoding="utf-8"))
+    if min_ghost_fidelity > 0:
+        profiles = {
+            episode_id: profile
+            for episode_id, profile in profiles.items()
+            if profile.get("ghost_fidelity") is None
+            or float(profile["ghost_fidelity"]) >= min_ghost_fidelity
+        }
     # resolve_opponent() dispatches on the stem alone (the file never actually
     # exists on disk), so a repo-relative path is just as functional and reads
     # far better in report.json than an absolute machine-specific one.
@@ -557,6 +572,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--h2h-goal", type=float, default=GOAL_HEAD_TO_HEAD_WIN_RATE, help="G2: required win rate vs --baseline.")
     parser.add_argument("--roster-goal", type=float, default=ROSTER_WIN_RATE, help="Required aggregate win rate across replay opponents.")
     parser.add_argument("--opponent-floor", type=float, default=ROSTER_OPPONENT_FLOOR, help="Minimum win rate against every replay opponent.")
+    parser.add_argument(
+        "--min-ghost-fidelity", type=float, default=0.8,
+        help="Exclude replay ghosts scoring below this fraction of their source bank "
+             "(see validate_ghosts.py). Collapsed replays are free wins, not opponents. "
+             "0 disables filtering.",
+    )
     parser.add_argument("--replay-dir", type=Path, default=None, help="Write full replay JSON here (large; off by default).")
     parser.add_argument("--report", type=Path, default=Path("replays/report.json"))
     parser.add_argument("--keep-old-replays", action="store_true", help="Do not remove old raw replay directories before this run; JSON reports are always retained.")
@@ -619,7 +640,19 @@ def main() -> int:
 
         if ensure_opponents_synced():
             print("Replay opponent roster was stale; rebuilt from logs/.")
-        for opponent, source_seed, swapped in replay_roster_entries():
+        roster_entries = replay_roster_entries(args.min_ghost_fidelity)
+        if args.min_ghost_fidelity > 0:
+            total = len(json.loads(
+                (Path(__file__).resolve().parent / "opponents" / "profiles.json")
+                .read_text(encoding="utf-8")
+            ))
+            dropped = total - len(roster_entries)
+            if dropped:
+                print(
+                    f"Excluding {dropped}/{total} low-fidelity ghosts "
+                    f"(< {args.min_ghost_fidelity:.0%} of their source bank)."
+                )
+        for opponent, source_seed, swapped in roster_entries:
             jobs.append(
                 (str(args.agent), opponent, source_seed, args.turns, swapped, replay_dir)
             )
