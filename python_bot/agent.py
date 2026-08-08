@@ -57,6 +57,7 @@ SHEEP_PURCHASE_END_DAY = 14
 STRAWBERRY_TARGET = 40
 TOMATO_TARGET = 0
 MELON_TARGET = 18
+WHEAT_FALLBACK_BIAS = 2.0
 # Melons become plantable four days before strawberries. Left uncapped, an
 # early cash-rich stretch fills tiles with melon before the strawberry
 # window opens, leaving too little open land once it does. Reserve part of
@@ -474,6 +475,7 @@ def _next_crop(
     strawberry_target=STRAWBERRY_TARGET,
     melon_target=MELON_TARGET,
     last_planting_day=LAST_PLANTING_DAY,
+    wheat_fallback_bias=WHEAT_FALLBACK_BIAS,
 ):
     """Choose the highest-value crop whose production window still fits."""
     strawberries = sum(
@@ -502,9 +504,13 @@ def _next_crop(
     prices = prices or BASE_PRICES
     if day >= last_planting_day:
         return "CARROT" if day < last_planting_day else "WHEAT"
+    # WHEAT_FALLBACK_BIAS: real top-ladder builds run wheat as a genuine
+    # revenue crop (~40 tiles) rather than splitting leftover land with
+    # carrot by per-turn rate. Favour wheat unless carrot's rate clears it
+    # by a wide margin.
     wheat_rate = (float(prices.get("WHEAT", 25)) * 4 - 10) / 4
     carrot_rate = (float(prices.get("CARROT", 35)) * 3 - 20) / 3
-    return "WHEAT" if wheat_rate >= carrot_rate else "CARROT"
+    return "WHEAT" if wheat_rate * wheat_fallback_bias >= carrot_rate else "CARROT"
 
 
 def _choose_worker_action(
